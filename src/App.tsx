@@ -58,6 +58,10 @@ function App() {
         <div className="read-the-docs">
           <ZustandUseDemo />
         </div>
+        {/* tailwindCss */}
+        <h1 className="text-3xl font-bold underline p-0.5">
+          Hello world!
+        </h1>
       </ThemeContext>
     </>
   )
