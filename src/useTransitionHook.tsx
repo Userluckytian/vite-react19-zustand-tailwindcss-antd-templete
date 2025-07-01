@@ -31,7 +31,6 @@ export default function UseTransitionHook(props: CtxChildrenProps) {
     // This would not work with useContext
     // because of the early return.
     const theme = use(ThemeContext);
-    console.log('theme', theme);
 
     return (
         <div>C {isPending ? '加载中...' : '加载完成'}</div>

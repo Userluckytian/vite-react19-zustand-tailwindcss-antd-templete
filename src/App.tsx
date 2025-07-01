@@ -37,7 +37,6 @@ function App() {
 
           <UseTransitionHook ref={
             (node: any) => {
-              console.log('node', node, ctxChildrenRef);
               return () => { }
             }
           } />
