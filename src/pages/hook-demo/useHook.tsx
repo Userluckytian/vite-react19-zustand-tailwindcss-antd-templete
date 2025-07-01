@@ -1,5 +1,6 @@
+import { buildBase64Image } from '@/utils/utils';
 import { use } from 'react';
-import { buildBase64Image } from './utils/utils';
+
 
 interface UseHookProps {
     num: number;

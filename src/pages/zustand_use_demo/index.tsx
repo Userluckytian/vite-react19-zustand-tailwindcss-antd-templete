@@ -1,5 +1,5 @@
-import { useUserStore } from './store/userStore';
-import { useUserStoreSample } from './store/userStore_sample';
+import { useUserStore } from "@/store/userStore";
+import { useUserStoreSample } from "@/store/userStore_sample";
 
 export default function ZustandUseDemo() {
     // 解构取数据，获取状态和方法

@@ -1,6 +1,7 @@
-import React, { useContext, useEffect, useImperativeHandle, useTransition, type Ref, use } from 'react'
-import { ThemeContext } from './App'
-import { sleep } from './utils/utils';
+import { ThemeContext } from '@/App';
+import { sleep } from '@/utils/utils';
+import { useContext, useImperativeHandle, useTransition, type Ref, use } from 'react'
+
 interface CtxChildrenProps {
     ref?: Ref<any>;
 };
