@@ -52,3 +52,5 @@ export default tseslint.config({
   },
 })
 ```
+
+###### 1： 引入axios， 然后封装axios， post、get可统一处理，尽量加入防抖选项
