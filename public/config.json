@@ -1,0 +1,111 @@
+{
+  "warningTip": "json文件不支持双斜杠写注释，如果你写了，可能会导致系统无法正常运行，请注意！",
+  "systemTitle": "生态环境卫星遥感影像产品生产线",
+  "gdosUrl_des": "gdos-assets,这个是接口，貌似是从服务器相对应的目录下找文件，属于取静态资源的接口",
+  "gdosUrl": "http://10.17.17.243/gdos-assets",
+  "ssoServerUrl": "http://10.17.17.243/sso-server",
+  "ecsUrl": "http://10.17.17.243/ecs",
+  "dmaptilesUrl": "http://10.17.17.243/dmaptiles",
+  "dmesUrl": "http://10.17.17.243/dmes",
+  "groupId": 1882027116733504,
+  "aliIcon": "//at.alicdn.com/t/c/font_4537432_lau3f3wlnoq.js",
+  "DriveLetterAssignment": [
+    {
+      "os": "win",
+      "driveLetter": "F:",
+      "path": "/aiDataCenter"
+    },
+    {
+      "driveLetter": "Z:",
+      "path": "/iisShare",
+      "os": "win"
+    }
+  ],
+  "BaseMapSeting": {
+    "minZoom": 4,
+    "zoom": 4,
+    "maxZoom": 22,
+    "center": [
+      39.9,
+      105.38
+    ],
+    "maxBounds": [
+      [
+        -90,
+        -180
+      ],
+      [
+        90,
+        180
+      ]
+    ]
+  },
+  "HOME_BASE_MAPS": [
+    {
+      "name": "天地图行政区划",
+      "url": "http://10.17.17.243/tdtxzqh/{z}/{y}/{x}.png",
+      "url_4326": "",
+      "minZoom": 1,
+      "maxZoom": 22,
+      "zIndex": -2,
+      "visible": true
+    },
+    {
+      "name": "天地图矢量注记",
+      "url": "http://10.17.17.243/tdtzj/{z}/{y}/{x}.png",
+      "url_4326": "",
+      "minZoom": 1,
+      "maxZoom": 22,
+      "zIndex": -2,
+      "visible": true
+    }
+  ],
+  "BASE_MAPS": [
+    {
+      "name": "测试底图",
+      "url": "https://36.110.12.227/maptiles/tile/service/enhanceEergeView?x={x}&y={y}&l={z}&uid=6666666666666&tdsId=1847007008240704&fromId=0",
+      "url_4326": "https://36.110.12.227/maptiles/tile/service/enhanceEergeView?x={x}&y={y}&l={z}&uid=6666666666666&tdsId=1847007008240704&fromId=0",
+      "minZoom": 1,
+      "maxZoom": 22,
+      "maxNativeZoom": 16,
+      "zIndex": -2,
+      "visible": true
+    },
+    {
+      "name": "天地图行政区划",
+      "url": "http://10.17.17.243/tdtxzqh/{z}/{y}/{x}.png",
+      "url_4326": "https://t1.tianditu.gov.cn/DataServer?T=ibo_c&x={x}&y={y}&l={z}&tk=9d3512a6ad161b05ac68a7fecf05b119",
+      "minZoom": 1,
+      "maxZoom": 22,
+      "maxNativeZoom": 11,
+      "zoomOffset": 1,
+      "zIndex": 2,
+      "visible": true
+    },
+    {
+      "name": "天地图矢量注记",
+      "url": "http://10.17.17.243/tdtzj/{z}/{y}/{x}.png",
+      "url_4326": "https://t1.tianditu.gov.cn/DataServer?T=cva_c&x={x}&y={y}&l={z}&tk=9d3512a6ad161b05ac68a7fecf05b119",
+      "minZoom": 1,
+      "maxZoom": 22,
+      "maxNativeZoom": 11,
+      "zoomOffset": 1,
+      "zIndex": 3,
+      "visible": true
+    }
+  ],
+  "VectorStyles": {
+    "weight": 1,
+    "color": "#2ed910",
+    "opacity": 1,
+    "fillColor": "#f5e2df",
+    "fill": true,
+    "fillOpacity": 0.2
+  },
+  "DataType": [
+    {
+      "label": "L5A3",
+      "value": "L5A3"
+    }
+  ]
+}

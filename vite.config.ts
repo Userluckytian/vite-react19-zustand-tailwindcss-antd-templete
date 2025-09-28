@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
-
+import webConfig from './public/config.json'
 
 /**
  * JS模块分包
@@ -58,4 +58,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  define: {
+    webConfig: JSON.stringify(webConfig)
+  }
 })
