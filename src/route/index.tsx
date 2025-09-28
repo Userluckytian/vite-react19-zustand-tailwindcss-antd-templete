@@ -8,8 +8,12 @@ import { sleep } from "@/utils/utils";
 const router = createHashRouter(
     [
         // path为空时，重定向到layout
-        { path: '', element: <Navigate to="/layout" /> },
+        { path: '', element: <Navigate to="/login" /> },
         // 使用LazyLoadComp动态加载页面
+        {
+            path: '/login',
+            element: LazyLoadComp(lazy(() => import("@/pages/login"))),
+        },
         {
             path: '/layout',
             element: LazyLoadComp(lazy(() => import("@/layout"))),

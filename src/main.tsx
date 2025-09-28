@@ -1,9 +1,5 @@
-// import { StrictMode } from 'react'
-
-
-
-
 /* react------------start */
+// import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createContext } from 'react';
 import './styles/main.css';
@@ -44,7 +40,7 @@ const getUserConfig = async (path: string) => {
 
 // raect19新的API之：父传子不再需要写provider字样, 之前需要携带 GlobalContext.provider。
 export const GlobalContext = createContext({} as any);
-const ThemeContext = createContext({}); // 这个要放到组件的外部（并且使用export，为了可以在子组件中拿到它）
+// const ThemeContext = createContext({}); // 这个要放到组件的外部（并且使用export，为了可以在子组件中拿到它）
 
 async function bootstrap() {
   try {
@@ -76,13 +72,9 @@ async function bootstrap() {
         <App>
 
           {/* 第一步：提供全部配置内容注入到全局上下文 */}
-          <ThemeContext value={{ name: '123', age: 12 }}>
-            <GlobalContext value={configData}>
-              <RouterProvider router={router} />
-              {/* <HashRouter>
-            </HashRouter> */}
-            </GlobalContext>
-          </ThemeContext>
+          <GlobalContext value={configData}>
+            <RouterProvider router={router} />
+          </GlobalContext>
         </App>
       </ConfigProvider>
     );
@@ -92,15 +84,3 @@ async function bootstrap() {
 }
 
 bootstrap(); // 调用启动函数
-
-
-
-
-createRoot(document.getElementById('root')!).render(
-  // <StrictMode>
-  /* 提供全部配置内容注入到全局上下文 */
-  <GlobalContext value={{}}>
-    <App />
-  </GlobalContext>
-  // </StrictMode>,
-)
