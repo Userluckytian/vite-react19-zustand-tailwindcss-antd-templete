@@ -55,7 +55,7 @@ export default function NotFoundPage() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/layout')}
             className="mt-8 px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium shadow-md hover:bg-indigo-700 transition-colors"
           >
             返回首页

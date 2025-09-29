@@ -1,15 +1,12 @@
 import { createHashRouter, Navigate } from "react-router";
-
-
 import { lazy } from "react";
 import LazyLoadComp from "./lazyLoadComp";
 import { sleep } from "@/utils/utils";
 import Guards from "./Guards";
-
 const router = createHashRouter(
     [
         // path为空时，重定向到layout
-        { path: '', element: <Navigate to="/login" /> },
+        { path: '', element: <Navigate to="/layout" /> },
         // 使用LazyLoadComp动态加载页面
         {
             path: '/login',

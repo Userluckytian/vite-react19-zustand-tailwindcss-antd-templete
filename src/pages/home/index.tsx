@@ -9,12 +9,13 @@ import UseTransitionHook from '../hook-demo/useTransitionHook'
 import ZustandUseDemo from '../zustand_use_demo'
 import { useUserStoreSample } from '@/store/zustand-store/userStore_sample'
 import { GlobalContext } from '@/main'
+import { useNavigate } from 'react-router';
 // 引入的组件
 
 
 export default function Home() {
     const [count, setCount] = useState(0)
-
+    const navigate = useNavigate();
     const globalConfigContext = useContext(GlobalContext);
     const { userInfo_sample } = useUserStoreSample()
 
@@ -87,7 +88,8 @@ export default function Home() {
                 Hello world!
             </h1>
             {/* 引入antd-design */}
-            <Button type="primary" onClick={() => openInfo()}>Button</Button>
+            <Button type="primary" onClick={() => openInfo()}>antd-btn</Button>
+            <Button type="primary" onClick={() => navigate('/404')}>导航到404页面</Button>
             <DatePicker></DatePicker>
         </Fragment>
     )

@@ -1,9 +1,9 @@
 import { useEffect } from "react";;
 import { useLocation, useNavigate, useOutlet } from "react-router";
-import nprogress from 'nprogress';
 import Layout from "@/layout";
 import { getLocalInfo } from "@/store/session-store";
 import { message } from "antd";
+import NProgress from "@/request/npprogress";
 
 function Guards() {
   const outlet = useOutlet();
@@ -13,15 +13,11 @@ function Guards() {
 
   // 顶部进度条
   useEffect(() => {
-    nprogress.start();
+    NProgress.start();
   }, []);
 
   useEffect(() => {
-    nprogress.done();
-
-    return () => {
-      nprogress.start();
-    };
+    NProgress.done();
   }, [location]);
 
   useEffect(() => {

@@ -1,5 +1,4 @@
 import axios, { AxiosError, type AxiosRequestConfig, type InternalAxiosRequestConfig } from "axios";
-import NProgress from "../npprogress";
 import { message } from "antd";
 
 /** 默认系统位置，如果涉及到一些接口需要传特定位置的话，记得更新 */
@@ -17,8 +16,6 @@ const axiosInstance = axios.create({
 /** 请求拦截器 */
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    /**开启进度条 */
-    NProgress.start();
     // 添加header头内容
     let token = getToken();
     config.headers["Authorization"] = `Bearer ${token}`;
@@ -33,8 +30,6 @@ axiosInstance.interceptors.request.use(
 /** 响应拦截器 */
 axiosInstance.interceptors.response.use(
   (res: any) => {
-    /** 请求结束后移除进度条 */
-    NProgress.done();
     checkAuth(res.data.status ? res.data.status : 200, res.data.message);
     return res.data;
   },
