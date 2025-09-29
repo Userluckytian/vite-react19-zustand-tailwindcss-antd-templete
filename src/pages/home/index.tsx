@@ -1,4 +1,4 @@
-import { Fragment, Suspense, useRef, useState } from 'react'
+import { Fragment, Suspense, useContext, useEffect, useRef, useState } from 'react'
 import reactLogo from '@/assets/react.svg'
 import viteLogo from '/vite.svg'
 
@@ -7,12 +7,17 @@ import UseHook from '../hook-demo/useHook'
 import UseOptimisticHook from '../hook-demo/useOptimisticHook'
 import UseTransitionHook from '../hook-demo/useTransitionHook'
 import ZustandUseDemo from '../zustand_use_demo'
-
+import { useUserStoreSample } from '@/store/zustand-store/userStore_sample'
+import { GlobalContext } from '@/main'
 // 引入的组件
 
 
 export default function Home() {
     const [count, setCount] = useState(0)
+
+    const globalConfigContext = useContext(GlobalContext);
+    const { userInfo_sample } = useUserStoreSample()
+
 
     const openInfo = () => {
         // console.log(modal, message);
@@ -22,6 +27,15 @@ export default function Home() {
             content: 'success',
         });
     }
+
+    useEffect(() => {
+        console.log('userInfo_sample', userInfo_sample);
+    }, [userInfo_sample])
+    useEffect(() => {
+        console.log('globalConfigContext', globalConfigContext);
+
+    }, [globalConfigContext])
+
 
 
     return (

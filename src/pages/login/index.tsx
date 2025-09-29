@@ -5,11 +5,13 @@ import logo from "@/assets/images/logo.png"
 import bgPng from "@/assets/images/bg.png"
 import { createVCode, type VCodeType } from "@/utils/valid-code"
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-
+import { useNavigate, useLocation } from "react-router";
+import { setLocalInfo } from "@/store/session-store";
+import { useUserStoreSample } from "@/store/zustand-store/userStore_sample";
 const Login = ({ }) => {
     const isProd = process.env.NODE_ENV === "production";
     const navigate = useNavigate()
+    const { search } = useLocation()
     const [form] = Form.useForm();
     const { message } = App.useApp();
     const [loading, setLoading] = useState(false);
@@ -17,6 +19,7 @@ const Login = ({ }) => {
         code: "",
         dataURL: ""
     })
+    const { setUserInfo_sample } = useUserStoreSample()
     const onFinish = (values: any) => {
         form.validateFields().then(() => {
             if (isProd) {
@@ -35,20 +38,31 @@ const Login = ({ }) => {
                 const newRes: any = {
                     status: 200,
                     data: {
-                        userToken: '123'
+                        userToken: '123',
+                        userInfo: {
+                            id: 1,
+                            username: '222333',
+                            email: '123@163.com',
+                            phone: '13843838438',
+                        }
                     },
                     message: '成功'
                 }
                 if (newRes.status === 200) {
                     // 0：存储token，接口请求需要
-                    localStorage.setItem("dmes_token", newRes.data.userToken);
+                    setLocalInfo('dmes_token', newRes.data.userToken);
                     // 1：存储用户信息
-                    // dispatch(setCurUser(res.data));
-                    // 2： 导航到对应位置
-                    navigate("/layout");
-                    // 3： 在其他地方---获取用户信息的方式： 
-                    // import { useAppSelector } from "@/store/hooks";
-                    // const userInfo = useAppSelector((state) => state.user.account); // 用户信息
+                    setUserInfo_sample({ ...newRes.data.userInfo });
+                    // 2：如果存在重定向, 导航到对应位置
+                    if (search?.includes('?redirect=')) {
+                        const url = getRedirectUrl();
+                        if (url) {
+                            navigate(url);
+                            return;
+                        }
+                    } else {
+                        navigate("/layout");
+                    }
                 } else {
                     message.error(newRes.message);
                     createNewVCode();
@@ -64,6 +78,15 @@ const Login = ({ }) => {
             ...info
         })
     }
+
+    /** 获取重定向路由 */
+    const getRedirectUrl = () => {
+        const key = '?redirect=';
+        const start = search.includes(key) ? search.indexOf(key) + 10 : 0;
+        const end = search.includes('&') ? search.indexOf('&') : search.length;
+        return search.substring(start, end);
+    };
+
     useEffect(() => {
         createNewVCode()
     }, [])
