@@ -1,24 +1,24 @@
-### 1. React新变化
-1: 增加了异步请求中的isPending，startTransition来控制页面的loading状态，或者按钮的是否禁用状态。(同步、异步写法均可)
- `useTransition`: `  const [isPending, startTransition] = useTransition(); ` // 异步请求中使用。
-详情见： D:\test_react\imagesky-vite-react19\src\useTransitionHook.tsx
- `useOptimistic`: ` const [optimisticName, setOptimisticName] = useOptimistic(currentName); `
+### 1. React新变化([下面是介绍了几个钩子函数，具体的建议直接看官网的介绍](https://react.dev/blog/2024/12/05/react-19#whats-new-in-react-19))
+1. `useTransition`: `  const [isPending, startTransition] = useTransition(); ` // 异步请求中使用。
 
-问： 你和useState设置个默认值有啥区别?
-答： useOptimistic 最佳场景‌：
-网络延迟敏感的场景（点赞、收藏、评论、表单提交---常见于移动端）
-需要即时视觉反馈的 UI（如购物车增减）
-由于上面的操作都将进行后台接口调用，一旦网速慢了，可能就无法及时更新状态，但是我们在网上看博客，刷视频。点赞评论等操作很多都是立刻更新的，这个时候，useOptimistic 就派上用场了。
-至于后续接口报错，也可以把错误信息返给用户，比如： 网络异常，点赞失败等等，然后把用户点赞的状态取消掉（简称回滚）。
-总结： 
+   - 增加了异步请求中的isPending，startTransition来控制页面的loading状态，或者按钮的是否禁用状态。(同步、异步写法均可)
+
+2. `useOptimistic`: ` const [optimisticName, setOptimisticName] = useOptimistic(currentName); `
+   - 实际使用见： src/pages/hook-demo/useTransitionHook.tsx
+   **问：你和useState设置个默认值有啥区别?**
+  **答： useOptimistic 最佳场景**‌：
+        - 网络延迟敏感的场景（点赞、收藏、评论、表单提交---常见于移动端）
+        - 需要即时视觉反馈的 UI（如购物车增减）
+        - 由于上面的操作都将进行后台接口调用，一旦网速慢了，可能就无法及时更新状态，但是我们在网上看博客，刷视频。点赞评论等操作很多都是立刻更新的，这个时候，useOptimistic 就派上用场了。至于后续接口报错，也可以把错误信息返给用户，比如： 网络异常，点赞失败等等，然后把用户点赞的状态取消掉（简称回滚）。
+**总结**：
 useOptimistic 是 useState 在‌异步交互场景‌的强化扩展，它允许你在异步操作完成前，先更新 UI 状态，然后等待异步操作完成。通过乐观更新机制显著优化了异步交互体验。
-使用: 
-既要定义useState 管理真实数据，又要定义useOptimistic管理页面显示交互体验
-详情见： D:\test_react\imagesky-vite-react19\src\useOptimisticHook.tsx文件 
-
-`useActionState`: ` `
-`useFormStatus`: ` `  // 弃用并重命名为3了。
-`use`: ` `
+    **使用**：
+    既要定义useState 管理真实数据，又要定义useOptimistic管理页面显示交互体验
+    详情见：src/pages/hook-demo/useOptimisticHook.tsx 
+3. 其他的Hook函数：
+- `useActionState`: ` `
+- `useFormStatus`: ` `  // 弃用并重命名为`useActionState`了。
+- `use`: ` `
 
 #### 总结：
  1. 引入了一些新的钩子函数，增加了一些服务端渲染（SSR）的内容。
