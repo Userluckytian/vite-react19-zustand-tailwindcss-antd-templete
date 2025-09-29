@@ -1,56 +1,113 @@
-# React + TypeScript + Vite
+### 1. React新变化
+1: 增加了异步请求中的isPending，startTransition来控制页面的loading状态，或者按钮的是否禁用状态。(同步、异步写法均可)
+ `useTransition`: `  const [isPending, startTransition] = useTransition(); ` // 异步请求中使用。
+详情见： D:\test_react\imagesky-vite-react19\src\useTransitionHook.tsx
+ `useOptimistic`: ` const [optimisticName, setOptimisticName] = useOptimistic(currentName); `
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+问： 你和useState设置个默认值有啥区别?
+答： useOptimistic 最佳场景‌：
+网络延迟敏感的场景（点赞、收藏、评论、表单提交---常见于移动端）
+需要即时视觉反馈的 UI（如购物车增减）
+由于上面的操作都将进行后台接口调用，一旦网速慢了，可能就无法及时更新状态，但是我们在网上看博客，刷视频。点赞评论等操作很多都是立刻更新的，这个时候，useOptimistic 就派上用场了。
+至于后续接口报错，也可以把错误信息返给用户，比如： 网络异常，点赞失败等等，然后把用户点赞的状态取消掉（简称回滚）。
+总结： 
+useOptimistic 是 useState 在‌异步交互场景‌的强化扩展，它允许你在异步操作完成前，先更新 UI 状态，然后等待异步操作完成。通过乐观更新机制显著优化了异步交互体验。
+使用: 
+既要定义useState 管理真实数据，又要定义useOptimistic管理页面显示交互体验
+详情见： D:\test_react\imagesky-vite-react19\src\useOptimisticHook.tsx文件 
 
-Currently, two official plugins are available:
+`useActionState`: ` `
+`useFormStatus`: ` `  // 弃用并重命名为3了。
+`use`: ` `
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+#### 总结：
+ 1. 引入了一些新的钩子函数，增加了一些服务端渲染（SSR）的内容。
+     - 其中useTransition用于简化之前做异步接口请求时，要定义loading状态，或者按钮的禁用状态的操作）
+     - useOptimistic用于处理一些需要即时视觉反馈的场景，比如： 购物车增减、点赞、评论等场景。 使用时，需要搭配useState使用，可以将其视为是state属性的强化。
+     - useActionState： 管理表单的状态，包括: [error, submitAction, isPending],其中 error表示：表单提交的错误状态、 submitAction表示：表单提交时，触发的异步请求方法、 isPending表示：表单是否正在提交的状态。 自身使用总结： 没用，因为antd-form组件已经封装了表单提交状态管理。
+     - useFormStatus：在 React 19 中，‌useFormState 已被弃用并被 useActionState 替代‌
+   
 
-## Expanding the ESLint configuration
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 2. 新的改进
+1: ref 可以通过 props 属性传递，将会删除forwardRef ref forwardRef。 子组件仍需要使用useImperativeHandle暴露自身的方法供父组件调用，否则仍然无法拿到子组件的内容.(之前可以通过自定义Ref来获取, 这种改进就是把之前两个写法，合并到一起了。)
+2: 改造了contextAPI的使用，父传子不再需要写provider字样。
+3：还有一些其他的，没啥用，但是要见过这种写法。
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+#### 总结：
+ 1. ref可以通过props获取了，且不再需要定义forWordRef ref forwardRef。
+     - 子组件仍需要使用useImperativeHandle暴露自身的方法供父组件调用
+ 2. 改造了contextAPI的使用，父传子不再需要写provider字样。
+ 3. 其他的一些改动，目前来看，使用会比较少。但是建议还是看看，别以后从github下载了别人的代码，看不懂。
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
 
-###### 1： 引入axios， 然后封装axios， post、get可统一处理，尽量加入防抖选项
+### 3: 记录创建框架的过程：
+1: 肯定是使用vite来创建. 那么vite创建项目的命令是什么呐？✔
+
+2: 解决样式隔离问题。使用tailwindcss，其按需引用版本： Windi CSS。 但是我还是建议先用tailwindcss，去了解它，然后再使用它的按需引入版本。 (https://tailwindcss.com/docs/installation/using-vite) ✔
+
+3: 引入组件库呀： antdesign UI ✔
+
+4: 路由 ✔
+
+5: utils工具函数中构建一个sleep函数，用于异步等待。✔
+
+6: 状态管理：zustand。✔
+
+7: echats图表库。
+
+8: leaflet地图库。
+
+
+
+
+#### react19 搭配react-route 7.0 需要 node > 20;
+
+
+**1：react19的新特征、以及改进的内容。**
+> 新的变化： https://react.dev/blog/2024/12/05/react-19#whats-new-in-react-19
+> 新的改进:  https://react.dev/blog/2024/12/05/react-19#improvements-in-react-19 
+
+  1.  react19将ref放在了props中，那么是不是可以通过ref获取子组件的全部变量了？ 我的子组件的useImperativeHandle还需要定义吗？
+  2. In HTML, `<div>` cannot be a descendant of `<p>`. This will cause a hydration error.  翻译这个报错， 是什么意思？
+  3.  ref将可以接收一个函数了，函数包含一些变量，第一个变量是什么？
+  4. 介绍下react19中 支持自定义元素中的客户端渲染模式，举个实际的例子
+  5. useOptimistic 和 useState有啥区别吗?
+  6. 给我来个useOptimistic的使用示例： 比如我要实现点赞功能， 通过promise settimeout resolve模拟接口请求， 你帮我写下代码。 我需要接口返回成功和返回失败的两种结果
+  7. useActionState 和 useFormStatus 哪个被弃用了？
+
+**2: 项目集成zustand后，如何构建和使用， devtools函数的作用。**
+-  import { devtools } from 'zustand/middleware'; 这个devTools的作用是？
+-  怎么在zustand中使用devtools
+-  enabled、name属性的作用是什么？
+-  定义好store.ts后，我在我的组件中如何打印userInfo的username以及修改userName？ 
+-  const userInfo_Sample = useUserStore((state) => state.userInfo); 之前redux中的写法，这种写法还可以吗? 支持吗？
+
+
+**3: tailwindcss引入项目的流程**
+https://tailwindcss.com/docs/installation/using-vite
+antd搭配tailwindcss的难点有哪些？
+
+**4: antd-design:**
+react19引入antddesign的一些坑--兼容性问题测试
+
+**5: 安装react-route V7**
+- index: true  是什么意思？ 
+- 定义index: true时，path是否生效？
+- 路由对象中。loader配置项的作用是什么? 有哪些应用场景? 支持异步写法吗，同步呢? loader写法是异步函数时，如果组件也使用懒加载，会不会导致组件已经加载完毕，然而loader异步请求的数据还没有拿到。
+- 什么是布局路由
+- 什么是索引路由，索引路由可以定义子节点吗？
+
+
+
+**6: 后续：实现全局配置项，如何在项目启动时获取，关于封装axios，路由守卫**
+1：引入配置项，config.json，这个为了可以在全局获取，需要改在项目启动文件main.ts中提取读取。 
+- 方式1：读取后，通过localStorage存储。
+- 方式2：尝试zustand是否可以接管，只要能达到项目启动后，可以获取到全局配置信息，即可。使用createcontext貌似是可以的。
+2:接口，如何统一管理。 包含了1:接口地址 2:调用方式? 重复代码较多，是否必要
+3:接口封装:request.ts，封装axios的get、post、update、delete、put方法，最好增加防抖的逻辑在里面。
+4:路由守卫，进入路由前，应该做校验。
+5:构建page组件，试试路由是否正常。试用hash以及history两种，因为总有些地方不太清楚(使用createHash + routeProvider注入)
+6: utils下面存放的工具类
