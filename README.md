@@ -103,11 +103,11 @@ react19引入antddesign的一些坑--兼容性问题测试
 
 
 **6: 后续：实现全局配置项，如何在项目启动时获取，关于封装axios，路由守卫**
-1：引入配置项，config.json，这个为了可以在全局获取，需要改在项目启动文件main.ts中提取读取。 
+1. 引入配置项，config.json，这个为了可以在全局获取，需要改在项目启动文件main.ts中提取读取。 
 - 方式1：读取后，通过localStorage存储。
 - 方式2：尝试zustand是否可以接管，只要能达到项目启动后，可以获取到全局配置信息，即可。使用createcontext貌似是可以的。
-2:接口，如何统一管理。 包含了1:接口地址 2:调用方式? 重复代码较多，是否必要
-3:接口封装:request.ts，封装axios的get、post、update、delete、put方法，最好增加防抖的逻辑在里面。
-4:路由守卫，进入路由前，应该做校验。
-5:构建page组件，试试路由是否正常。试用hash以及history两种，因为总有些地方不太清楚(使用createHash + routeProvider注入)
-6: utils下面存放的工具类
+2. 接口，如何统一管理。 包含了1:接口地址 2:调用方式? 重复代码较多，是否必要
+3. 接口封装:request.ts，封装axios的get、post、update、delete、put方法，最好增加防抖的逻辑在里面。
+4. 路由守卫，进入路由前，应该做校验。
+5. 构建page组件，试试路由是否正常。试用hash以及history两种，因为总有些地方不太清楚(使用createHash + routeProvider注入)
+6. utils下面存放的工具类
