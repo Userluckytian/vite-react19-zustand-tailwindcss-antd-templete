@@ -11,6 +11,10 @@ import type {
   ServerResult
 } from './types';
 
+interface NewAxiosRequestConfig<D = any> extends AxiosRequestConfig<D> {
+  _mapKey?: string; // 存储请求唯一值的
+}
+
 class AxiosRequest {
   // axios 实例
   instance: AxiosInstance;
@@ -35,7 +39,7 @@ class AxiosRequest {
 
         const mapKey = this.generateMapKey(res);
         // 保存key到请求配置中，供响应拦截器使用
-        (res as any)._mapKey = mapKey;
+        (res as NewAxiosRequestConfig)._mapKey = mapKey;
 
         // 如果存在则删除该请求
         if (this.abortControllerMap.get(mapKey)) {
@@ -64,7 +68,7 @@ class AxiosRequest {
       // 因为我们接口的数据都在res.data下，所以我们直接返回res.data
       (res: AxiosResponse) => {
         // 从请求配置中获取之前保存的key
-        const mapKey = (res.config as any)._mapKey || '';
+        const mapKey = (res.config as NewAxiosRequestConfig)._mapKey || '';
         this.abortControllerMap.delete(mapKey);
         return res.data;
       },
@@ -127,7 +131,7 @@ class AxiosRequest {
     const requestAPI = this.instance.delete(url, options) as Promise<ServerResult<T>>;
     return debounce ? this.debounceRequest(url, requestAPI, debounceTime) : requestAPI;
   }
-  
+
   /**
    * 生成请求的唯一key（考虑参数）
    */
