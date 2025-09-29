@@ -1,6 +1,7 @@
 import { useLoaderData, useParams } from "react-router";
-
+import { useNavigate } from "react-router";
 export default function RouteDemo() {
+    const navigate = useNavigate();
     // 1: 获取loader的数据
     let data = useLoaderData();
     console.log('data', data);
@@ -9,6 +10,6 @@ export default function RouteDemo() {
     console.log('params', params);
 
     return (
-        <div>RouteDemo</div>
+        <div onClick={() => navigate('/layout')}>点我返回首页</div>
     )
 }

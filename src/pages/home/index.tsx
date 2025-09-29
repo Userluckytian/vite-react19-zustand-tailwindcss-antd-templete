@@ -90,6 +90,7 @@ export default function Home() {
             {/* 引入antd-design */}
             <Button type="primary" onClick={() => openInfo()}>antd-btn</Button>
             <Button type="primary" onClick={() => navigate('/404')}>导航到404页面</Button>
+            <Button type="primary" onClick={() => navigate('/layout/teams/123')}>导航到下一页</Button>
             <DatePicker></DatePicker>
         </Fragment>
     )
