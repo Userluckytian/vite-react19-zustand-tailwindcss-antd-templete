@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useOutlet } from "react-router";
 import Layout from "@/layout";
 import { getLocalInfo } from "@/store/session-store";
 import { message } from "antd";
-import NProgress from "@/request/npprogress";
+import NProgress from "@/route/npprogress";
 
 function Guards() {
   const outlet = useOutlet();
