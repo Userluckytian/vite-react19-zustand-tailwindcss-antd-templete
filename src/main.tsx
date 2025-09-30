@@ -11,14 +11,38 @@ import './styles/tailwind.css'
 /* tailwindcss------------end */
 
 /* react-router------------start */
-import { createBrowserRouter, RouterProvider, HashRouter } from "react-router";
+import { RouterProvider } from "react-router";
 import router from './route'
 /* react-router------------end */
 
 /* antd-design------------start */
-import '@ant-design/v5-patch-for-react-19'; // 兼容react19的patch
+
 import { App, ConfigProvider, theme } from "antd";
 import zhCN from "antd/locale/zh_CN";
+// 兼容react19的方式二选一：优选方式一
+/*
+  下面的代码我都开发环境都可以运行，但是打包后就不行了! 如果你使用方式1打包后运行也是正常的，就不用看方式2了。否则就用方式2把。
+  方式1：直接添加这句代码即可： import '@ant-design/v5-patch-for-react-19';
+  但本项目中不知道为啥不行！
+  方式2：使用unstableSetRender, 这个在本项目中可以！
+  代码如下：
+  ```javascript
+  import { unstableSetRender } from 'antd';
+  unstableSetRender((node, container) => {
+    // @ts-ignore
+    container._reactRoot ||= createRoot(container);
+    // @ts-ignore
+    const root = container._reactRoot;
+    root.render(node);
+    return async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      root.unmount();
+    };
+  });
+  ```
+*/
+// import '@ant-design/v5-patch-for-react-19'; // 兼容react19的patch
+import { unstableSetRender } from 'antd';
 /* antd-design------------end */
 
 /* dayjs------------start */
@@ -37,6 +61,19 @@ const getUserConfig = async (path: string) => {
   }
   return await response.json();
 }
+
+unstableSetRender((node, container) => {
+  // @ts-ignore
+  container._reactRoot ||= createRoot(container);
+  // @ts-ignore
+  const root = container._reactRoot;
+  root.render(node);
+  return async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    root.unmount();
+  };
+});
+
 
 // raect19新的API之：父传子不再需要写provider字样, 之前需要携带 GlobalContext.provider。
 export const GlobalContext = createContext({} as any);
