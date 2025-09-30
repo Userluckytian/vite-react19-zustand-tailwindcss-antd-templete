@@ -1,5 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig, type InternalAxiosRequestConfig } from "axios";
 import { message } from "antd";
+import NProgress from "@/route/npprogress";
 
 /** 默认系统位置，如果涉及到一些接口需要传特定位置的话，记得更新 */
 const defaultPosConfig = {
