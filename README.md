@@ -67,7 +67,7 @@ useOptimistic 是 useState 在‌异步交互场景‌的强化扩展，它允�
 
 
 **1：react19的新特征、以及改进的内容。**
-> 新的变化： https://react.dev/blog/2024/12/05/react-19#whats-new-in-react-19
+> 新的变化： https://react.dev/blog/2024/12/05/react-19#whats-new-in-react-19  
 > 新的改进:  https://react.dev/blog/2024/12/05/react-19#improvements-in-react-19 
 
   1.  react19将ref放在了props中，那么是不是可以通过ref获取子组件的全部变量了？ 我的子组件的useImperativeHandle还需要定义吗？
