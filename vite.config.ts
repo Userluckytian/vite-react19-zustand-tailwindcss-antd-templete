@@ -47,7 +47,7 @@ export default defineConfig({
           }
         }
       }
-    }
+    },
   },
   resolve: {
     alias: {
@@ -58,6 +58,15 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: "modern-compiler", // 修改api调用方式
+        silenceDeprecations: ["legacy-js-api"], // 静默警告
+        additionalData: `@use "@/styles/global.scss"`,
+      }
+    }
+  },
   define: {
     webConfig: JSON.stringify(webConfig)
   }
