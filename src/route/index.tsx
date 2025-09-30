@@ -41,6 +41,7 @@ const router = createHashRouter(
                 },
                 { path: "demoOne", element: LazyLoadComp(lazy(() => import("@/pages/demos/demo1"))) },
                 { path: "demoTwo", element: LazyLoadComp(lazy(() => import("@/pages/demos/demo2"))) },
+                { path: "demoThree", element: LazyLoadComp(lazy(() => import("@/pages/demos/scroll-load-from-comp"))) },
                 { path: "404", element: LazyLoadComp(lazy(() => import("@/components/NotFoundPage"))) }
             ]
         },
