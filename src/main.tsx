@@ -20,7 +20,7 @@ import router from './route'
 import { App, ConfigProvider, theme } from "antd";
 import zhCN from "antd/locale/zh_CN";
 // 兼容react19的方式二选一：优选方式一
-/*
+/* 解决方案来源：https://github.com/ant-design/ant-design/issues/54312
   下面的代码我都开发环境都可以运行，但是打包后就不行了! 如果你使用方式1打包后运行也是正常的，就不用看方式2了。否则就用方式2把。
   方式1：直接添加这句代码即可： import '@ant-design/v5-patch-for-react-19';
   但本项目中不知道为啥不行！
