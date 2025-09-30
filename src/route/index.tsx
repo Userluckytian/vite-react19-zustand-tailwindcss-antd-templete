@@ -33,7 +33,7 @@ const router = createHashRouter(
                     //     return { age: 18, name: 'xiao ming', teamId: params.teamId };
                     // },
                     // Component: RouteDemo,
-                    element: LazyLoadComp(lazy(() => import('@/pages/route-demo')))
+                    element: LazyLoadComp(lazy(() => import('@/pages/demos/route-demo')))
                 },
                 { path: "404", element: LazyLoadComp(lazy(() => import("@/components/NotFoundPage"))) }
             ]

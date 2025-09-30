@@ -3,10 +3,10 @@ import reactLogo from '@/assets/react.svg'
 import viteLogo from '/vite.svg'
 
 import { Button, message, Modal, DatePicker } from 'antd'
-import UseHook from '../hook-demo/useHook'
-import UseOptimisticHook from '../hook-demo/useOptimisticHook'
-import UseTransitionHook from '../hook-demo/useTransitionHook'
-import ZustandUseDemo from '../zustand_use_demo'
+import UseHook from '../demos/hook-demo/useHook'
+import UseOptimisticHook from '../demos/hook-demo/useOptimisticHook'
+import UseTransitionHook from '../demos/hook-demo/useTransitionHook'
+import ZustandUseDemo from '../demos/zustand_use_demo'
 import { useUserStoreSample } from '@/store/zustand-store/userStore_sample'
 import { GlobalContext } from '@/main'
 import { useNavigate } from 'react-router';
@@ -41,14 +41,6 @@ export default function Home() {
 
     return (
         <Fragment>
-            <div>
-                <a href="https://vite.dev" target="_blank">
-                    <img src={viteLogo} className="logo" alt="Vite logo" />
-                </a>
-                <a href="https://react.dev" target="_blank">
-                    <img src={reactLogo} className="logo react" alt="React logo" />
-                </a>
-            </div>
             <h1>Vite + React</h1>
             <div className="card">
                 <button onClick={() => setCount((count) => count + 1)}>
@@ -60,7 +52,6 @@ export default function Home() {
             </div>
             <div className="read-the-docs">
                 {/* 钩子函数1 */}
-
                 <UseTransitionHook ref={
                     (node: any) => {
                         return () => { }
