@@ -63,7 +63,7 @@ export default defineConfig({
       scss: {
         api: "modern-compiler", // 修改api调用方式
         silenceDeprecations: ["legacy-js-api"], // 静默警告
-        additionalData: `@use "@/styles/global.scss"`,
+        additionalData: `@use "@/styles/global.scss";`, // 添加全局变量, 需要加分号隔断, 不然会报错
       }
     }
   },
