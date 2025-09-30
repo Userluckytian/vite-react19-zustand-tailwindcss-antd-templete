@@ -6,11 +6,15 @@ import Guards from "./Guards";
 const router = createHashRouter(
     [
         // path为空时，重定向到layout
-        { path: '', element: <Navigate to="/layout" /> },
+        { path: '', element: <Navigate to="/welcome" /> },
         // 使用LazyLoadComp动态加载页面
         {
             path: '/login',
             element: LazyLoadComp(lazy(() => import("@/pages/login"))),
+        },
+        {
+            path: '/welcome',
+            element: LazyLoadComp(lazy(() => import("@/pages/welcome"))),
         },
         {
             path: '/layout',
@@ -35,6 +39,8 @@ const router = createHashRouter(
                     // Component: RouteDemo,
                     element: LazyLoadComp(lazy(() => import('@/pages/demos/route-demo')))
                 },
+                { path: "demoOne", element: LazyLoadComp(lazy(() => import("@/pages/demos/demo1"))) },
+                { path: "demoTwo", element: LazyLoadComp(lazy(() => import("@/pages/demos/demo2"))) },
                 { path: "404", element: LazyLoadComp(lazy(() => import("@/components/NotFoundPage"))) }
             ]
         },
