@@ -1,6 +1,6 @@
 {
   "warningTip": "json文件不支持双斜杠写注释，如果你写了，可能会导致系统无法正常运行，请注意！",
-  "systemTitle": "生态环境卫星遥感影像产品生产线",
+  "systemTitle": "产品生产线",
   "gdosUrl_des": "gdos-assets,这个是接口，貌似是从服务器相对应的目录下找文件，属于取静态资源的接口",
   "gdosUrl": "http://10.17.17.243/gdos-assets",
   "ssoServerUrl": "http://10.17.17.243/sso-server",

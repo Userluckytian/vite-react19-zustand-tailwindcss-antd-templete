@@ -1,7 +1,7 @@
 import { App, Button, Checkbox, Flex, Form, Input, message } from "antd";
 import { LockOutlined, SafetyCertificateOutlined, UserOutlined } from "@ant-design/icons";
 
-import logo from "@/assets/images/logo.png"
+import logo from "@/assets/react.svg"
 import bgPng from "@/assets/images/bg.png"
 import { createVCode, type VCodeType } from "@/utils/valid-code"
 import { useEffect, useState } from "react";
@@ -92,9 +92,11 @@ const Login = ({ }) => {
     }, [])
     return (
         <div className="w-full h-full flex relative">
-            <div className="absolute flex items-center text-2xl p-[20px] font-bold text-gray-100">
-                <img src={logo} className="w-21 h-full" />
-                {webConfig.systemTitle}
+            <div className="absolute flex items-center p-[20px] font-bold text-gray-100 gap-5.5">
+                <img src={logo} className="w-14 h-full" />
+                <span className="text-3xl">
+                    {webConfig.systemTitle}
+                </span>
             </div>
             <div className="w-full h-full min-w-[1280px] overflow-hidden flex  bg-gradient-to-br from-[#256bc1] to-[#071d95]">
                 <div className="flex-1 flex-shrink-0 basis-3/5 flex-grow-0 w-3/5 flex items-center justify-center">
