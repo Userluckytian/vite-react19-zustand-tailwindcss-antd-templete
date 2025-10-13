@@ -1,5 +1,5 @@
 import { createHashRouter, Navigate } from "react-router";
-import { lazy } from "react";
+import { lazy, type ReactElement } from "react";
 import LazyLoadComp from "./lazyLoadComp";
 import { sleep } from "@/utils/utils";
 import Guards from "./Guards";
@@ -18,7 +18,7 @@ const router = createHashRouter(
         },
         {
             path: '/layout',
-            element: <Guards />, //  LazyLoadComp(lazy(() => import("@/layout"))),
+            element: <Guards>{LazyLoadComp(lazy(() => import("@/layout"))) as ReactElement}</Guards>,
             children: [
                 { index: true, element: LazyLoadComp(lazy(() => import("@/pages/home"))) },
                 {
