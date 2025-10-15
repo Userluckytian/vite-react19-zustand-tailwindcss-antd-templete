@@ -10,9 +10,12 @@ import type {
   CreateRequestConfig,
   ServerResult
 } from './types';
+const DEFAULT_DEBOUNCETIME = 300;
 
 interface NewAxiosRequestConfig<D = any> extends AxiosRequestConfig<D> {
   _mapKey?: string; // 存储请求唯一值的
+  _debounce?: boolean; // 是否防抖
+  _debounceTime?: number; // 防抖时间
 }
 
 class AxiosRequest {
@@ -100,36 +103,36 @@ class AxiosRequest {
    * @param url - 链接
    * @param options - 参数
    */
-  get<T = object>(url: string, options = {}, debounce: Boolean = true, debounceTime = 300) {
-    const requestAPI = this.instance.get(url, options) as Promise<ServerResult<T>>;
-    return debounce ? this.debounceRequest(url, requestAPI, debounceTime) : requestAPI;
+  get<T = object>(url: string, config?: NewAxiosRequestConfig<object>) {
+    const requestAPI = this.instance.get(url, config) as Promise<ServerResult<T>>;
+    return config?._debounce ? this.debounceRequest(url, requestAPI, config?._debounceTime || DEFAULT_DEBOUNCETIME) : requestAPI;
   }
   /**
    * post请求
    * @param url - 链接
    * @param options - 参数
    */
-  post<T = object>(url: string, options = {}, debounce: Boolean = true, debounceTime = 300, config?: AxiosRequestConfig<object>) {
+  post<T = object>(url: string, options: object = {}, config?: NewAxiosRequestConfig<object>) {
     const requestAPI = this.instance.post(url, options, config) as Promise<ServerResult<T>>;
-    return debounce ? this.debounceRequest(url, requestAPI, debounceTime) : requestAPI;
+    return config?._debounce ? this.debounceRequest(url, requestAPI, config?._debounceTime || DEFAULT_DEBOUNCETIME) : requestAPI;
   }
   /**
    * put请求
    * @param url - 链接
    * @param options - 参数
    */
-  put<T = object>(url: string, options = {}, debounce: Boolean = true, debounceTime = 300, config?: AxiosRequestConfig<object>) {
+  put<T = object>(url: string, options: object = {}, config?: NewAxiosRequestConfig<object>) {
     const requestAPI = this.instance.put(url, options, config) as Promise<ServerResult<T>>;
-    return debounce ? this.debounceRequest(url, requestAPI, debounceTime) : requestAPI;
+    return config?._debounce ? this.debounceRequest(url, requestAPI, config?._debounceTime || DEFAULT_DEBOUNCETIME) : requestAPI;
   }
   /**
    * delete请求
    * @param url - 链接
    * @param options - 参数
    */
-  delete<T = object>(url: string, options = {}, debounce: Boolean = true, debounceTime = 300) {
-    const requestAPI = this.instance.delete(url, options) as Promise<ServerResult<T>>;
-    return debounce ? this.debounceRequest(url, requestAPI, debounceTime) : requestAPI;
+  delete<T = object>(url: string, config?: NewAxiosRequestConfig<object>) {
+    const requestAPI = this.instance.delete(url, config) as Promise<ServerResult<T>>;
+    return config?._debounce ? this.debounceRequest(url, requestAPI, config?._debounceTime || DEFAULT_DEBOUNCETIME) : requestAPI;
   }
 
   /**

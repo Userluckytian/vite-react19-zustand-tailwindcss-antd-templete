@@ -31,7 +31,7 @@ function creteRequest(url: string, tokenKey: string) {
       responseInterceptors(res) {
         const { data } = res;
         // 权限不足
-        if (data?.code === 401) {
+        if (data?.status === 401) {
           const lang = localStorage.getItem('lang');
           const enMsg = 'Insufficient permissions, please log in again!';
           const zhMsg = '权限不足，请重新登录！';
@@ -57,7 +57,7 @@ function creteRequest(url: string, tokenKey: string) {
         }
 
         // 错误处理
-        if (data?.code !== 200) {
+        if (data?.status !== 200) {
           handleError(data?.message);
           return res;
         }
