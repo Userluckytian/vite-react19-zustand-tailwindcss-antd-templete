@@ -1,4 +1,4 @@
-import { useState, useOptimistic, useTransition } from 'react';
+import { useState, useOptimistic, useTransition, Activity } from 'react';
 
 export default function UseOptimisticHook() {
 
@@ -50,11 +50,11 @@ export default function UseOptimisticHook() {
             </button>
             
             {/* before写法 */}
-            {error && <p style={{ color: 'red' }}>{error}</p>}
-            {/* react19.2： after写法 */}
-            {/* <Activity mode={error ? "visible" : "hidden"}>
+            {/* {error && <p style={{ color: 'red' }}>{error}</p>} */}
+            {/* after写法 */}
+            <Activity mode={error ? "visible" : "hidden"}>
                 <p style={{ color: 'red' }}>{error}</p>
-            </Activity> */}
+            </Activity>
         </div>
     );
 }
