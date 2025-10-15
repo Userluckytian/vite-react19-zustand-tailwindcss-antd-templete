@@ -48,6 +48,7 @@ import { unstableSetRender } from 'antd';
 /* dayjs------------start */
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
+import { setLocalInfo } from './store/session-store/local';
 dayjs.locale('zh-cn');
 /* dayjs------------end */
 
@@ -81,6 +82,8 @@ export const GlobalContext = createContext({} as any);
 async function bootstrap() {
   try {
     const configData = await getUserConfig(configPath); // 加载配置
+    // 存储到local中一份，原因： ts文件也可能需要读取
+    setLocalInfo('config', configData);
     const root = createRoot(document.getElementById('root')!);
     root.render(
       <ConfigProvider
