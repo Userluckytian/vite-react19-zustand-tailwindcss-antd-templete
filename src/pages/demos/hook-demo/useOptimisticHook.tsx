@@ -28,7 +28,7 @@ export default function UseOptimisticHook() {
     const handleLike = async () => {
         startTransition(async () => {
             if (isPending) return;
-            
+
             // 乐观更新
             addOptimisticLike(1);
             setError(null);
@@ -48,7 +48,13 @@ export default function UseOptimisticHook() {
             <button onClick={handleLike} disabled={isPending}>
                 点赞 {optimisticLikes} ❤️
             </button>
+            
+            {/* before写法 */}
             {error && <p style={{ color: 'red' }}>{error}</p>}
+            {/* react19.2： after写法 */}
+            {/* <Activity mode={error ? "visible" : "hidden"}>
+                <p style={{ color: 'red' }}>{error}</p>
+            </Activity> */}
         </div>
     );
 }

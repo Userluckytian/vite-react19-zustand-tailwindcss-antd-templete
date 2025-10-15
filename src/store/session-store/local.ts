@@ -32,7 +32,7 @@ export function setLocalInfo(key: string, value: unknown, expire: number | null 
  * 获取本地缓存数据
  * @param key - 唯一值
  */
-export function getLocalInfo<T>(key: string) {
+export function getLocalInfo<T>(key: string): any {
   const json = localStorage.getItem(key);
 
   if (json) {
