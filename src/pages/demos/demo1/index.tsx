@@ -5,7 +5,7 @@ export default function DemoOne() {
     return (
         <div className="zan">
             <span>
-                点赞
+                点赞特效
             </span>
             <ul>
                 {

@@ -14,7 +14,7 @@ function Guards({ children }: { children: JSX.Element }) {
   const [authChecked, setAuthChecked] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  console.log('====');
+  // console.log('====');
 
   const token: string = getLocalInfo('dmes_token');
 
@@ -29,7 +29,7 @@ function Guards({ children }: { children: JSX.Element }) {
 
   useEffect(() => {
     const checkAuth = async () => {
-      console.log('5');
+      // console.log('5');
       NProgress.start();
       setIsLoading(true);
 
@@ -50,7 +50,7 @@ function Guards({ children }: { children: JSX.Element }) {
         // 逻辑3：验证 token
         if (currentToken) {
           const isValid = await validToken(currentToken);
-          console.log('3');
+          // console.log('3');
 
           setIsAuthorized(isValid);
 
@@ -83,7 +83,7 @@ function Guards({ children }: { children: JSX.Element }) {
 
   // 显示加载状态
   if (isLoading) {
-    console.log('1');
+    // console.log('1');
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -96,13 +96,13 @@ function Guards({ children }: { children: JSX.Element }) {
 
   // 未授权且已完成验证
   if (authChecked && !isAuthorized) {
-    console.log('2');
+    // console.log('2');
     return <NoAuthPage />;
   }
 
   // 授权通过，渲染子组件
   if (authChecked && isAuthorized) {
-    console.log('4');
+    // console.log('4');
     // 如果是登录/注册页面且有 token，显示 outlet（会被重定向）
     if (['/login', '/register'].includes(location.pathname) && token) {
       return <div>{outlet}</div>;
