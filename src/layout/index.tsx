@@ -1,13 +1,56 @@
+import { cn } from '@/utils/tailwind'
+import { App, Avatar, Dropdown } from 'antd'
 import React, { Fragment } from 'react'
-import { Outlet } from 'react-router'
+import { Outlet, useNavigate } from 'react-router'
+import { UserOutlined } from "@ant-design/icons";
+import { useUserStoreSample } from '@/store/zustand-store/userStore_sample';
+import { clearLocalInfo } from '@/store/session-store';
+import { logout } from '@/request/services/login';
 
 export default function Layout() {
+    const { message } = App.useApp();
+    const navigate = useNavigate();
+    const exit = () => {
+        logout().then((res: any) => {
+            if (res.status === 200) {
+                clearLocalInfo();
+                navigate('/login')
+            } else {
+                message.error('退出失败, 请重试')
+            }
+        })
+    }
+    const userInfo_sample = useUserStoreSample((state) => state.userInfo_sample);
+    const dropMenus = [
+        {
+            label: <span onClick={() => exit()}>退出登录</span>,
+            key: 'exit',
+        }
+    ];
+
     return (
         <Fragment>
-            <header className='p-1 flex justify-between items-center border-b border-gray-300 dark:border-gray-700'>
-                我是标题
+            <header className={cn('flex justify-between items-center border-b border-gray-300 dark:border-gray-700 h-16', 'system-header')}>
+                <div className={cn('w-fit h-full flex items-center', 'system-logo-title')}>
+                    <div className={cn('flex gap-2.5 items-center m-2')}>
+                        <img src="/vite.svg" alt="" />
+                        <span className={cn('font-bold text-3xl')}>Vite React</span>
+                    </div>
+                    <ul className={cn('flex gap-3 items-center m-3.5')}>
+                        <li className={cn('w-20 text-[1rem] hover:cursor-pointer hover:opacity-80 hover:text-amber-600')}>Menu1</li>
+                        <li className={cn('w-20 text-[1rem] hover:cursor-pointer hover:opacity-80 hover:text-amber-600')}>Menu2</li>
+                        <li className={cn('w-20 text-[1rem] hover:cursor-pointer hover:opacity-80 hover:text-amber-600')}>Menu3</li>
+                        <li className={cn('w-20 text-[1rem] hover:cursor-pointer hover:opacity-80 hover:text-amber-600')}>Menu4</li>
+                    </ul>
+                </div>
+                <Dropdown menu={{ items: dropMenus }} trigger={['click']}>
+                    <div className={cn('w-fit pr-3 h-full flex justify-end-safe items-center gap-2', 'system-userinfo')}>
+                        <Avatar style={{ backgroundColor: '#87d068' }} icon={<UserOutlined />} />
+                        <span className='text-xl'>{userInfo_sample.userName}</span>
+                    </div>
+                </Dropdown>
             </header>
-            <main className='flex-1'>
+            <main className={cn('flex-1 h-[calc(100vh-4rem)] border-2', 'system-context')}>
                 <Outlet />
             </main>
         </Fragment>

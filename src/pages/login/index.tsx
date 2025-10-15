@@ -40,7 +40,7 @@ const Login = ({ }) => {
                     // 0：存储token，接口请求需要
                     setLocalInfo('dmes_token', res.data.userToken);
                     // 1：存储用户信息（zustand）
-                    setUserInfo_sample({ ...res.data.userInfo });
+                    setUserInfo_sample({ ...res.data });
                     // 2：如果存在重定向, 导航到对应位置
                     if (search?.includes('?redirect=')) {
                         const url = getRedirectUrl();

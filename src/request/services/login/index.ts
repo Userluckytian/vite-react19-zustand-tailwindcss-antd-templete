@@ -2,6 +2,7 @@
 import { request, type ServerResult } from '@/request/api';
 import { getLocalInfo } from '@/store/session-store/local';
 import { toFormData } from 'axios';
+import { header } from 'motion/react-client';
 // 数据类型
 export type BaseFormData = Record<string, unknown>
 export interface PaginationData {
@@ -12,6 +13,7 @@ export interface PaginationData {
 
 enum API {
   LOGINAPI = '/auth/login',
+  LOGOUTAPI = '/auth/logout',
   URL = '/content/article',
 }
 
@@ -23,6 +25,21 @@ export function login(data: Partial<BaseFormData>) {
   return request.post<ServerResult<BaseFormData[]>>(
     getLocalInfo('config').ssoServerUrl + API.LOGINAPI,
     toFormData(data)
+  );
+}
+/**
+ * 获取分页数据
+ * @param data - 请求数据
+ */
+export function logout() {
+  return request.post<ServerResult<BaseFormData[]>>(
+    getLocalInfo('config').ssoServerUrl + API.LOGOUTAPI,
+    {},
+    {
+      headers: {
+        token: getLocalInfo('dmes_token'),
+      }
+    }
   );
 }
 

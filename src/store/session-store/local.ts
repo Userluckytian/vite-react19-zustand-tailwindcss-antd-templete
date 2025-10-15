@@ -70,5 +70,10 @@ export function removeLocalInfo(key: string) {
 
 /** 清空本地缓存 */
 export function clearLocalInfo() {
-  localStorage.clear();
+  for (let i = 0; i < localStorage.length; i++) {
+    let key = localStorage.key(i); // 获取第 i 个键名
+    if (key && key !== 'config') {
+      localStorage.removeItem(key);
+    }
+  }
 }
