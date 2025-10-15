@@ -1,3 +1,9 @@
+/* tailwindcss------------start */
+import './styles/tailwind.css'
+import './styles/index.css'
+/* tailwindcss------------end */
+
+
 /* react------------start */
 // import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -5,10 +11,6 @@ import { createContext } from 'react';
 import './styles/main.css';
 /* react------------end */
 
-/* tailwindcss------------start */
-import './styles/index.css'
-import './styles/tailwind.css'
-/* tailwindcss------------end */
 
 /* react-router------------start */
 import { RouterProvider } from "react-router";

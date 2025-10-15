@@ -30,7 +30,7 @@ export default function Layout() {
 
     return (
         <Fragment>
-            <header className={cn('flex justify-between items-center border-b border-gray-300 dark:border-gray-700 h-16', 'system-header')}>
+            <header className={cn('flex justify-between items-center bg-white border-b border-gray-300 dark:border-gray-700 h-16', 'system-header')}>
                 <div className={cn('w-fit h-full flex items-center', 'system-logo-title')}>
                     <div className={cn('flex gap-2.5 items-center m-2')}>
                         <img src="/vite.svg" alt="" />
@@ -44,13 +44,13 @@ export default function Layout() {
                     </ul>
                 </div>
                 <Dropdown menu={{ items: dropMenus }} trigger={['click']}>
-                    <div className={cn('w-fit pr-3 h-full flex justify-end-safe items-center gap-2', 'system-userinfo')}>
+                    <div className={cn('w-fit pr-3 h-full flex justify-end-safe items-center gap-2 hover:cursor-pointer hover:text-amber-600', 'system-userinfo')}>
                         <Avatar style={{ backgroundColor: '#87d068' }} icon={<UserOutlined />} />
                         <span className='text-xl'>{userInfo_sample.userName}</span>
                     </div>
                 </Dropdown>
             </header>
-            <main className={cn('flex-1 h-[calc(100vh-4rem)] border-2', 'system-context')}>
+            <main className={cn('flex-1  m-2 h-[calc(100vh-5rem)] bg-white overflow-hidden', 'system-context')}>
                 <Outlet />
             </main>
         </Fragment>
