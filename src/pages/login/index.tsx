@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { setLocalInfo } from "@/store/session-store";
 import { useUserStoreSample } from "@/store/zustand-store/userStore_sample";
+import { login } from "@/request/services/login";
 const Login = ({ }) => {
     const isProd = process.env.NODE_ENV === "production";
     const navigate = useNavigate()
@@ -34,25 +35,12 @@ const Login = ({ }) => {
                 userName: values.username,
                 password: values.password,
             };
-            Promise.resolve().then((res: any) => {
-                const newRes: any = {
-                    status: 200,
-                    data: {
-                        userToken: '123',
-                        userInfo: {
-                            id: 1,
-                            username: '222333',
-                            email: '123@163.com',
-                            phone: '13843838438',
-                        }
-                    },
-                    message: '成功'
-                }
-                if (newRes.status === 200) {
+            login(loginParams).then((res: any) => {
+                if (res.status === 200) {
                     // 0：存储token，接口请求需要
-                    setLocalInfo('dmes_token', newRes.data.userToken);
-                    // 1：存储用户信息
-                    setUserInfo_sample({ ...newRes.data.userInfo });
+                    setLocalInfo('dmes_token', res.data.userToken);
+                    // 1：存储用户信息（zustand）
+                    setUserInfo_sample({ ...res.data.userInfo });
                     // 2：如果存在重定向, 导航到对应位置
                     if (search?.includes('?redirect=')) {
                         const url = getRedirectUrl();
@@ -64,7 +52,7 @@ const Login = ({ }) => {
                         navigate("/layout");
                     }
                 } else {
-                    message.error(newRes.message);
+                    message.error(res.message);
                     createNewVCode();
                 }
             }).finally(() => {

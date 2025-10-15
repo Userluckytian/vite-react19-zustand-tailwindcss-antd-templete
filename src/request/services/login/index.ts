@@ -1,5 +1,7 @@
 
 import { request, type ServerResult } from '@/request/api';
+import { getLocalInfo } from '@/store/session-store/local';
+import { toFormData } from 'axios';
 // 数据类型
 export type BaseFormData = Record<string, unknown>
 export interface PaginationData {
@@ -9,9 +11,20 @@ export interface PaginationData {
 
 
 enum API {
-  URL = '/content/article'
+  LOGINAPI = '/auth/login',
+  URL = '/content/article',
 }
 
+/**
+ * 获取分页数据
+ * @param data - 请求数据
+ */
+export function login(data: Partial<BaseFormData>) {
+  return request.post<ServerResult<BaseFormData[]>>(
+    getLocalInfo('config').ssoServerUrl + API.LOGINAPI,
+    toFormData(data)
+  );
+}
 
 /**
  * 获取分页数据
