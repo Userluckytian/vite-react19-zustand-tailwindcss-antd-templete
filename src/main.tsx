@@ -10,6 +10,10 @@ import { createRoot } from 'react-dom/client'
 import { createContext } from 'react';
 import './styles/main.css';
 /* react------------end */
+/* leaflet------------start */
+import 'leaflet/dist/leaflet.css';
+/* leaflet------------end */
+
 
 
 /* react-router------------start */
