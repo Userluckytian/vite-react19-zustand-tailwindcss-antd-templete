@@ -18,7 +18,7 @@ const router = createHashRouter(
         },
         {
             path: '/layout',
-            element: <Guards>{LazyLoadComp(lazy(() => import("@/layout"))) as ReactElement}</Guards>,
+            element: LazyLoadComp(lazy(() => import("@/layout"))) as ReactElement, // <Guards>{}</Guards>,
             children: [
                 { index: true, element: LazyLoadComp(lazy(() => import("@/pages/home"))) },
                 {
@@ -39,9 +39,13 @@ const router = createHashRouter(
                     // Component: RouteDemo,
                     element: LazyLoadComp(lazy(() => import('@/pages/demos/route-demo')))
                 },
+                { path: "map", element: LazyLoadComp(lazy(() => import("@/pages/map"))) },
                 { path: "demoOne", element: LazyLoadComp(lazy(() => import("@/pages/demos/demo1"))) },
                 { path: "demoTwo", element: LazyLoadComp(lazy(() => import("@/pages/demos/demo2"))) },
-                { path: "demoThree", element: LazyLoadComp(lazy(() => import("@/pages/demos/scroll-load-from-comp"))) },
+                {
+                    path: "demoThree",
+                    element: <Guards>{LazyLoadComp(lazy(() => import("@/pages/demos/scroll-load-from-comp"))) as ReactElement}</Guards>
+                },
                 { path: "404", element: LazyLoadComp(lazy(() => import("@/components/NotFoundPage"))) }
             ]
         },
