@@ -67,8 +67,45 @@ function debounce(func, wait = 100) {
 }
 
 
+// 节流函数原理:指频繁触发事件时，只会在指定的时间段内执行事件回调，即触发事件间隔大于等于指定的时间才会执行回调函数。总结起来就是：事件，按照一段时间的间隔来进行触发。
+// 时间戳方式：
+// func是用户传入需要防抖的函数
+// wait是等待时间
+function throttle(func, wait = 50) {
+    // 上一次执行该函数的时间
+    let lastTime = 0
+    return function (...args) {
+        // 当前时间
+        let now = +new Date()
+        // 将当前时间和上一次执行函数时间对比
+        // 如果差值大于设置的等待时间就执行函数
+        if (now - lastTime > wait) {
+            lastTime = now
+            func.apply(this, args)
+        }
+    }
+}
+
+/** 格式化数字
+ * 
+ * @param num 
+ * @param toFixedNum 
+ * @returns 
+ */
+function formatNumber(num: number, toFixedNum: number = 2) {
+    const isInterger = Number.isInteger(num);
+    if (isInterger) {
+        return num;
+    } else {
+        return Number(num.toFixed(toFixedNum));
+    }
+}
+
+
 export {
     sleep,
+    formatNumber,
     buildBase64Image,
+    throttle,
     debounce
 }
