@@ -42,7 +42,7 @@ export default function ScrollLoadFromComp() {
     return (
         <div className='image-grid'>
             {images.map((image, index) => (
-                <div className='image-grid__item'>
+                <div className='image-grid__item' key={'IGI_' + index}>
                     <PicCard
                         key={`SLP_${index}`}
                         image={image.image}
