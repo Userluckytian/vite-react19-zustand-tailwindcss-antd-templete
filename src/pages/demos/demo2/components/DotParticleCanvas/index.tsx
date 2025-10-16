@@ -10,11 +10,9 @@ interface DotParticleCanvasProps {
 }
 
 const DotParticleCanvas = ({
-    containerWidth = 200,
-    containerHeight = 200,
     backgroundColor = "transparent", // 直接使用 transparent
     particleColor = "100, 100, 100",
-    animationSpeed = 0.006,
+    animationSpeed = 0.6,
 }: DotParticleCanvasProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const requestIdRef = useRef<number | null>(null)
@@ -50,8 +48,10 @@ const DotParticleCanvas = ({
         const dpr = window.devicePixelRatio || 1
         dprRef.current = dpr
 
-        const displayWidth = containerWidth;
-        const displayHeight = containerHeight;
+        const container = canvas.parentElement; // 或者通过ref获取外部div元素
+
+        const displayWidth = container.clientWidth;
+        const displayHeight = container.clientHeight;
 
         canvas.width = displayWidth * dpr
         canvas.height = displayHeight * dpr
@@ -63,7 +63,7 @@ const DotParticleCanvas = ({
         if (ctx) {
             ctx.scale(dpr, dpr)
         }
-    }, [containerWidth, containerHeight])
+    }, [])
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
         const canvas = canvasRef.current
@@ -223,11 +223,7 @@ const DotParticleCanvas = ({
         }
     }, [animate, resizeCanvas, handleMouseMove, handleMouseDown, handleMouseUp])
 
-    return (
-        <div className="HB" style={{ backgroundColor, width: containerWidth, height: containerHeight }}>
-            <canvas ref={canvasRef} className="HBCanvas" />
-        </div>
-    )
+    return  <canvas ref={canvasRef} className="HBCanvas" />
 }
 
 export default DotParticleCanvas
