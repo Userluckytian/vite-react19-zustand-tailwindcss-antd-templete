@@ -11,6 +11,8 @@ import './index.scss';
 import { GlobalContext } from '@/main'
 import { addScaleControl, addZoomControl } from './map-utils';
 import { formatNumber, throttle } from '@/utils/utils';
+import { App } from 'antd';
+import CustomLeafLetDrawBar from '@/components/custom-leaflet-draw-bar'
 
 interface MapPreviewProps {
     outputMapView?: (map: L.Map) => void;
@@ -26,9 +28,10 @@ export default function SampleCheckEditMap({
         maxZoom: 18,
         tileSize: 256
     };
+    const { message } = App.useApp();
     const globalConfigContext = useContext(GlobalContext);
     const baseMapSetting = globalConfigContext.baseMapSetting;
-
+    const drawBarRef = useRef<any>(null)
     const [mapView, setMapView] = useState<L.Map | null>(null);
 
     const mapRef = useRef(null)
@@ -60,6 +63,16 @@ export default function SampleCheckEditMap({
 
     function mouseMoveFun(e: any) {
         setLngLat(e.latlng);
+    };
+
+    // 清除绘制信息和所选择的行政区划信息
+    function clearDrawAndDistrict() { };
+
+
+    // 绘制多边形
+    function drawPolygon(value: { geometry: any }) {
+        clearDrawAndDistrict();
+        drawBarRef && drawBarRef.current.destory();
     };
 
 
@@ -168,9 +181,9 @@ export default function SampleCheckEditMap({
             </div>
 
             {/* 工具条2: 绘制工具 */}
-
-            
-
+            <div className="draw-tools">
+                <CustomLeafLetDrawBar mapInstance={mapView} drawGeoJsonResult={drawPolygon} ref={drawBarRef} />
+            </div>
             {/* 工具条3: 绘制面积 */}
 
             {/* 工具条3: 删除绘制内容的按钮 */}

@@ -56,7 +56,7 @@
     }
   }
   // 经纬度
-  .lnglat{
+  .lnglat {
     position: absolute;
     bottom: 0px;
     right: 0px;
@@ -65,5 +65,12 @@
     z-index: 400;
     display: flex;
     gap: 5px;
+  }
+  // 绘制工具
+  .draw-tools {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    z-index: 400;
   }
 }
