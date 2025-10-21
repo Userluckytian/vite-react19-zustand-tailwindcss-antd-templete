@@ -13,6 +13,7 @@ import { addScaleControl, addZoomControl } from './map-utils';
 import { formatNumber, throttle } from '@/utils/utils';
 import { App } from 'antd';
 import CustomLeafLetDrawBar from '@/components/custom-leaflet-draw-bar'
+import { addLeafletGeoJsonLayer, bingGeojsonLayerEditEvent } from '@/utils/leafletUtils';
 
 interface MapPreviewProps {
     outputMapView?: (map: L.Map) => void;
@@ -33,6 +34,7 @@ export default function SampleCheckEditMap({
     const baseMapSetting = globalConfigContext.baseMapSetting;
     const drawBarRef = useRef<any>(null)
     const [mapView, setMapView] = useState<L.Map | null>(null);
+    const drawLayerGroup = useRef<L.LayerGroup>(new L.LayerGroup());
 
     const mapRef = useRef(null)
     // 经纬度信息
@@ -71,8 +73,19 @@ export default function SampleCheckEditMap({
 
     // 绘制多边形
     function drawPolygon(value: { geometry: any }) {
-        clearDrawAndDistrict();
-        drawBarRef && drawBarRef.current.destory();
+        console.log('value', value);
+        const geoLayerOption = {
+            style: {
+                color: "#000dff",
+                weight: 3,
+                opacity: 0.8,
+                fill: true, // 设置false的话，就只能点击边才能触发了！
+                id: 'xxx'
+            },
+        };
+        const geoJsonLayer = addLeafletGeoJsonLayer(mapView!, value.geometry, 'layerGeoJsonPane', 3, geoLayerOption);
+        bingGeojsonLayerEditEvent(geoJsonLayer, mapView!);
+        drawLayerGroup.current?.addLayer(geoJsonLayer).addTo(mapView!);
     };
 
 
@@ -114,8 +127,6 @@ export default function SampleCheckEditMap({
             // const satelliteMap = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
             //     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
             // });
-            // 周一、 周三、周四、周五
-            // 周一、周二、周三、周五
             // const baseLayers = {
             //     "谷歌影像": satelliteMap,
             // }
