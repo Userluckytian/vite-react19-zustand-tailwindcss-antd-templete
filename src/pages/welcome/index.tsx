@@ -75,15 +75,17 @@ export default function Welcome() {
     return (
         <div className='w-full h-full flex align-center justify-center flex-col gap-8 relative' id="welcomeContainerId">
             {/* 底层：背景 */}
-            <div className="header finisher-header" style={{ width: '100%', height: '100%', position: 'absolute', left: 0, top: 0, zIndex: -1 }}></div>
+            <div className="header finisher-header" style={{ width: '100%', height: '100%', position: 'absolute', left: 0, top: 0, zIndex: 0 }}></div>
             {/* 内容部分 */}
-            <div className="text-6xl">🎉</div>
-            <h1 className='text-white'>项目启动成功</h1>
-            <p className='text-white text-xl'>一切准备就绪，开始您的精彩旅程吧！</p>
-            <div className="action-buttons">
-                <div className="btn" onClick={() => navigate('/layout')}>查看文档</div>
-                <div className="btn" onClick={() => navigate('/layout')}>进入主页</div>
-                <div className="btn" onClick={() => playConFetti(confettiObj)}>播放纸屑</div>
+            <div className='flex align-center justify-center flex-col gap-8 absolute w-full h-full z-1'>
+                <div className="text-6xl">🎉</div>
+                <h1 className='text-white'>项目启动成功</h1>
+                <p className='text-white text-xl'>一切准备就绪，开始您的精彩旅程吧！</p>
+                <div className="action-buttons">
+                    <div className="btn" onClick={() => navigate('/login')}>查看文档</div>
+                    <div className="btn" onClick={() => navigate('/login')}>进入主页</div>
+                    <div className="btn" onClick={() => playConFetti(confettiObj)}>播放纸屑</div>
+                </div>
             </div>
             {/* 顶层:五彩纸屑 */}
             <div id="confetti-wrapper"></div>
