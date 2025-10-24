@@ -54,7 +54,7 @@ type toolsOptions = {
 export class DrawGeometryService {
     // 常量
     private OVERLAY_PANE_INDEX = 400;
-    private SHADOW_PANE_INDEX = 500;
+    private POPUP_PANE_INDEX = 700;
     private map: L.Map;
     // 图层初始化时，全部设为不可见
     private drawLayerStyle = {
@@ -84,10 +84,17 @@ export class DrawGeometryService {
     }
     private init(options: toolsOptions) {
         // (1) pane 用来定义每个图层的Zindex位置，这个只和每个layer有关系，但是和layerGroup没关系。所以下面又定义了一个layerGroup来收集和管理这些layer。
-        let pane = this.map.getPane('drawToolPane');
-        if (!pane) {
-            pane = this.map.createPane('drawToolPane');
-            pane.style.zIndex = (this.OVERLAY_PANE_INDEX + 1) + ''; // 要大于overlayPane的层级
+        let drawsPane = this.map.getPane('drawToolPane');
+        let measurePane = this.map.getPane('measureToolPane');
+        // 绘制面板
+        if (!drawsPane) {
+            drawsPane = this.map.createPane('drawToolPane');
+            drawsPane.style.zIndex = (this.OVERLAY_PANE_INDEX + 1) + ''; // 要大于overlayPane的层级
+        }
+        // 测量面板
+        if (!measurePane) {
+            measurePane = this.map.createPane('measureToolPane');
+            measurePane.style.zIndex = (this.POPUP_PANE_INDEX + 1) + ''; // 要大于popup的层级
         }
         // （2）构建一个组，
         if (!this.drawLayerGroup) {

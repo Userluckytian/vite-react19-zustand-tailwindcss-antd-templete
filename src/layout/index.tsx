@@ -40,9 +40,9 @@ export default function Layout() {
                         {/* 地图模块应该包括绘制、地图切换、缩放、测量、底图切换等功能 */}
                         <li className={cn('w-25 text-[1rem] hover:cursor-pointer hover:opacity-80 hover:text-amber-600')} onClick={() => navigate('/layout/map')}>地图模块</li>
                         {/* react 19 练习 */}
-                        <li className={cn('w-25 text-[1rem] hover:cursor-pointer hover:opacity-80 hover:text-amber-600')} onClick={() => navigate('/layout/demoOne')}>react19练习</li>
+                        <li className={cn('w-25 text-[1rem] hover:cursor-pointer hover:opacity-80 hover:text-amber-600')} onClick={() => navigate('/layout/demoOne')}>react19</li>
                         {/* zustand 练习 */}
-                        <li className={cn('w-25 text-[1rem] hover:cursor-pointer hover:opacity-80 hover:text-amber-600')} onClick={() => navigate('/layout/DemoTwo')}>zustand练习</li>
+                        <li className={cn('w-25 text-[1rem] hover:cursor-pointer hover:opacity-80 hover:text-amber-600')} onClick={() => navigate('/layout/DemoTwo')}>zustand</li>
                         {/* 构建左右结构 */}
                         <li className={cn('w-25 text-[1rem] hover:cursor-pointer hover:opacity-80 hover:text-amber-600')} onClick={() => navigate('/layout/demoThree')}>其他</li>
                     </ul>
