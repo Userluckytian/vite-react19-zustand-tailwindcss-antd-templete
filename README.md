@@ -112,3 +112,183 @@ react19引入antddesign的一些坑--兼容性问题测试
 4. 路由守卫，进入路由前，应该做校验。
 5. 构建page组件，试试路由是否正常。试用hash以及history两种，因为总有些地方不太清楚(清楚了：使用createHash + routeProvider注入)
 6. utils下面存放的工具类
+
+### 后续1：动态路由的方式1
+【需要配合状态管理zustand】
+第一步：在app.tsx中迈入钉子，并通过useEffect对用户信息更新时，更新路由信息。
+```javascript
+app.tsx
+
+const AppIndex: FC = (): ReactElement => {
+  const userInfo: any = useUserStore((state) => state.userInfo);
+  const [finalRouteConfig, setFinalRouteConfig] = useState<any[]>([]);
+
+  const IndexRoutes = [
+  {
+    path: "/",
+    element: <Navigate to="/layout" />,
+  },
+  {
+    path: "/login",
+    element: LazyLoad(lazy(() => import("@/pages/login"))),
+    meta: new RouteMeta("登录页面"),
+  },
+  {
+    path: "/home",
+    element: LazyLoad(lazy(() => import("@/pages/home"))),
+    meta: new RouteMeta("首页", [GxPurview.DATA_VIEW.code]),
+  },
+  {
+    path: "/layout",
+    element: LazyLoad(lazy(() => import("@/layout"))),
+    children: [
+      {
+        path: "/layout/production",
+        element: <Outlet />,
+        meta: new RouteMeta("影像生产", [GxPurview.DATA_COPY.code]),
+        children: [
+          {
+            path: "/layout/production/list",
+            element: LazyLoad(lazy(() => import("@/pages/production/list"))),
+          },
+          {
+            path: "/layout/production/create",
+            element: LazyLoad(lazy(() => import("@/pages/production/create"))),
+          }
+        ]
+      },
+      {
+        path: "/layout/statistics",
+        element: LazyLoad(lazy(() => import("@/pages/statistics"))),
+        meta: new RouteMeta("生产统计", [GxPurview.DATA_MAG.code]),
+      },
+      {
+        path: "/layout/qualityInspection",
+        element: LazyLoad(lazy(() => import("@/pages/qualityInspection"))),
+        meta: new RouteMeta("质量检查", [GxPurview.DATA_STATISTICS.code]),
+      },
+      {
+        path: "/layout/systemSetting",
+        element: LazyLoad(lazy(() => import("@/pages/systemSetting"))),
+        meta: new RouteMeta("系统管理", [GxPurview.PURVIEW_SET.code]),
+      },
+      {
+        path: "/layout/home",
+        // 重定向
+        element: <Navigate to="/home" />,
+      },
+    ],
+  },
+  {
+    path: "/403",
+    element: <NoPermissions />,
+  },
+  {
+    path: "/404",
+    element: <NotFound />,
+  }
+];
+
+  // 深拷贝一份新的路由，并移除可能存在的delFlag属性
+  const deepCloneRoutes = (routes: any[]): any[] => {
+    return routes.map(route => {
+      // 基础属性拷贝
+      const clonedRoute = {
+        ...route,
+        // 保持 React 元素的原始引用（不应该拷贝）
+        element: route.element,
+        // 重新创建 meta 对象
+        meta: route.meta ? route.meta : undefined,
+        // 递归处理 children
+        children: route.children ? deepCloneRoutes(route.children) : undefined
+      };
+
+
+
+      return clonedRoute;
+    });
+  };
+
+
+// 为了每次返回都是一个新的对象，因为无法使用JSON.parse(JSON.stringify())进行深拷贝。。。
+ const getIndexRouteConfig = () => {
+  return [
+    ...IndexRoutes
+  ]
+};
+
+
+  useEffect(() => {
+    // TODO: 更新路由信息
+    const tempRouteArr = deepCloneRoutes(getIndexRouteConfig());
+    if (userInfo && userInfo.role.purview) {
+      // TODO: 根据用户信息，过滤一部分没有权限的路由
+      // ...
+      setFinalRouteConfig([
+              {
+                path: "/",
+                element: <Navigate to="/layout" />,
+                index: true
+              },
+              ...tempRouteArr
+            ]);
+    }else{
+            setFinalRouteConfig([
+              {
+                path: "/",
+                element: <Navigate to="/login" />,
+                index: true
+              },
+              ...tempRouteArr
+            ]);
+    }
+
+
+    }, [userInfo])
+  }
+
+  return (
+    /* 包裹组件 地址：https://ant.design/components/app-cn#%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8*/
+    <App>
+      <HashRouter>
+        {/* 路由守卫（认证+鉴权），基于路由的拦截器 */}
+        <RouterGuard key="guard">
+          {/* 渲染路由组件 */}
+          <Router routes={finalRouteConfig} />
+        </RouterGuard>
+      </HashRouter>
+    </App>
+  );
+
+```
+前端存储全部的路由信息
+【如果你要后端返回的话，一般后端返回的是组件路径比如：@/pages/statistics，然后前端组织成路由实际需要的结构，你可能会问：一个字符串路径，前端如何构建成路由需要的组件结构，可以参考：[umi3+qiankun+webpack4：构建动态路由流程整理--菜单目录是： 【<span style="border-bottom:2px dashed yellow;">最终</span> 】里面的截图](https://www.yuque.com/g/yuqueyonghupid8l3/sugz8z/ultvrnhp9b4ydhwz/collaborator/join?token=M5DYGuA3zDAys1Hx&source=doc_collaborator)】，
+项目启动时，我去获取用户的信息，如果没有获取到，我就跳转到登录页。
+这块的核心就是用户改变时，会触发effect事件的监听，然后重置路由信息
+
+
+### 后续2：动态路由的方式2
+前端只保留登录、注册、404、403等通用页面的路由地址，待项目启动，默认进入登录页.
+```javascript
+const baseRoutes = [
+{ path: '', element: <Navigate to="/login" /> },
+  { path: '/login', element: <Login /> },
+  { path: '/register', element: <Register /> },
+  { path: '/403', element: <Forbidden /> },
+  { path: '*', element: <NotFound /> }
+];
+const router = createBrowserRouter(baseRoutes);
+```
+在用户登录页面，登录后拿到用户信息，获取到路由信息后，将这些路由信息塞入到路由中，然后再触发跳转逻辑
+```javascript
+function injectRoutes(routeData) {
+  routeData.forEach(route => {
+    router.routes.push(route); // 或使用 router.addRoutes()，取决于你用的路由器封装
+  });
+}
+// 登录时:
+const userRoutes = await fetchUserRoutes(token);
+injectRoutes(userRoutes);
+navigate('/home');
+```
+然后用户退出登录时，我需要将路由还原为默认路由，并跳转到登录页。
