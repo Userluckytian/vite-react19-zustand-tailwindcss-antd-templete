@@ -1,4 +1,4 @@
-import React, { Activity, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import React, { Activity, Fragment, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import CustomIcon from '../custom-icon';
 import { App, Divider } from 'antd';
 import { circle } from '@turf/turf';
@@ -16,52 +16,52 @@ function CustomLeafLetDrawBar(props: CustomLeafLetDrawBarProps, ref: any) {
     // 优化： 是否有必要定义成 state 变量？
     const [toolbarList, setToolBarList] = useState<any>([
         {
-            id: 'polygon', // draw_polygon
+            id: 'point',
             title: '标点',
             icon: 'icon-biaodian_1',
-            type: 'polygon',
+            type: 'point',
             desp: '标点'
         },
         {
-            id: 'polygon', // draw_polygon
+            id: 'line',
             title: '标线',
             icon: 'icon-biaoxian_1',
-            type: 'polygon',
+            type: 'line',
             desp: '标线'
         },
         {
-            id: 'polygon', // draw_polygon
+            id: 'polygon',
             title: '标面',
             icon: 'icon-biaomian_0',
             type: 'polygon',
             desp: '标面'
         },
         {
-            id: 'circle', // drag_circle
+            id: 'circle',
             title: '画圆',
             icon: 'icon-huayuan_0',
             type: 'circle',
             desp: '画圆'
         },
         {
-            id: 'bbox', // draw_rectangle
+            id: 'rectangle',
             title: '画矩形',
             icon: 'icon-huajuxing_0',
-            type: 'bbox',
+            type: 'rectangle',
             desp: '画矩形'
         },
         {
-            id: 'measure_distance', // drag_circle
+            id: 'measure_distance',
             title: '测距',
             icon: 'icon-ceju_0',
-            type: 'circle',
+            type: 'measure_distance',
             desp: '测距'
         },
         {
-            id: 'measure_area', // draw_rectangle
+            id: 'measure_area',
             title: '测面',
             icon: 'icon-cemian_0',
-            type: 'bbox',
+            type: 'measure_area',
             desp: '测面'
         },
         {
@@ -81,7 +81,6 @@ function CustomLeafLetDrawBar(props: CustomLeafLetDrawBarProps, ref: any) {
     const [startDraw, setStartDraw] = useState<boolean>(false);
     const isDrawing = useRef<boolean>(startDraw);
     const lastMouseMoveTime = useRef<number>(0);
-    const mouseMoveThrottle = 50; // 毫秒!
     const km_value = 1000; // 1千米 = 1000米
     useEffect(() => {
         isDrawing.current = startDraw;
@@ -105,20 +104,26 @@ function CustomLeafLetDrawBar(props: CustomLeafLetDrawBarProps, ref: any) {
             // 存储
             setTempCoords((prev) => {
                 const newCoords = [...prev, e.latlng];
-                tempCoordinates.current = newCoords;  // 手动同步，主要是不想执行页面渲染是吗?
+                tempCoordinates.current = newCoords;  // 手动同步
                 return newCoords;
             })
+            if (['point'].includes(currSelToolId.current)) {
+                // 结束绘制
+                setStartDraw(false)
+                renderLayerByType(currSelToolId.current);
+                return;
+            }
             // console.log('坐标，当前激活按钮', tempCoordinates.current, currSelToolId.current);
-            // 开始校验
-            if (currSelToolId.current === 'bbox' || currSelToolId.current === 'circle') {
+            if (['rectangle', 'circle'].includes(currSelToolId.current)) {
                 if (tempCoordinates.current.length === 2) {
                     // 关闭绘制功能 + 渲染最终图层 + 清空存储的坐标信息(可不做)
                     setStartDraw(false);
                     renderLayerByType(currSelToolId.current);
+                    return
                 }
             }
-            // 多边形绘制时，继续添加点（这里什么也不需要做）
-            if (currSelToolId.current === 'polygon') { }
+            // 多边形、线图层绘制时，继续添加点（这里什么也不需要做）
+            if (['line', 'polygon'].includes(currSelToolId.current)) { }
         }
     };
     // 地图双击事件
@@ -135,12 +140,38 @@ function CustomLeafLetDrawBar(props: CustomLeafLetDrawBarProps, ref: any) {
     const renderLayerByType = (type: string) => {
         // 检查是否有足够的点
         switch (type) {
-            case 'bbox':
+            case 'point':
+                const pointIsValid = tempCoordinates.current.length === 1;
+                const pointLayer = drawServiceObj.current!.getLayerByType(type);
+                if (pointIsValid && pointLayer) {
+                    (pointLayer as L.Marker).setLatLng(tempCoordinates.current[0] as any);
+                    (pointLayer as L.Marker).setOpacity(1);
+                    // 发出消息
+                    const geoJSON = (pointLayer as any).toGeoJSON();
+                    drawGeoJsonResult && drawGeoJsonResult(geoJSON);
+                } else {
+                    message.error('没有找到矩图层或者点位数量不足，不足以绘制图层。');
+                }
+                break;
+            case 'line':
+                const lineIsValid = tempCoordinates.current.length >= 2;
+                const lineLayer = drawServiceObj.current!.getLayerByType(type);
+                if (lineIsValid && lineLayer) {
+                    // (lineLayer as L.Polyline).setStyle(layerSubOptions);
+                    (lineLayer as L.Polyline).setLatLngs(tempCoordinates.current);
+                    // 发出消息
+                    const geoJSON = (lineLayer as any).toGeoJSON();
+                    drawGeoJsonResult && drawGeoJsonResult(geoJSON);
+                } else {
+                    message.error('没有找到矩图层或者点位数量不足，不足以绘制图层。');
+                }
+                break;
+            case 'rectangle':
                 const rectIsValid = tempCoordinates.current.length >= 2;
                 const rectLayer = drawServiceObj.current!.getLayerByType(type);
                 if (rectIsValid && rectLayer) {
                     const bounds = L.latLngBounds(tempCoordinates.current);
-                    (rectLayer as any).setBounds(bounds);
+                    (rectLayer as L.Rectangle).setBounds(bounds);
                     // 发出消息
                     const geoJSON = (rectLayer as any).toGeoJSON();
                     drawGeoJsonResult && drawGeoJsonResult(geoJSON);
@@ -154,8 +185,8 @@ function CustomLeafLetDrawBar(props: CustomLeafLetDrawBarProps, ref: any) {
                 if (circleIsValid && circleLayer) {
                     const center = tempCoordinates.current[0];
                     const radius = center.distanceTo(tempCoordinates.current[1]);
-                    (circleLayer as any).setLatLng(center);
-                    (circleLayer as any).setRadius(radius);
+                    (circleLayer as L.Circle).setLatLng(center);
+                    (circleLayer as L.Circle).setRadius(radius);
                     // 发出消息(圆需要自己定制吐出的结构)
                     const lnglat = [center.lng, center.lat];
                     const options: any = { steps: 64, units: 'kilometers', properties: { type: 'circle' } };
@@ -169,7 +200,7 @@ function CustomLeafLetDrawBar(props: CustomLeafLetDrawBarProps, ref: any) {
                 const polygonIsValid = tempCoordinates.current.length >= 3;
                 const polygonLayer = drawServiceObj.current!.getLayerByType(type);
                 if (polygonIsValid && polygonLayer) {
-                    (polygonLayer as any).setLatLngs(tempCoordinates.current);
+                    (polygonLayer as L.Polygon).setLatLngs(tempCoordinates.current);
                     // 发出消息
                     const geoJSON = (polygonLayer as any).toGeoJSON();
                     drawGeoJsonResult && drawGeoJsonResult(geoJSON);
@@ -183,25 +214,27 @@ function CustomLeafLetDrawBar(props: CustomLeafLetDrawBarProps, ref: any) {
     // 鼠标移动事件（带节流）
     const handleMouseMove = (e: L.LeafletMouseEvent) => {
         if (!isDrawing.current || !currSelToolId.current || currSelToolId.current === 'delete') return;
-        const now = Date.now();
-        if (now - lastMouseMoveTime.current < mouseMoveThrottle) return;
-        lastMouseMoveTime.current = now;
         // 更新临时坐标
         const coordsLength = tempCoordinates.current.length;
+
         if (coordsLength > 0) {
             // 对于矩形和圆形，只需要两个点
-            const bboxCircleEnter = ['bbox', 'circle'].includes(currSelToolId.current);
-            if (bboxCircleEnter) {
+            const rectAndCircleEnter = ['rectangle', 'circle'].includes(currSelToolId.current);
+            if (rectAndCircleEnter) {
                 tempCoordinates.current[1] = e.latlng;
             }
-            if (['polygon'].includes(currSelToolId.current)) {
-                setTempCoords((prev: any[]) => {
-                    if (prev.length > 1) {
-                        prev.splice(coordsLength - 1, 1);
+            // 对于线和多边形面
+            if (['polygon', 'line'].includes(currSelToolId.current)) {
+                setTempCoords((prev: L.LatLng[]) => {
+                    // 如果只有一个点，添加临时点
+                    if (prev.length === 1) {
+                        return [prev[0], e.latlng];
                     }
-                    const newCoords = [...prev, e.latlng];
-                    return [...newCoords];
-                })
+                    // 保留所有已确定的点，只更新最后一个临时点
+                    const fixedPoints = prev.slice(0, prev.length - 1); // 除最后一个点外的所有点
+                    const newCoords = [...fixedPoints, e.latlng];
+                    return newCoords;
+                });
             }
             updateTempLayer();
         }
@@ -211,7 +244,7 @@ function CustomLeafLetDrawBar(props: CustomLeafLetDrawBarProps, ref: any) {
         if (tempCoordinates.current.length < 1) return;
         const layer = drawServiceObj.current!.getLayerByType(currSelToolId.current!);
         switch (currSelToolId.current!) {
-            case 'bbox':
+            case 'rectangle':
                 if (tempCoordinates.current.length >= 2) {
                     const bounds = L.latLngBounds(tempCoordinates.current);
                     if (layer) (layer as any).setBounds(bounds);
@@ -225,6 +258,12 @@ function CustomLeafLetDrawBar(props: CustomLeafLetDrawBarProps, ref: any) {
                         (layer as any).setLatLng(center);
                         (layer as any).setRadius(radius);
                     }
+                }
+                break;
+            case 'line':
+                if (layer) {
+                    const polylineCoords = [...tempCoordinates.current];
+                    (layer as any).setLatLngs(polylineCoords);
                 }
                 break;
             case 'polygon':
@@ -299,9 +338,8 @@ function CustomLeafLetDrawBar(props: CustomLeafLetDrawBarProps, ref: any) {
     return (
         <div className="leaflet-draw-toolbar">
             {toolbarList.map((tool: any, idx: number) => (
-                <>
+                <Fragment key={tool.id}>
                     <div
-                        key={tool.id}
                         className={`tool-button ${currSelTool === tool.id ? 'selected' : ''}`}
                         title={tool.desp}
                         onClick={() => handleToolClick(tool.id)}
@@ -312,7 +350,7 @@ function CustomLeafLetDrawBar(props: CustomLeafLetDrawBarProps, ref: any) {
                     <Activity mode={idx !== toolbarList.length ? 'visible' : 'hidden'}>
                         <Divider type="horizontal" style={{ margin: '0px' }} />
                     </Activity>
-                </>
+                </Fragment>
             ))}
         </div>
     );

@@ -39,6 +39,16 @@ L.LayerGroup.include({
         return this.getLayerById(id) !== null;
     }
 });
+
+// 可以实例化的工具
+type toolsOptions = {
+    point?: boolean;  // 实例化点
+    line?: boolean; // 实例化线
+    polygon?: boolean; // 实例化多边形
+    circle?: boolean; // 实例化圆
+    rectangle?: boolean; // 实例化矩形
+};
+
 // ------------------------------------------------------------------------------------------
 // 构建绘制类
 export class DrawGeometryService {
@@ -46,21 +56,33 @@ export class DrawGeometryService {
     private OVERLAY_PANE_INDEX = 400;
     private SHADOW_PANE_INDEX = 500;
     private map: L.Map;
-    // 外边线图层
-    private lineLayerId: string = 'out-line-layer';
+    // 图层初始化时，全部设为不可见
+    private drawLayerStyle = {
+        color: 'red', // 设置边线颜色
+        fillColor: "red", // 设置填充颜色
+        fillOpacity: 0.3, // 设置填充透明度
+    };
+    // 点（marker）图层(不用L.point, 用marker)
+    private markerLayerId: string = 'draw-marker-layer';
+    private markerIcon = L.divIcon({
+        className: 'draw-marker-icon',
+        html: '<div style="width: 16px; height: 16px; border-radius: 8px; overflow: hidden; border: solid 1px red; background: #ff000048"></div>'
+    });
+    // 线图层
+    private lineLayerId: string = 'draw-line-layer';
     // 框选、圈选、圆选
-    private bboxShapeId: string = 'draw-bbox-layer';
+    private rectangleLayerId: string = 'draw-rect-layer';
     private CircleLayerId: string = 'draw-circle-layer';
     private polygenLayerId: string = 'draw-poly-layer';
     private drawLayerGroup: L.LayerGroup | null = null;
     // 构造函数
-    constructor(map: any) {
+    constructor(map: any, options: toolsOptions = { point: true, line: true, polygon: true, rectangle: true, circle: true }) {
         this.map = map;
         if (this.map) {
-            this.mapInit();
+            this.init(options);
         }
     }
-    private mapInit() {
+    private init(options: toolsOptions) {
         // (1) pane 用来定义每个图层的Zindex位置，这个只和每个layer有关系，但是和layerGroup没关系。所以下面又定义了一个layerGroup来收集和管理这些layer。
         let pane = this.map.getPane('drawToolPane');
         if (!pane) {
@@ -73,46 +95,60 @@ export class DrawGeometryService {
             this.drawLayerGroup.addTo(this.map);
         }
         // （3）  初始化各个图层
-        this.initLayers();
+        this.initLayers(options);
     }
-    private initLayers() {
+    // 全部放到左下角
+    private initLayers(options: toolsOptions) {
+        // marker
+        if (options?.point && this.drawLayerGroup && !this.drawLayerGroup.getLayerById(this.markerLayerId)) {
+            const markerLayer = L.marker([-90, -180], { pane: 'drawToolPane', icon: this.markerIcon });
+            this.drawLayerGroup.addLayerWithId(markerLayer, this.markerLayerId);
+        }
+        // 线
+        if (options?.line && this.drawLayerGroup && !this.drawLayerGroup.getLayerById(this.lineLayerId)) {
+            const bboxLayer = L.polyline([[-90, -180], [-90, -180]], { pane: 'drawToolPane', ...this.drawLayerStyle });
+            this.drawLayerGroup.addLayerWithId(bboxLayer, this.lineLayerId);
+        }
         // 矩形
-        if (this.drawLayerGroup && !this.drawLayerGroup.getLayerById(this.bboxShapeId)) {
-            const bboxLayer = L.rectangle([[0, 0], [0, 0]], { pane: 'drawToolPane', fillOpacity: 0.3 });
-            this.drawLayerGroup.addLayerWithId(bboxLayer, this.bboxShapeId);
+        if (options?.rectangle && this.drawLayerGroup && !this.drawLayerGroup.getLayerById(this.rectangleLayerId)) {
+            const bboxLayer = L.rectangle([[-90, -180], [-90, -180]], { pane: 'drawToolPane',  ...this.drawLayerStyle });
+            this.drawLayerGroup.addLayerWithId(bboxLayer, this.rectangleLayerId);
         }
         // 圆形
-        if (this.drawLayerGroup && !this.drawLayerGroup.getLayerById(this.CircleLayerId)) {
-            const bboxLayer = L.circle([0, 0], { pane: 'drawToolPane', radius: 0, fillOpacity: 0.3 });
+        if (options?.circle && this.drawLayerGroup && !this.drawLayerGroup.getLayerById(this.CircleLayerId)) {
+            const bboxLayer = L.circle([-90, -180], { pane: 'drawToolPane', radius: 0,  ...this.drawLayerStyle});
             this.drawLayerGroup.addLayerWithId(bboxLayer, this.CircleLayerId);
         }
         // 自定义多边形
-        if (this.drawLayerGroup && !this.drawLayerGroup.getLayerById(this.polygenLayerId)) {
-            const bboxLayer = L.polygon([[0, 0], [0, 0], [0, 0], [0, 0]], { pane: 'drawToolPane', fillOpacity: 0.3 });
+        if (options?.polygon && this.drawLayerGroup && !this.drawLayerGroup.getLayerById(this.polygenLayerId)) {
+            const bboxLayer = L.polygon([[-90, -180], [-90, -180], [-90, -180], [-90, -180]], { pane: 'drawToolPane',  ...this.drawLayerStyle });
             this.drawLayerGroup.addLayerWithId(bboxLayer, this.polygenLayerId);
         }
     }
     // 公共方法：清除所有绘制内容
     public clearAll(): void {
         this.drawLayerGroup!.eachLayer(layer => {
-            if (layer instanceof L.Polyline) {
-                (layer as L.Polyline).setLatLngs([]);
+            if (layer instanceof L.Marker) {
+                layer.setLatLng(L.latLng(-90, -180));
+            } else if (layer instanceof L.Polyline) {
+                layer.setLatLngs([[-90, -180], [-90, -180]]);
             } else if (layer instanceof L.Polygon) {
-                (layer as L.Polygon).setLatLngs([]);
+                layer.setLatLngs([[-90, -180], [-90, -180], [-90, -180], [-90, -180]]);
             } else if (layer instanceof L.Circle) {
-                const centerLatlng = L.latLng(0, 0);
-                (layer as L.Circle).setLatLng(centerLatlng);
-                (layer as L.Circle).setRadius(0);
+                const centerLatlng = L.latLng(-90, -180);
+                layer.setLatLng(centerLatlng);
+                layer.setRadius(0);
             } else if (layer instanceof L.Rectangle) {
-                (layer as L.Rectangle).setBounds(L.latLngBounds([0, 0], [0, 0]));
+                layer.setBounds(L.latLngBounds([-90, -180], [-90, -180]));
             }
         });
     }
     // 根据类型获取图层ID
     public getLayerByType(type: string): L.Layer | null | undefined {
         switch (type) {
-            // case 'line': return this.LINE_LAYER_ID;
-            case 'bbox': return this.drawLayerGroup?.getLayerById(this.bboxShapeId);
+            case 'point': return this.drawLayerGroup?.getLayerById(this.markerLayerId);
+            case 'line': return this.drawLayerGroup?.getLayerById(this.lineLayerId);
+            case 'rectangle': return this.drawLayerGroup?.getLayerById(this.rectangleLayerId);
             case 'circle': return this.drawLayerGroup?.getLayerById(this.CircleLayerId);
             case 'polygon': return this.drawLayerGroup?.getLayerById(this.polygenLayerId);
             default: return null;

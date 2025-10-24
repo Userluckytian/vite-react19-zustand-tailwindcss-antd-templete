@@ -74,18 +74,18 @@ export default function SampleCheckEditMap({
     // 绘制多边形
     function drawPolygon(value: { geometry: any }) {
         console.log('value', value);
-        const geoLayerOption = {
-            style: {
-                color: "#000dff",
-                weight: 3,
-                opacity: 0.8,
-                fill: true, // 设置false的话，就只能点击边才能触发了！
-                id: 'xxx'
-            },
-        };
-        const geoJsonLayer = addLeafletGeoJsonLayer(mapView!, value.geometry, 'layerGeoJsonPane', 3, geoLayerOption);
-        bingGeojsonLayerEditEvent(geoJsonLayer, mapView!);
-        drawLayerGroup.current?.addLayer(geoJsonLayer).addTo(mapView!);
+        // const geoLayerOption = {
+        //     style: {
+        //         color: "#000dff",
+        //         weight: 3,
+        //         opacity: 0.8,
+        //         fill: true, // 设置false的话，就只能点击边才能触发了！
+        //         id: 'xxx'
+        //     },
+        // };
+        // const geoJsonLayer = addLeafletGeoJsonLayer(mapView!, value.geometry, 'layerGeoJsonPane', 3, geoLayerOption);
+        // bingGeojsonLayerEditEvent(geoJsonLayer, mapView!);
+        // drawLayerGroup.current?.addLayer(geoJsonLayer).addTo(mapView!);
     };
 
 
@@ -183,8 +183,8 @@ export default function SampleCheckEditMap({
             {/* 工具条1: 底图切换 */}
             <div className='layerList'>
                 {
-                    baseLayers.map((layer: any) => {
-                        return <div className='layerItem' style={layer.positionStyle}>
+                    baseLayers.map((layer: any, idx: number) => {
+                        return <div className='layerItem' key={`baselayer_${idx}`} style={layer.positionStyle}>
                             <div className='layerName'>{layer.name}</div>
                         </div>
                     })
