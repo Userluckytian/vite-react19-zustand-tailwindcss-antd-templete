@@ -3,11 +3,11 @@ import CustomIcon from '../custom-icon';
 import { App, Divider } from 'antd';
 import * as L from 'leaflet';
 import './index.scss';
-import MarkerPoint from './utils/markerPoint';
-import LeafletLine from './utils/polyline';
-import LeafletPolygon from './utils/polygon';
-import LeafletCircle from './utils/circle';
-import LeafletRectangle from './utils/rectangle';
+import MarkerPoint from './draw/markerPoint';
+import LeafletLine from './draw/polyline';
+import LeafletPolygon from './draw/polygon';
+import LeafletCircle from './draw/circle';
+import LeafletRectangle from './draw/rectangle';
 interface CustomLeafLetDrawProps {
     mapInstance: L.Map; // 传入的地图实例
     drawGeoJsonResult?: (result: any) => void; // 绘制结果吐出
