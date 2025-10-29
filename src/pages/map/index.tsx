@@ -12,8 +12,8 @@ import { GlobalContext } from '@/main'
 import { addScaleControl, addZoomControl } from './map-utils';
 import { formatNumber, throttle } from '@/utils/utils';
 import { App } from 'antd';
-import CustomLeafLetDrawBar from '@/components/custom-leaflet-draw-bar'
 import { addLeafletGeoJsonLayer, bingGeojsonLayerEditEvent } from '@/utils/leafletUtils';
+import CustomLeafLetDraw from '@/components/custom-leaflet-draw';
 
 interface MapPreviewProps {
     outputMapView?: (map: L.Map) => void;
@@ -32,9 +32,7 @@ export default function SampleCheckEditMap({
     const { message } = App.useApp();
     const globalConfigContext = useContext(GlobalContext);
     const baseMapSetting = globalConfigContext.baseMapSetting;
-    const drawBarRef = useRef<any>(null)
     const [mapView, setMapView] = useState<L.Map | null>(null);
-    const drawLayerGroup = useRef<L.LayerGroup>(new L.LayerGroup());
 
     const mapRef = useRef(null)
     // 经纬度信息
@@ -193,10 +191,10 @@ export default function SampleCheckEditMap({
 
             {/* 工具条2: 绘制工具 */}
             <div className="draw-tools">
-                <CustomLeafLetDrawBar mapInstance={mapView} drawGeoJsonResult={drawPolygon} ref={drawBarRef} />
+                <CustomLeafLetDraw mapInstance={mapView}></CustomLeafLetDraw>
             </div>
             {/* 工具条3: 绘制面积 */}
-
+            <div className='area-info'></div>
             {/* 工具条3: 删除绘制内容的按钮 */}
 
             {/* 工具条4: 显示经纬度信息 */}
