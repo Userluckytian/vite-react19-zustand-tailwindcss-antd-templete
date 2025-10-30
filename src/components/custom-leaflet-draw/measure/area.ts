@@ -10,7 +10,7 @@ type FormattedArea = {
 }
 
 const HECTARE_THRESHOLD = 10000; // 1公顷 = 10000平方米
-const SQUARE_KILOMETER_THRESHOLD = 1000000; // 1平方千米 = 1000000平方米
+const SQUARE_KILOMETER_THRESHOLD = 1000000; // 1平方公里 = 1000000平方米
 export default class LeafletArea {
     private map: L.Map;
     private polygonLayer: L.Polygon | null = null;
@@ -215,7 +215,7 @@ export default class LeafletArea {
             const squareKilometers = squareMeters / SQUARE_KILOMETER_THRESHOLD;
             return {
                 val: parseFloat(squareKilometers.toFixed(2)),
-                unit: "平方千米"
+                unit: "平方公里"
             };
         } else if (squareMeters >= HECTARE_THRESHOLD) {
             // 转换为公顷并保留2位小数
