@@ -4,6 +4,11 @@
 import { area, center, polygon } from '@turf/turf';
 import * as L from 'leaflet';
 
+type areaOptions = {
+    precision?: number;
+    lang: 'en' | 'zh';
+}
+
 type FormattedArea = {
     val: number;
     unit: string;
@@ -11,6 +16,21 @@ type FormattedArea = {
 
 const HECTARE_THRESHOLD = 10000; // 1公顷 = 10000平方米
 const SQUARE_KILOMETER_THRESHOLD = 1000000; // 1平方公里 = 1000000平方米
+
+// 单位映射表
+const UNIT_MAP = {
+    'zh': {
+        'squareMeter': '平方米',
+        'hectare': '公顷',
+        'squareKilometer': '平方公里'
+    },
+    'en': {
+        'squareMeter': 'm²',
+        'hectare': 'ha',
+        'squareKilometer': 'km²'
+    }
+};
+
 export default class LeafletArea {
     private map: L.Map;
     private polygonLayer: L.Polygon | null = null;
@@ -23,8 +43,10 @@ export default class LeafletArea {
     // marker图层
     private markerLayer: L.Marker = null;
     private tempCoords: number[][] = [];
-    constructor(map: L.Map, options: L.PolylineOptions = {}) {
+    private measureOptions: areaOptions;
+    constructor(map: L.Map, measureOptions: areaOptions = { precision: 2, lang: 'zh' }, options: L.PolylineOptions = {}) {
         this.map = map;
+        this.measureOptions = measureOptions;
         if (this.map) {
             // 鼠标手势设置为十字
             this.map.getContainer().style.cursor = 'crosshair';
@@ -147,7 +169,7 @@ export default class LeafletArea {
             const polygonCoords: any = [...coords, coords[0]];
             const turfPolygon = polygon([polygonCoords]);
             const areaNum = area(turfPolygon);
-            const areaInfo = this.formatArea(areaNum);
+            const areaInfo = this.formatArea(areaNum, this.measureOptions);
             const areaCenter = center(turfPolygon);
             const markerCenter: any = areaCenter.geometry.coordinates;
             const markerOptions: L.MarkerOptions = {
@@ -203,36 +225,6 @@ export default class LeafletArea {
         map.off('mousemove', this.mapMouseMoveEvent);
     }
 
-    /**
-     * 面积单位转换函数
-     * @param {number} squareMeters - 输入的平方米数值
-     * @returns {FormattedArea} 格式化后的面积对象
-     */
-    private formatArea(squareMeters): FormattedArea {
-
-        if (squareMeters >= SQUARE_KILOMETER_THRESHOLD) {
-            // 转换为平方千米并保留2位小数
-            const squareKilometers = squareMeters / SQUARE_KILOMETER_THRESHOLD;
-            return {
-                val: parseFloat(squareKilometers.toFixed(2)),
-                unit: "平方公里"
-            };
-        } else if (squareMeters >= HECTARE_THRESHOLD) {
-            // 转换为公顷并保留2位小数
-            const hectares = squareMeters / HECTARE_THRESHOLD;
-            return {
-                val: parseFloat(hectares.toFixed(2)),
-                unit: "公顷"
-            };
-        } else {
-            // 保持平方米并保留2位小数
-            return {
-                val: parseFloat(squareMeters.toFixed(2)),
-                unit: "平方米"
-            };
-        }
-    }
-
     /** 动态生成marker图标(天地图应该是构建的点图层+marker图层两个)
      *
      *
@@ -284,6 +276,55 @@ export default class LeafletArea {
 
         return result;
     }
+
+    // #endregion
+
+
+    // #region 面积单位换算函数，内容偏多，这块不用看，知道有面积计算就行
+
+    /**
+     * 面积单位转换函数
+     * @param {number} squareMeters - 输入的平方米数值
+     * @returns {FormattedArea} 格式化后的面积对象
+     */
+    private formatArea(squareMeters, options: areaOptions): FormattedArea {
+        const { lang = 'zh', precision = 2 } = options;
+        const units = UNIT_MAP[lang];
+
+        // 参数验证
+        if (squareMeters < 0) {
+            throw new Error('面积值不能为负数');
+        }
+
+        if (precision < 0 || precision > 10) {
+            throw new Error('精度值必须在0-10之间');
+        }
+
+        let result: FormattedArea;
+
+        if (squareMeters >= SQUARE_KILOMETER_THRESHOLD) {
+            // 转换为平方千米并保留2位小数
+            const squareKilometers = squareMeters / SQUARE_KILOMETER_THRESHOLD;
+            return {
+                val: parseFloat(squareKilometers.toFixed(precision)),
+                unit: units.squareKilometer
+            };
+        } else if (squareMeters >= HECTARE_THRESHOLD) {
+            // 转换为公顷并保留2位小数
+            const hectares = squareMeters / HECTARE_THRESHOLD;
+            return {
+                val: parseFloat(hectares.toFixed(precision)),
+                unit: units.hectare
+            };
+        } else {
+            // 保持平方米并保留2位小数
+            return {
+                val: parseFloat(squareMeters.toFixed(precision)),
+                unit: units.squareMeter
+            };
+        }
+    }
+
 
     // #endregion
 
