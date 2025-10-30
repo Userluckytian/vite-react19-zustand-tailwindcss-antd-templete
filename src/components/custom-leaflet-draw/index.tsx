@@ -8,6 +8,8 @@ import LeafletLine from './draw/polyline';
 import LeafletPolygon from './draw/polygon';
 import LeafletCircle from './draw/circle';
 import LeafletRectangle from './draw/rectangle';
+import LeafletDistance from './measure/distance';
+import LeafletArea from './measure/area';
 interface CustomLeafLetDrawProps {
     mapInstance: L.Map; // 传入的地图实例
     drawGeoJsonResult?: (result: any) => void; // 绘制结果吐出
@@ -102,6 +104,14 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             case 'rectangle':
                 const rectangleLayer = new LeafletRectangle(mapInstance);
                 setDrawLayers([...drawLayers, rectangleLayer]);
+                break;
+            case 'measure_distance':
+                const distanceLayer = new LeafletDistance(mapInstance);
+                setDrawLayers([...drawLayers, distanceLayer]);
+                break;
+            case 'measure_area':
+                const areaLayer = new LeafletArea(mapInstance);
+                setDrawLayers([...drawLayers, areaLayer]);
                 break;
             case 'delete':
                 clearAllIfExist();

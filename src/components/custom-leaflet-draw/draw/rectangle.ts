@@ -66,15 +66,27 @@ export default class LeafletRectangle {
         } else {
             const finalCoords = [this.tempCoords[0], e.latlng];
             this.renderLayer(finalCoords);
-            // 清空坐标把，因为没什么用了
-            this.tempCoords = [];
-            // 设置完毕就关闭地图事件监听
-            this.offMapEvent(this.map);
-            this.map.getContainer().style.cursor = 'grab';
-            // 恢复双击地图放大事件
-            this.map.doubleClickZoom.enable();
+            this.reset();
         }
     }
+
+    /** 状态重置
+     *
+     *
+     * @private
+     * @memberof LeafletDistance
+     */
+    private reset() {
+        // 清空坐标把，因为没什么用了
+        this.tempCoords = [];
+        // 设置完毕就关闭地图事件监听
+        this.offMapEvent(this.map);
+        this.map.getContainer().style.cursor = 'grab';
+        // 恢复双击地图放大事件
+        this.map.doubleClickZoom.enable();
+    }
+
+
     /**  地图鼠标移动事件，用于设置点的位置
      *
      *
@@ -133,6 +145,7 @@ export default class LeafletRectangle {
             this.rectangleLayer.remove();
             this.rectangleLayer = null;
         }
+        this.reset();
     }
 
     /** 关闭地图事件监听

@@ -76,14 +76,23 @@ export default class LeafletPolygon {
             // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
             const finalCoords = this.deduplicateCoordinates(this.tempCoords);
             this.renderLayer([...finalCoords, finalCoords[0]]);
-            // 清空坐标把，因为没什么用了
-            this.tempCoords = [];
-            // 设置完毕就关闭地图事件监听
-            this.offMapEvent(this.map);
-            this.map.getContainer().style.cursor = 'grab';
-            // 恢复双击地图放大事件
-            this.map.doubleClickZoom.enable();
+            this.reset();
         }
+    }
+    /** 状态重置
+     *
+     *
+     * @private
+     * @memberof LeafletDistance
+     */
+    private reset() {
+        // 清空坐标把，因为没什么用了
+        this.tempCoords = [];
+        // 设置完毕就关闭地图事件监听
+        this.offMapEvent(this.map);
+        this.map.getContainer().style.cursor = 'grab';
+        // 恢复双击地图放大事件
+        this.map.doubleClickZoom.enable();
     }
     /**  地图鼠标移动事件，用于设置点的位置
      *
@@ -145,6 +154,7 @@ export default class LeafletPolygon {
             this.polygonLayer.remove();
             this.polygonLayer = null;
         }
+        this.reset();
     }
 
     /** 关闭地图事件监听

@@ -72,13 +72,7 @@ export default class LeafletCircle {
         } else {
             const finalCoords = [this.tempCoords[0], e.latlng];
             this.renderLayer(finalCoords);
-            // 清空坐标把，因为没什么用了
-            this.tempCoords = [];
-            // 设置完毕就关闭地图事件监听
-            this.offMapEvent(this.map);
-            this.map.getContainer().style.cursor = 'grab';
-            // 恢复双击地图放大事件
-            this.map.doubleClickZoom.enable();
+            this.reset();
         }
     }
     /**  地图鼠标移动事件，用于设置点的位置
@@ -118,6 +112,21 @@ export default class LeafletCircle {
         }
     }
 
+    /** 状态重置
+ *
+ *
+ * @private
+ * @memberof LeafletDistance
+ */
+    private reset() {
+        // 清空坐标把，因为没什么用了
+        this.tempCoords = [];
+        // 设置完毕就关闭地图事件监听
+        this.offMapEvent(this.map);
+        this.map.getContainer().style.cursor = 'grab';
+        // 恢复双击地图放大事件
+        this.map.doubleClickZoom.enable();
+    }
     /** 返回图层的空间信息 
      * 
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
@@ -125,10 +134,10 @@ export default class LeafletCircle {
      */
     public geojson() {
         if (this.circleLayer) {
-             // 发出消息(圆需要自己定制吐出的结构)
-             const lnglat = [this.center.lng, this.center.lat];
-             const options: any = { steps: 64, units: 'kilometers', properties: { type: 'circle' } };
-             const geojson = circle(lnglat, this.radius / km_value, options); // 获取图形！
+            // 发出消息(圆需要自己定制吐出的结构)
+            const lnglat = [this.center.lng, this.center.lat];
+            const options: any = { steps: 64, units: 'kilometers', properties: { type: 'circle' } };
+            const geojson = circle(lnglat, this.radius / km_value, options); // 获取图形！
             return geojson;
         } else {
             throw new Error("未捕获到marker图层，无法获取到geojson数据");
@@ -145,6 +154,7 @@ export default class LeafletCircle {
             this.circleLayer.remove();
             this.circleLayer = null;
         }
+        this.reset();
     }
 
     /** 关闭地图事件监听

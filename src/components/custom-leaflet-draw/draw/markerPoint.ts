@@ -57,10 +57,20 @@ export default class MarkerPoint {
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
         if (this.markerLayer) {
             this.markerLayer.setLatLng([e.latlng.lat, e.latlng.lng]);
-            // 设置完毕就关闭地图事件监听
-            this.map.off('click', this.mapClickEvent);
-            this.map.getContainer().style.cursor = 'grab';
+            this.reset();
         }
+    }
+
+    /** 状态重置
+     *
+     *
+     * @private
+     * @memberof LeafletDistance
+     */
+    private reset() {
+        // 设置完毕就关闭地图事件监听
+        this.map.off('click', this.mapClickEvent);
+        this.map.getContainer().style.cursor = 'grab';
     }
 
     /** 返回图层的空间信息 
@@ -86,6 +96,7 @@ export default class MarkerPoint {
             this.markerLayer.remove();
             this.markerLayer = null;
         }
+        this.reset();
     }
 
     // #endregion
