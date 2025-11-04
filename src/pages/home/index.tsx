@@ -67,7 +67,7 @@ export default function Home() {
             <div className="read-the-docs">
                 {/* Suspense 如果你不想每次都写，可以写在main.tsx文件中，然后使用Suspense包裹整个App即可 */}
                 <Suspense fallback={<div>⏳ 生成图片中...</div>}>
-                    <UseHook num={12} />
+                    {/* <UseHook num={1} /> */}
                 </Suspense>
             </div>
             {/* 4：zustand */}

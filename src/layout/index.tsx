@@ -11,7 +11,9 @@ export default function Layout() {
     const { message } = App.useApp();
     const navigate = useNavigate();
     const exit = () => {
-        logout().then((res: any) => {
+        // const trueAPI = logout();
+        const mockAPI = Promise.resolve({status: 200})
+        mockAPI.then((res: any) => {
             if (res.status === 200) {
                 clearLocalInfo();
                 navigate('/login')

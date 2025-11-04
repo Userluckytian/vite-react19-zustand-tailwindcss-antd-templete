@@ -35,7 +35,36 @@ const Login = ({ }) => {
                 userName: values.username,
                 password: values.password,
             };
-            login(loginParams).then((res: any) => {
+
+            const loginResult = {
+                "status": 200,
+                "message": "成功",
+                "data": {
+                    "isRegist": true,
+                    "userId": 6666,
+                    "userName": "admin",
+                    "userToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+                    "userInfo": {
+                        "dayAccessTimes": 10000,
+                        "orgTypeId": "11682",
+                        "orgType": "儋州市",
+                        "orgNameId": "11683",
+                        "orgName": "儋州市张若昀家"
+                    },
+                    "alias": "admin",
+                    "avatar": "44a015fbe2f744b380269a7bbbc1fca9",
+                    "dingBind": false,
+                    "wxBind": false
+                },
+                "timeStamp": "2025-11-04 17:22:13"
+            }
+            const mockAPI = new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    resolve(loginResult);
+                }, 300)
+            })
+            // const api = login(loginParams);
+            mockAPI.then((res: any) => {
                 if (res.status === 200) {
                     // 0：存储token，接口请求需要
                     setLocalInfo('dmes_token', res.data.userToken);
