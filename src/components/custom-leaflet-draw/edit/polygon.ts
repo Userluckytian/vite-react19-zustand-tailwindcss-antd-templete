@@ -19,15 +19,24 @@ export default class LeafletEditPolygon {
     // 我们需要记录当前状态是否正处于绘制状态
     private isDrawing: boolean = false;
 
-    // #region 我们开始定义编辑需要的内容
+    // #region【面编辑】里程碑第一步: 实现点的拖动、右键删除。下面三个变量就够了 
     // 1: 我们需要记录当前状态是否正处于编辑状态
     private isEditing: boolean = false;
     // 2：我们需要一个数组，存储所有的顶点（Marker），编辑时，我们应该展示这些Marker点。所以，这个数组的内容填充的时机是我们什么时候开始【编辑】，我们就在那一刻开始创建marker，注意不是在双击【绘制】结束后就创建。
     private vertexMarkers: L.Marker[] = [];
     // 3：编辑历史栈（用于撤销---存储的是编辑后的坐标点）
     private historyStack: number[][][] = [];
-
     // #endregion
+
+
+
+    // #region【面编辑】里程碑第二步: 实现边中点插入新顶点
+    // 1： 我们需要一个数组，存储边线的中间点坐标
+    private midpointMarkers: L.CircleMarker[] = [];
+    // #endregion
+
+
+
 
     constructor(map: L.Map, options: L.PolylineOptions = {}) {
         this.map = map;
@@ -204,6 +213,9 @@ export default class LeafletEditPolygon {
             this.polygonLayer = null;
         }
         this.reset();
+
+        // 编辑模式的内容也重置
+        this.exitEditMode();
     }
 
     /** 关闭地图事件监听
@@ -274,14 +286,15 @@ export default class LeafletEditPolygon {
 
         // 渲染每个顶点为可拖动 marker
         latlngs.forEach((point, index) => {
-            
-            const marker = L.marker(point, { draggable: true }).addTo(this.map);
+
+            const marker = L.marker(point, { draggable: true, icon: this.buildMarkerIcon()}).addTo(this.map);
             this.vertexMarkers.push(marker);
 
             marker.on('drag', (e: L.LeafletMouseEvent) => {
                 const newLatLng = e.latlng;
                 const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
                 this.renderLayer([...updated, updated[0]]);
+                this.updateMidpoints();
             });
 
             marker.on('dragend', () => {
@@ -290,20 +303,23 @@ export default class LeafletEditPolygon {
             });
 
             marker.on('contextmenu', () => {
-                if (this.vertexMarkers.length >= 4) {
+                if (this.vertexMarkers.length > 3) {
                     // 好奇marker的查找方式吗? 毕竟marker是一个对象呀。
                     // 解答：marker 是一个图层对象（L.Marker 实例），但在 JavaScript 中，对象是按引用存储的，所以实际比较的是地址，这俩实际指向同一个地址。     
                     const idx = this.vertexMarkers.findIndex(m => m === marker);
                     if (idx !== -1) {
-                      this.map.removeLayer(marker);
-                      this.vertexMarkers.splice(idx, 1);
-                      const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
-                      this.renderLayer([...updated, updated[0]]);
-                      this.historyStack.push([...updated]);
+                        this.map.removeLayer(marker);
+                        this.vertexMarkers.splice(idx, 1);
+                        const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
+                        this.renderLayer([...updated, updated[0]]);
+                        this.historyStack.push([...updated]);
+                        this.updateMidpoints();
                     }
-                  }
+                }
             });
         });
+        // 渲染边的中线点
+        this.insertMidpointMarkers();
     }
 
     /** 退出编辑模式
@@ -319,12 +335,123 @@ export default class LeafletEditPolygon {
      */
     private exitEditMode(): void {
         this.vertexMarkers.forEach(marker => {
-          this.map.removeLayer(marker); // 移除 marker，同时清除事件
+            this.map.removeLayer(marker); // 移除 marker，同时清除事件
         });
         this.vertexMarkers = [];
         this.isEditing = false;
-      }
-      
+        // 移除边的中线点标记
+        this.midpointMarkers.forEach(m => this.map.removeLayer(m));
+        this.midpointMarkers = [];
+    }
+    /** 插入中间点坐标
+     *
+     *
+     * @private
+     * @return {*}  {void}
+     * @memberof LeafletEditPolygon
+     */
+    private insertMidpointMarkers(): void {
+        if (!this.polygonLayer || !this.isEditing) return;
+
+        // 清除旧的中点标记（若数组中存在）
+        this.midpointMarkers.forEach(m => this.map.removeLayer(m));
+        this.midpointMarkers = [];
+
+        const latlngs = this.vertexMarkers.map(m => m.getLatLng());
+
+        for (let i = 0; i < latlngs.length; i++) {
+            const nextIndex = (i + 1) % latlngs.length;
+            const p1 = latlngs[i];
+            const p2 = latlngs[nextIndex];
+
+            const midpoint = L.latLng(
+                (p1.lat + p2.lat) / 2,
+                (p1.lng + p2.lng) / 2
+            );
+
+            const marker = L.circleMarker(midpoint, {
+                radius: 6,
+                color: '#ff0000',
+                fillColor: '#ffffff',
+                opacity: 0.8,
+                fillOpacity: 0.8,
+                weight: 1
+            }).addTo(this.map);
+
+            marker.on('click', () => {
+                // 插入新顶点
+                const insertIndex = nextIndex;
+                const newMarker = L.marker(midpoint, { draggable: true, icon: this.buildMarkerIcon() }).addTo(this.map);
+
+                newMarker.on('drag', () => {
+                    const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
+                    this.renderLayer([...updated, updated[0]]);
+                    this.updateMidpoints();
+                });
+
+                newMarker.on('dragend', () => {
+                    const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
+                    this.historyStack.push(updated);
+                });
+
+                newMarker.on('contextmenu', () => {
+                    if (this.vertexMarkers.length > 3) {
+                        this.map.removeLayer(newMarker);
+                        this.vertexMarkers = this.vertexMarkers.filter(m => m !== newMarker);
+                        const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
+                        this.renderLayer([...updated, updated[0]]);
+                        this.historyStack.push(updated);
+                        this.updateMidpoints();
+                    }
+                });
+
+                this.vertexMarkers.splice(insertIndex, 0, newMarker);
+
+                const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
+                this.renderLayer([...updated, updated[0]]);
+                this.historyStack.push(updated);
+
+                // 重建中点标记
+                this.insertMidpointMarkers();
+            });
+
+            this.midpointMarkers.push(marker);
+        }
+    }
+
+
+    /** 实时更新中线点的位置
+     *
+     *
+     * @private
+     * @memberof LeafletEditPolygon
+     */
+    private updateMidpoints(): void {
+        // 清除旧的中点
+        this.midpointMarkers.forEach(m => this.map.removeLayer(m));
+        this.midpointMarkers = [];
+
+        // 重新插入
+        this.insertMidpointMarkers();
+    }
+
+    /** 动态生成marker图标(天地图应该是构建的点图层+marker图层两个)
+     *
+     *
+     * @private
+     * @param {(number | string)} distance
+     * @return {*}  {L.DivIcon}
+     * @memberof LeafletDistance
+     */
+    private buildMarkerIcon(): L.DivIcon {
+        return L.divIcon({
+            className: 'edit-polygon-marker',
+            html: ` <!-- 构建小圆点 -->
+                     <div style="width: 20px;height: 20px;border-radius: 50%;background: #ffffff;border: solid 3px red;"></div>
+                   `,
+            iconSize: [20, 20]
+        });
+    }
     // #endregion
 
 
