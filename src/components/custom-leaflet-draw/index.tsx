@@ -10,6 +10,7 @@ import LeafletCircle from './draw/circle';
 import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
+import LeafletEditPolygon from './edit/polygon';
 interface CustomLeafLetDrawProps {
     mapInstance: L.Map; // 传入的地图实例
     drawGeoJsonResult?: (result: any) => void; // 绘制结果吐出
@@ -71,6 +72,13 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             desp: '测面'
         },
         {
+            id: 'edit_polygon',
+            title: '编辑面：双击打开编辑、右键删除点、',
+            icon: 'icon-cemian_0',
+            type: 'edit_polygon',
+            desp: '测面'
+        },
+        {
             id: 'delete',
             title: '清空',
             type: 'delete',
@@ -112,6 +120,10 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             case 'measure_area':
                 const areaLayer = new LeafletArea(mapInstance);
                 setDrawLayers([...drawLayers, areaLayer]);
+                break;
+            case 'edit_polygon':
+                const editPolygonLayer = new LeafletEditPolygon(mapInstance);
+                setDrawLayers([...drawLayers, editPolygonLayer]);
                 break;
             case 'delete':
                 clearAllIfExist();
