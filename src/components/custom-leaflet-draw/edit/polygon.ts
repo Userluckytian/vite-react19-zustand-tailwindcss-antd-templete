@@ -3,6 +3,7 @@
  * 1：双击激活编辑逻辑。
  * 2：编辑时，支持拖动。
  * */
+import { booleanPointInPolygon, point } from '@turf/turf';
 import * as L from 'leaflet';
 export default class LeafletEditPolygon {
 
@@ -15,9 +16,24 @@ export default class LeafletEditPolygon {
         fillOpacity: 0.3, // 设置填充透明度
     };
     private tempCoords: number[][] = [];
+    // 我们需要记录当前状态是否正处于绘制状态
+    private isDrawing: boolean = false;
+
+    // #region 我们开始定义编辑需要的内容
+    // 1: 我们需要记录当前状态是否正处于编辑状态
+    private isEditing: boolean = false;
+    // 2：我们需要一个数组，存储所有的顶点（Marker），编辑时，我们应该展示这些Marker点。所以，这个数组的内容填充的时机是我们什么时候开始【编辑】，我们就在那一刻开始创建marker，注意不是在双击【绘制】结束后就创建。
+    private vertexMarkers: L.Marker[] = [];
+    // 3：编辑历史栈（用于撤销---存储的是编辑后的坐标点）
+    private historyStack: number[][][] = [];
+
+    // #endregion
+
     constructor(map: L.Map, options: L.PolylineOptions = {}) {
         this.map = map;
         if (this.map) {
+            // 初始化时，设置绘制状态为true(双击结束绘制时关闭绘制状态，其生命周期到头，且不再改变)
+            this.isDrawing = true;
             // 鼠标手势设置为十字
             this.map.getContainer().style.cursor = 'crosshair';
             // 禁用双击地图放大功能
@@ -61,7 +77,11 @@ export default class LeafletEditPolygon {
      * @memberof markerPoint
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
-        this.tempCoords.push([e.latlng.lat, e.latlng.lng])
+        // 绘制时的逻辑
+        if (this.isDrawing) {
+            this.tempCoords.push([e.latlng.lat, e.latlng.lng])
+            return;
+        }
     }
     /**  地图双击事件，用于设置点的位置
      *
@@ -72,26 +92,30 @@ export default class LeafletEditPolygon {
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
         if (this.polygonLayer) {
-            // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
-            const finalCoords = this.deduplicateCoordinates(this.tempCoords);
-            this.renderLayer([...finalCoords, finalCoords[0]]);
-            this.reset();
+            // 情况1： 正在绘制状态时，绘制的逻辑
+            if (this.isDrawing) {
+                // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
+                const finalCoords = this.deduplicateCoordinates(this.tempCoords);
+                this.renderLayer([...finalCoords, finalCoords[0]]);
+                this.reset();
+                return;
+            }
+            // 情况 2：已绘制完成，后续双击事件的逻辑均走这个
+            const clickedLatLng = e.latlng;
+            if (!this.isDrawing) {
+                const polygonGeoJSON = this.polygonLayer.toGeoJSON();
+                // 判断用户是否点击到了面上，是的话，就开始编辑模式
+                const turfPoint = point([clickedLatLng.lng, clickedLatLng.lat]);
+                const isInside = booleanPointInPolygon(turfPoint, polygonGeoJSON);
+                if (isInside && !this.isEditing) {
+                    this.enterEditMode();
+                } else if (this.isEditing) {
+                    this.exitEditMode();
+                }
+            }
+
         }
-    }
-    /** 状态重置
-     *
-     *
-     * @private
-     * @memberof LeafletDistance
-     */
-    private reset() {
-        // 清空坐标把，因为没什么用了
-        this.tempCoords = [];
-        // 设置完毕就关闭地图事件监听
-        this.offMapEvent(this.map);
-        this.map.getContainer().style.cursor = 'grab';
-        // 恢复双击地图放大事件
-        this.map.doubleClickZoom.enable();
+
     }
     /**  地图鼠标移动事件，用于设置点的位置
      *
@@ -101,20 +125,29 @@ export default class LeafletEditPolygon {
      * @memberof markerPoint
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
-        if (!this.tempCoords.length) return;
-        const lastMoveEndPoint: L.LatLngExpression = [e.latlng.lat, e.latlng.lng];
-        // 1：一个点也没有时，我们移动事件，也什么也不做。
-        // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。
-        if (this.tempCoords.length === 1) {
-            this.tempCoords = [this.tempCoords[0], lastMoveEndPoint]
+        // 逻辑1： 绘制时的逻辑
+        if (this.isDrawing) {
+            if (!this.tempCoords.length) return;
+            const lastMoveEndPoint: L.LatLngExpression = [e.latlng.lat, e.latlng.lng];
+            // 1：一个点也没有时，我们移动事件，也什么也不做。
+            // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。
+            if (this.tempCoords.length === 1) {
+                this.tempCoords = [this.tempCoords[0], lastMoveEndPoint]
+            }
+            // 3：有两个及以上的点时，我们删掉在只有一个点时，塞入的最后移动的那个点，也就是前一个if语句中塞入的那个点，然后添加此刻移动结束的点。
+            const fixedPoints = this.tempCoords.slice(0, this.tempCoords.length - 1); // 除最后一个点外的所有点
+            this.tempCoords = [...fixedPoints, lastMoveEndPoint];
+            // 实时渲染
+            this.renderLayer(this.tempCoords);
+            return;
         }
-        // 3：有两个及以上的点时，我们删掉在只有一个点时，塞入的最后移动的那个点，也就是前一个if语句中塞入的那个点，然后添加此刻移动结束的点。
-        const fixedPoints = this.tempCoords.slice(0, this.tempCoords.length - 1); // 除最后一个点外的所有点
-        this.tempCoords = [...fixedPoints, lastMoveEndPoint];
-        // 实时渲染
-        this.renderLayer(this.tempCoords);
-    }
 
+        if (this.isEditing) {
+            // 🎯 编辑模式下的逻辑（可扩展）
+            // 例如：拖动整个面时显示辅助线、吸附提示等
+        }
+
+    }
     /** 渲染线图层
      *
      *
@@ -141,6 +174,23 @@ export default class LeafletEditPolygon {
         } else {
             throw new Error("未捕获到marker图层，无法获取到geojson数据");
         }
+    }
+
+    /** 状态重置
+     *
+     *
+     * @private
+     * @memberof LeafletDistance
+     */
+    private reset() {
+        // 清空坐标把，因为没什么用了
+        this.tempCoords = [];
+        // // 设置完毕就关闭地图事件监听
+        // this.offMapEvent(this.map);
+        this.map.getContainer().style.cursor = 'grab';
+        // 恢复双击地图放大事件
+        this.map.doubleClickZoom.enable();
+        this.isDrawing = false;
     }
 
     /** 销毁图层，从地图中移除图层
@@ -200,5 +250,82 @@ export default class LeafletEditPolygon {
     }
 
     // #endregion
+
+    // #region 编辑用到的工具函数
+
+    /** 进入编辑模式
+     * 1: 更新编辑状态变量 
+     * 2: 构建marker点 
+     * 3: 给marker添加拖动事件
+     *
+     * @private 
+     * @return {*}  {void}
+     * @memberof LeafletEditPolygon
+     */
+    private enterEditMode(): void {
+        
+        if (!this.polygonLayer || this.isEditing) return;
+
+        this.isEditing = true;
+        const latlngs = this.polygonLayer.getLatLngs()[0] as L.LatLng[];
+
+        // 记录初始快照
+        this.historyStack.push(latlngs.map(p => [p.lat, p.lng]));
+
+        // 渲染每个顶点为可拖动 marker
+        latlngs.forEach((point, index) => {
+            
+            const marker = L.marker(point, { draggable: true }).addTo(this.map);
+            this.vertexMarkers.push(marker);
+
+            marker.on('drag', (e: L.LeafletMouseEvent) => {
+                const newLatLng = e.latlng;
+                const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
+                this.renderLayer([...updated, updated[0]]);
+            });
+
+            marker.on('dragend', () => {
+                const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
+                this.historyStack.push([...updated]);
+            });
+
+            marker.on('contextmenu', () => {
+                if (this.vertexMarkers.length >= 4) {
+                    // 好奇marker的查找方式吗? 毕竟marker是一个对象呀。
+                    // 解答：marker 是一个图层对象（L.Marker 实例），但在 JavaScript 中，对象是按引用存储的，所以实际比较的是地址，这俩实际指向同一个地址。     
+                    const idx = this.vertexMarkers.findIndex(m => m === marker);
+                    if (idx !== -1) {
+                      this.map.removeLayer(marker);
+                      this.vertexMarkers.splice(idx, 1);
+                      const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
+                      this.renderLayer([...updated, updated[0]]);
+                      this.historyStack.push([...updated]);
+                    }
+                  }
+            });
+        });
+    }
+
+    /** 退出编辑模式
+     * 进入编辑模式时，事件内部绑定了三个事件（drag、dragend、contextmenu），
+     * 事件绑定之后是需要解绑的，不过Leaflet 的事件绑定是和对象实例绑定的，
+     * 一旦你调用 map.removeLayer(marker)，
+     * 这个 marker 就被销毁了，它的事件也随之失效， 
+     * 所以你只需要在 exitEditMode() 中清理掉 vertexMarkers，
+     * 就可以完成“事件解绑”的效果
+     * 
+     * @private
+     * @memberof LeafletEditPolygon
+     */
+    private exitEditMode(): void {
+        this.vertexMarkers.forEach(marker => {
+          this.map.removeLayer(marker); // 移除 marker，同时清除事件
+        });
+        this.vertexMarkers = [];
+        this.isEditing = false;
+      }
+      
+    // #endregion
+
 
 }
