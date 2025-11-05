@@ -28,14 +28,10 @@ export default class LeafletEditPolygon {
     private historyStack: number[][][] = [];
     // #endregion
 
-
-
     // #region【面编辑】里程碑第二步: 实现边中点插入新顶点
     // 1： 我们需要一个数组，存储边线的中间点坐标
     private midpointMarkers: L.CircleMarker[] = [];
     // #endregion
-
-
 
 
     constructor(map: L.Map, options: L.PolylineOptions = {}) {
@@ -275,7 +271,7 @@ export default class LeafletEditPolygon {
      * @memberof LeafletEditPolygon
      */
     private enterEditMode(): void {
-        
+
         if (!this.polygonLayer || this.isEditing) return;
 
         this.isEditing = true;
@@ -287,7 +283,7 @@ export default class LeafletEditPolygon {
         // 渲染每个顶点为可拖动 marker
         latlngs.forEach((point, index) => {
 
-            const marker = L.marker(point, { draggable: true, icon: this.buildMarkerIcon()}).addTo(this.map);
+            const marker = L.marker(point, { draggable: true, icon: this.buildMarkerIcon() }).addTo(this.map);
             this.vertexMarkers.push(marker);
 
             marker.on('drag', (e: L.LeafletMouseEvent) => {
@@ -418,8 +414,6 @@ export default class LeafletEditPolygon {
             this.midpointMarkers.push(marker);
         }
     }
-
-
     /** 实时更新中线点的位置
      *
      *
@@ -439,17 +433,19 @@ export default class LeafletEditPolygon {
      *
      *
      * @private
-     * @param {(number | string)} distance
+     * @param {string} [iconStyle="border-radius: 50%;background: #ffffff;border: solid 3px red;"]
+     * @param {L.PointExpression} [iconSize=[20, 20]]
+     * @param {L.DivIconOptions} [options]
      * @return {*}  {L.DivIcon}
-     * @memberof LeafletDistance
+     * @memberof LeafletEditPolygon
      */
-    private buildMarkerIcon(): L.DivIcon {
+    private buildMarkerIcon(iconStyle = "border-radius: 50%;background: #ffffff;border: solid 3px red;", iconSize: L.PointExpression = [20, 20], options?: L.DivIconOptions): L.DivIcon {
+        let defaultIconStyle = `width:${iconSize[0]}px; height: ${iconSize[1]}px;`
         return L.divIcon({
             className: 'edit-polygon-marker',
-            html: ` <!-- 构建小圆点 -->
-                     <div style="width: 20px;height: 20px;border-radius: 50%;background: #ffffff;border: solid 3px red;"></div>
-                   `,
-            iconSize: [20, 20]
+            html: `<div style="${iconStyle + defaultIconStyle}"></div>`,
+            iconSize: iconSize,
+            ...options
         });
     }
     // #endregion
