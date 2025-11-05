@@ -96,8 +96,7 @@ export default function SampleCheckEditMap({
             // maxZoom: baseMapSetting?.defaultMaxZoom || 18,
             maxZoom: 18,
             attributionControl: false, // 默认情况下，是否将 attribution 版权控件添加到地图中。
-            zoomControl: true, // 默认情况下，是否将 zoom 缩放控件添加到地图中。
-
+            zoomControl: false, // 默认情况下，是否将 zoom 缩放控件添加到地图中。
         });
         if (baseMapSetting?.maxBounds) {
             const maxBounds = L.latLngBounds(
@@ -116,6 +115,7 @@ export default function SampleCheckEditMap({
 
     useEffect(() => {
         let mapScaleControl: any = null;
+        let mapZoomControl: any = null;
         if (mapView) {
             // 获取到地图后，触发事件： 
             // 事件1: 添加底图
@@ -158,12 +158,15 @@ export default function SampleCheckEditMap({
 
             // 事件2： 添加地图比例尺工具条
             mapScaleControl = addScaleControl(mapView);
+            // 事件3： 添加地图Zoom工具条
+            mapZoomControl = addZoomControl(mapView, { zoomInTitle: '放大', zoomOutTitle: '缩小' });
 
-            // 事件3：添加mousemove事件
+            // 事件4：添加mousemove事件
             mapView.on('mousemove', throttle(mouseMoveFun, 500))
         }
         return () => {
             mapScaleControl && mapScaleControl.remove();
+            mapZoomControl && mapZoomControl.remove();
         }
     }, [mapView])
 
