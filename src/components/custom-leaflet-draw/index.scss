@@ -1,5 +1,5 @@
+$iconWidth: 36px;
 .leaflet-draw-toolbar {
-  $iconWidth: 36px;
   border-radius: 4px;
   .tool-button-item {
     position: relative;
@@ -38,5 +38,18 @@
       left: -#{$iconWidth + 1px};
       top: 0px;
     }
+  }
+}
+.leaflet-edit-toolbar {
+  position: absolute;
+  width: max-content;
+  right: 50px + $iconWidth;
+  width: 120px;
+  display: flex;
+  gap: 3px;
+  top: 0px;
+  .edit-tool-item {
+    padding: 3px;
+    background: linear-gradient(41deg, #40d9ff5c 50%, #40d9ffa3 50%);
   }
 }

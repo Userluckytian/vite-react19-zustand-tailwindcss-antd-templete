@@ -22,6 +22,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const { mapInstance } = props;
     const [currSelTool, setCurrSelTool] = useState<string | null>(null);
     const [drawLayers, setDrawLayers] = useState<any[]>([]);
+    const [currEditLayer, setCurrEditLayer] = useState<any>(null);
     const [toolbarList, setToolBarList] = useState<any>([
         {
             id: 'point',
@@ -88,7 +89,6 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         }
     ]
     )
-
 
     // 工具按钮点击
     const handleToolClick = (toolId: string) => {
@@ -187,13 +187,23 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 // 添加监听逻辑
                 editPolygonLayer.onStateChange((status: PolygonEditorState) => {
                     console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
+                    if (status === PolygonEditorState.Editing) {
+                        setCurrEditLayer(editPolygonLayer);
+                    } else {
+                        if (status === PolygonEditorState.Idle) {
+                            setCurrSelTool('');
+                        }
+                        setCurrEditLayer(null);
                     }
                 })
                 break;
             case 'delete':
+                // 销毁图层
                 clearAllIfExist();
+                // 关闭工具条
+                if (currEditLayer) {
+                    setCurrEditLayer(null);
+                }
                 break;
 
             default:
@@ -201,6 +211,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         }
     };
 
+    // #region 绘制工具条事件
     // 清理当前绘制（保留之前的）
     const clearCurrentDraw = () => {
         if (drawLayers.length > 0) {
@@ -222,31 +233,59 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         clearCurrentDraw()
         setCurrSelTool('');
     }
+    // #endregion
 
+    // #region 编辑工具条事件
+    const undoEdit = () => {
+        currEditLayer && currEditLayer.undoEdit();
+
+    }
+    // 重置到最初状态
+    const resetToInitial = () => {
+        currEditLayer && currEditLayer.resetToInitial();
+    }
+    // 完成编辑
+    const exitEditMode = () => {
+        currEditLayer && currEditLayer.commitEdit();
+    }
+    // #endregion
 
 
     return (
-        <div className="leaflet-draw-toolbar">
-            {toolbarList.map((tool: any, idx: number) => (
-                <div className='tool-button-item' key={tool.id}>
-                    {/* 图标部分 */}
-                    <div
-                        className={`tool-button-icon ${currSelTool === tool.id ? 'item-selected' : ''}`}
-                        title={tool.desp}
-                        onClick={() => handleToolClick(tool.id)}
-                    >
-                        <CustomIcon type={tool.icon} className={currSelTool === tool.id ? 'activeItem' : 'defaulted'}></CustomIcon>
-                        {/* {tool.title && <span>{tool.title}</span>} */}
-                    </div>
-                    {/* 底部的分割线 */}
-                    <Activity mode={idx !== toolbarList.length ? 'visible' : 'hidden'}>
-                        <Divider type="horizontal" style={{ margin: '0px' }} />
-                    </Activity>
-                    {/* 绘制状态时的取消按钮 */}
-                    {currSelTool === tool.id && currSelTool !== 'delete' && <div className='cancel-btn' onClick={handleCancelDraw}>取消</div>}
+        <>
+            {/* 绘制工具条 */}
+            <div className="leaflet-draw-toolbar">
+                {toolbarList.map((tool: any, idx: number) => (
+                    <div className='tool-button-item' key={tool.id}>
+                        {/* 图标部分 */}
+                        <div
+                            className={`tool-button-icon ${currSelTool === tool.id ? 'item-selected' : ''}`}
+                            title={tool.desp}
+                            onClick={() => handleToolClick(tool.id)}
+                        >
+                            <CustomIcon type={tool.icon} className={currSelTool === tool.id ? 'activeItem' : 'defaulted'}></CustomIcon>
+                            {/* {tool.title && <span>{tool.title}</span>} */}
+                        </div>
+                        {/* 底部的分割线 */}
+                        <Activity mode={idx !== toolbarList.length ? 'visible' : 'hidden'}>
+                            <Divider type="horizontal" style={{ margin: '0px' }} />
+                        </Activity>
+                        {/* 绘制状态时的取消按钮 */}
+                        {currSelTool === tool.id && currSelTool !== 'delete' && <div className='cancel-btn' onClick={handleCancelDraw}>取消</div>}
 
+                    </div>
+                ))}
+            </div>
+            {/* 编辑工具条 */}
+            {currEditLayer
+                &&
+                <div className="leaflet-edit-toolbar">
+                    <div className='edit-tool-item' onClick={() => undoEdit()}>↩️ 撤销一步</div>
+                    <div className='edit-tool-item' onClick={() => resetToInitial()}>🔄 撤销全部</div>
+                    <div className='edit-tool-item' onClick={() => exitEditMode()}>✅ 完成编辑</div>
                 </div>
-            ))}
-        </div>
+            }
+
+        </>
     );
 }

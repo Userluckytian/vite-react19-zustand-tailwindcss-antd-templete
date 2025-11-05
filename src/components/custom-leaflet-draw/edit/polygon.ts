@@ -126,7 +126,7 @@ export default class LeafletEditPolygon {
                     this.updateAndNotifyStateChange(PolygonEditorState.Editing);
                     // 3: 进入编辑模式
                     this.enterEditMode();
-                } else if (this.currentState === PolygonEditorState.Editing) {
+                } else if (!isInside && this.currentState === PolygonEditorState.Editing) {
                     // 2：状态变更，并发出状态通知
                     this.updateAndNotifyStateChange(PolygonEditorState.Idle);
                     // 3: 退出编辑模式
@@ -313,44 +313,12 @@ export default class LeafletEditPolygon {
         if (!this.polygonLayer) return;
 
         const latlngs = this.polygonLayer.getLatLngs()[0] as L.LatLng[];
-
+        const coords: number[][] = latlngs.map(p => [p.lat, p.lng]);
         // 记录初始快照
-        this.historyStack.push(latlngs.map(p => [p.lat, p.lng]));
+        this.historyStack.push(coords);
 
         // 渲染每个顶点为可拖动 marker
-        latlngs.forEach((point, index) => {
-
-            const marker = L.marker(point, { draggable: true, icon: this.buildMarkerIcon() }).addTo(this.map);
-            this.vertexMarkers.push(marker);
-
-            marker.on('drag', (e: L.LeafletMouseEvent) => {
-                const newLatLng = e.latlng;
-                const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
-                this.renderLayer([...updated, updated[0]]);
-                this.updateMidpoints();
-            });
-
-            marker.on('dragend', () => {
-                const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
-                this.historyStack.push([...updated]);
-            });
-
-            marker.on('contextmenu', () => {
-                if (this.vertexMarkers.length > 3) {
-                    // 好奇marker的查找方式吗? 毕竟marker是一个对象呀。
-                    // 解答：marker 是一个图层对象（L.Marker 实例），但在 JavaScript 中，对象是按引用存储的，所以实际比较的是地址，这俩实际指向同一个地址。     
-                    const idx = this.vertexMarkers.findIndex(m => m === marker);
-                    if (idx !== -1) {
-                        this.map.removeLayer(marker);
-                        this.vertexMarkers.splice(idx, 1);
-                        const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
-                        this.renderLayer([...updated, updated[0]]);
-                        this.historyStack.push([...updated]);
-                        this.updateMidpoints();
-                    }
-                }
-            });
-        });
+        this.reBuildMarker(coords)
         // 渲染边的中线点
         this.insertMidpointMarkers();
     }
@@ -366,7 +334,7 @@ export default class LeafletEditPolygon {
      * @private
      * @memberof LeafletEditPolygon
      */
-    private exitEditMode(): void {
+    public exitEditMode(): void {
         // 移除真实拐点Marker
         this.vertexMarkers.forEach(marker => {
             this.map.removeLayer(marker); // 移除 marker，会默认清除Marker自身的事件
@@ -410,7 +378,7 @@ export default class LeafletEditPolygon {
                 fillOpacity: 0.8,
                 weight: 1
             }).addTo(this.map);
-
+            // 为什么不写成dragStart，因为circleMarker不支持拖动
             marker.on('click', () => {
                 // 插入新顶点
                 const insertIndex = nextIndex;
@@ -485,6 +453,110 @@ export default class LeafletEditPolygon {
             ...options
         });
     }
+
+    // 进阶：
+    /** 撤回上一步
+     *
+     *
+     * @private
+     * @return {*}  {void}
+     * @memberof LeafletEditPolygon
+     */
+    public undoEdit(): void {
+        if (this.historyStack.length < 2) return;
+
+        this.historyStack.pop(); // 弹出当前状态
+        const previous = this.historyStack[this.historyStack.length - 1]; // 获取上一个状态
+        this.reBuildMarkerAndRender(previous)
+    }
+
+    /** 全部撤回
+     *
+     *
+     * @private
+     * @return {*}  {void}
+     * @memberof LeafletEditPolygon
+     */
+    public resetToInitial(): void {
+
+        if (!this.historyStack.length) return;
+
+        const initial = this.historyStack[0];
+        this.historyStack = [initial]; // 清空后只保留初始状态
+        this.reBuildMarkerAndRender(initial)
+    }
+
+    /** 完成绘制
+     *
+     *
+     * @memberof LeafletEditPolygon
+     */
+    public commitEdit(): void {
+        const current = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
+        this.historyStack = [current]; // 当前状态作为新的初始快照
+        this.exitEditMode();
+        this.updateAndNotifyStateChange(PolygonEditorState.Idle);
+    }
+
+    /** 根据坐标重建 marker 和图形 + 重新渲染图层
+     * 
+     * @param latlngs 坐标数组
+     */
+    private reBuildMarkerAndRender(latlngs: number[][]): void {
+        this.renderLayer([...latlngs, latlngs[0]]);
+
+        this.reBuildMarker(latlngs);
+
+        this.updateMidpoints();
+
+    }
+    /** 根据坐标重建 marker 和图形
+     * 
+     * @param latlngs 坐标数组
+     */
+    private reBuildMarker(latlngs: number[][]): void {
+        // 清除旧 marker
+        this.vertexMarkers.forEach(m => this.map.removeLayer(m));
+        this.vertexMarkers = [];
+
+        // 构建新 marker
+        latlngs.forEach(coord => {
+            const latlng = L.latLng(coord[0], coord[1]);
+            const marker = L.marker(latlng, { draggable: true, icon: this.buildMarkerIcon() }).addTo(this.map);
+            this.vertexMarkers.push(marker);
+            // 下面这三个事件虽然被写在循环里了，但是事件里的内容并不是立刻执行的内容。
+            marker.on('drag', (e: L.LeafletMouseEvent) => {
+                const newLatLng = e.latlng;
+                const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
+                this.renderLayer([...updated, updated[0]]);
+                this.updateMidpoints();
+            });
+
+            marker.on('dragend', () => {
+                const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
+                this.historyStack.push([...updated]);
+            });
+
+            marker.on('contextmenu', () => {
+                if (this.vertexMarkers.length > 3) {
+                    // 好奇marker的查找方式吗? 毕竟marker是一个对象呀。
+                    // 解答：marker 是一个图层对象（L.Marker 实例），但在 JavaScript 中，对象是按引用存储的，所以实际比较的是地址，这俩实际指向同一个地址。     
+                    const idx = this.vertexMarkers.findIndex(m => m === marker);
+                    if (idx !== -1) {
+                        this.map.removeLayer(marker);
+                        this.vertexMarkers.splice(idx, 1);
+                        const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
+                        this.renderLayer([...updated, updated[0]]);
+                        this.historyStack.push([...updated]);
+                        this.updateMidpoints();
+                    }
+                }
+            });
+        });
+
+    }
+
+
     // #endregion
 
     // #region 绘制、编辑等状态改变时的事件回调
@@ -527,6 +599,16 @@ export default class LeafletEditPolygon {
     private updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;
         this.stateListeners.forEach(fn => fn(this.currentState));
+    }
+
+    /** 内部使用，状态改变时，触发所有的监听事件
+     *
+     *
+     * @public
+     * @memberof LeafletEditPolygon
+     */
+    public setCurrentState(status: PolygonEditorState): void {
+        this.currentState = status;
     }
     // #endregion
 
