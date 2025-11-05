@@ -220,9 +220,9 @@ export default class LeafletEditPolygon {
      *
      * @memberof markerPoint
      */
-    public destory() {
+    public destroy() {
         // #region 1：绘制图层用到的内容
-        this.destoryLayer();
+        this.destroyLayer();
         // #endregion
 
         // #region 2：编辑模式用到的内容
@@ -248,7 +248,7 @@ export default class LeafletEditPolygon {
      * @private
      * @memberof LeafletEditPolygon
      */
-    private destoryLayer() {
+    private destroyLayer() {
         // 1.1清空坐标把，因为没什么用了
         this.tempCoords = [];
         // 1.2从地图中移除图层

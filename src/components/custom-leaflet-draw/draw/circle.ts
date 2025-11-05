@@ -149,7 +149,7 @@ export default class LeafletCircle {
      *
      * @memberof markerPoint
      */
-    public destory() {
+    public destroy() {
         if (this.circleLayer) {
             this.circleLayer.remove();
             this.circleLayer = null;

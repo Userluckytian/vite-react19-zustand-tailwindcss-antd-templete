@@ -149,7 +149,7 @@ export default class LeafletPolygon {
      *
      * @memberof markerPoint
      */
-    public destory() {
+    public destroy() {
         if (this.polygonLayer) {
             this.polygonLayer.remove();
             this.polygonLayer = null;

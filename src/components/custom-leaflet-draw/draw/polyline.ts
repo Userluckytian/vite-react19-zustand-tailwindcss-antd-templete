@@ -150,7 +150,7 @@ export default class LeafletPolyline {
      *
      * @memberof markerPoint
      */
-    public destory() {
+    public destroy() {
         if (this.lineLayer) {
             this.lineLayer.remove();
             this.lineLayer = null;

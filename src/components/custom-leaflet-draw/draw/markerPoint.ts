@@ -91,7 +91,7 @@ export default class MarkerPoint {
      *
      * @memberof markerPoint
      */
-    public destory() {
+    public destroy() {
         if (this.markerLayer) {
             this.markerLayer.remove();
             this.markerLayer = null;

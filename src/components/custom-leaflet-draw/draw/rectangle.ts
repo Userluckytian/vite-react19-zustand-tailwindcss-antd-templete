@@ -140,7 +140,7 @@ export default class LeafletRectangle {
      *
      * @memberof markerPoint
      */
-    public destory() {
+    public destroy() {
         if (this.rectangleLayer) {
             this.rectangleLayer.remove();
             this.rectangleLayer = null;
