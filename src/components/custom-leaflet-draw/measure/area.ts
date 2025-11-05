@@ -1,8 +1,10 @@
 /* 本组件，设计初衷是用作测量面积的工具的。
  * 因此：本组件不会吐出任何数据。
+ * 1 ：绘制状态时，外部ui可能要展示取消按钮，所以需要给外部提供当前是否是处于绘制状态，即需要添加一个事件回调机制，外部监听状态的改变进行响应的ui调整
  * */
 import { area, center, polygon } from '@turf/turf';
 import * as L from 'leaflet';
+import { PolygonEditorState } from '../types';
 
 type areaOptions = {
     precision?: number;
@@ -44,10 +46,18 @@ export default class LeafletArea {
     private markerLayer: L.Marker = null;
     private tempCoords: number[][] = [];
     private measureOptions: areaOptions;
+
+    // 1：我们需要记录当前状态是处于绘制状态--见：currentState变量
+    private currentState: PolygonEditorState = PolygonEditorState.Idle; // 默认空闲状态
+    // 2：我们需要一个数组，存储全部的监听事件，然后在状态改变时，触发所有这些事件的监听回调！
+    private stateListeners: ((state: PolygonEditorState) => void)[] = [];
+
     constructor(map: L.Map, measureOptions: areaOptions = { precision: 2, lang: 'zh' }, options: L.PolylineOptions = {}) {
         this.map = map;
         this.measureOptions = measureOptions;
         if (this.map) {
+            // 初始化时，设置绘制状态为true，且发出状态通知
+            this.updateAndNotifyStateChange(PolygonEditorState.Drawing);
             // 鼠标手势设置为十字
             this.map.getContainer().style.cursor = 'crosshair';
             // 禁用双击地图放大功能
@@ -122,6 +132,8 @@ export default class LeafletArea {
         this.map.getContainer().style.cursor = 'grab';
         // 恢复双击地图放大事件
         this.map.doubleClickZoom.enable();
+        // 初始化时，设置绘制状态为true，且发出状态通知
+        this.updateAndNotifyStateChange(PolygonEditorState.Idle);
     }
     /**  地图鼠标移动事件，用于设置点的位置
      *
@@ -279,7 +291,6 @@ export default class LeafletArea {
 
     // #endregion
 
-
     // #region 面积单位换算函数，内容偏多，这块不用看，知道有面积计算就行
 
     /**
@@ -326,6 +337,49 @@ export default class LeafletArea {
     }
 
 
+    // #endregion
+
+    // #region 绘制状态改变时的事件回调
+    /** 【外部使用】的监听器，用于监听状态改变事件
+     *
+     *
+     * @param {(state: PolygonEditorState) => void} listener
+     * @memberof LeafletEditPolygon
+     */
+    public onStateChange(listener: (state: PolygonEditorState) => void): void {
+        // 存储回调事件并立刻触发一次
+        this.stateListeners.push(listener);
+        // 立即回调当前状态
+        listener(this.currentState);
+    }
+
+    /** 添加移除单个监听器的方法 
+     * 
+     */
+    public offStateChange(listener: (state: PolygonEditorState) => void): void {
+        const index = this.stateListeners.indexOf(listener);
+        if (index > -1) {
+            this.stateListeners.splice(index, 1);
+        }
+    }
+
+    /** 清空所有状态监听器 
+     * 
+     */
+    public clearAllStateListeners(): void {
+        this.stateListeners = [];
+    }
+
+    /** 内部使用，状态改变时，触发所有的监听事件
+     *
+     *
+     * @private
+     * @memberof LeafletEditPolygon
+     */
+    private updateAndNotifyStateChange(status: PolygonEditorState): void {
+        this.currentState = status;
+        this.stateListeners.forEach(fn => fn(this.currentState));
+    }
     // #endregion
 
 }

@@ -528,5 +528,6 @@ export default class LeafletEditPolygon {
         this.currentState = status;
         this.stateListeners.forEach(fn => fn(this.currentState));
     }
+    // #endregion
 
 }
