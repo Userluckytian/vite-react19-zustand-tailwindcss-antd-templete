@@ -10,7 +10,8 @@ import LeafletCircle from './draw/circle';
 import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
-import LeafletEditPolygon, { PolygonEditorState } from './edit/polygon';
+import LeafletEditPolygon from './edit/polygon';
+import { PolygonEditorState } from './types';
 interface CustomLeafLetDrawProps {
     mapInstance: L.Map; // 传入的地图实例
     drawGeoJsonResult?: (result: any) => void; // 绘制结果吐出
@@ -73,10 +74,10 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         },
         {
             id: 'edit_polygon',
-            title: '编辑面：双击打开编辑、右键删除点、',
-            icon: 'icon-cemian_0',
+            title: '编辑面：双击打开编辑右键删除点',
+            icon: 'icon-huizhiduobianxing1',
             type: 'edit_polygon',
-            desp: '测面'
+            desp: '编辑面'
         },
         {
             id: 'delete',
@@ -91,43 +92,104 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
 
     // 工具按钮点击
     const handleToolClick = (toolId: string) => {
+
+        // 如果点击的是当前已选中的工具，则取消
+        if (currSelTool === toolId) {
+            handleCancelDraw();
+            return;
+        }
+        // // 先清理之前的绘制
+        // clearCurrentDraw();
+
         setCurrSelTool(toolId);
+        // clearAllIfExist();
         switch (toolId) {
             case 'point':
                 const markerPoint = new MarkerPoint(mapInstance);
-                setDrawLayers([...drawLayers, markerPoint]);
+                setDrawLayers((pre: any[]) => [...pre, markerPoint]);
+                // 添加监听逻辑
+                markerPoint.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
+                })
                 break;
             case 'line':
                 const lineLayer = new LeafletLine(mapInstance);
-                setDrawLayers([...drawLayers, lineLayer]);
+                setDrawLayers((pre: any[]) => [...pre, lineLayer]);
+                // 添加监听逻辑
+                lineLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
+                })
                 break;
             case 'polygon':
                 const polygonLayer = new LeafletPolygon(mapInstance);
-                setDrawLayers([...drawLayers, polygonLayer]);
+                setDrawLayers((pre: any[]) => [...pre, polygonLayer]);
+                // 添加监听逻辑
+                polygonLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
+                })
                 break;
             case 'circle':
                 const circleLayer = new LeafletCircle(mapInstance);
-                setDrawLayers([...drawLayers, circleLayer]);
+                setDrawLayers((pre: any[]) => [...pre, circleLayer]);
+                // 添加监听逻辑
+                circleLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
+                })
                 break;
             case 'rectangle':
                 const rectangleLayer = new LeafletRectangle(mapInstance);
-                setDrawLayers([...drawLayers, rectangleLayer]);
+                setDrawLayers((pre: any[]) => [...pre, rectangleLayer]);
+                // 添加监听逻辑
+                rectangleLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
+                })
                 break;
             case 'measure_distance':
                 const distanceLayer = new LeafletDistance(mapInstance);
-                setDrawLayers([...drawLayers, distanceLayer]);
+                setDrawLayers((pre: any[]) => [...pre, distanceLayer]);
+                // 添加监听逻辑
+                distanceLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
+                })
                 break;
             case 'measure_area':
                 const areaLayer = new LeafletArea(mapInstance);
-                setDrawLayers([...drawLayers, areaLayer]);
+                setDrawLayers((pre: any[]) => [...pre, areaLayer]);
+                // 添加监听逻辑
+                areaLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
+                })
                 break;
             case 'edit_polygon':
                 const editPolygonLayer = new LeafletEditPolygon(mapInstance);
-                setDrawLayers([...drawLayers, editPolygonLayer]);
+                setDrawLayers((pre: any[]) => [...pre, editPolygonLayer]);
                 // 添加监听逻辑
                 editPolygonLayer.onStateChange((status: PolygonEditorState) => {
                     console.log('status', status);
-
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
                 })
                 break;
             case 'delete':
@@ -138,10 +200,27 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 break;
         }
     };
+
+    // 清理当前绘制（保留之前的）
+    const clearCurrentDraw = () => {
+        if (drawLayers.length > 0) {
+            const lastLayer = drawLayers[drawLayers.length - 1];
+            if (lastLayer && lastLayer.destroy) {
+                lastLayer.destroy();
+            }
+            setDrawLayers(prev => prev.slice(0, -1));
+        }
+    };
+
     const clearAllIfExist = () => {
         drawLayers.forEach((layer: any) => {
-            layer.destory();
+            layer.destroy();
         });
+    }
+    // 处理取消绘制事件
+    const handleCancelDraw = () => {
+        clearCurrentDraw()
+        setCurrSelTool('');
     }
 
 
@@ -149,19 +228,24 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     return (
         <div className="leaflet-draw-toolbar">
             {toolbarList.map((tool: any, idx: number) => (
-                <Fragment key={tool.id}>
+                <div className='tool-button-item' key={tool.id}>
+                    {/* 图标部分 */}
                     <div
-                        className={`tool-button ${currSelTool === tool.id ? 'selected' : ''}`}
+                        className={`tool-button-icon ${currSelTool === tool.id ? 'item-selected' : ''}`}
                         title={tool.desp}
                         onClick={() => handleToolClick(tool.id)}
                     >
                         <CustomIcon type={tool.icon} className={currSelTool === tool.id ? 'activeItem' : 'defaulted'}></CustomIcon>
                         {/* {tool.title && <span>{tool.title}</span>} */}
                     </div>
+                    {/* 底部的分割线 */}
                     <Activity mode={idx !== toolbarList.length ? 'visible' : 'hidden'}>
                         <Divider type="horizontal" style={{ margin: '0px' }} />
                     </Activity>
-                </Fragment>
+                    {/* 绘制状态时的取消按钮 */}
+                    {currSelTool === tool.id && currSelTool !== 'delete' && <div className='cancel-btn' onClick={handleCancelDraw}>取消</div>}
+
+                </div>
             ))}
         </div>
     );

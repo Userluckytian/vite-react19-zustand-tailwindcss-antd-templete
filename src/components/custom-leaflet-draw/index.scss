@@ -1,7 +1,10 @@
 .leaflet-draw-toolbar {
-    border-radius: 4px;
-    .tool-button {
-      width: 36px;
+  $iconWidth: 36px;
+  border-radius: 4px;
+  .tool-button-item {
+    position: relative;
+    .tool-button-icon {
+      width: $iconWidth;
       font-size: 18px;
       aspect-ratio: 1 / 1;
       background-color: #ffffff;
@@ -22,9 +25,18 @@
         color: #40d9ff;
       }
     }
-    .selected {
+    .item-selected {
       color: #40d9ff;
       border: solid 1px #40d9ff;
     }
+    .cancel-btn {
+      position: absolute;
+      width: $iconWidth;
+      aspect-ratio: 1 / 1;
+      background: #40d9ff;
+      line-height: $iconWidth;
+      left: -#{$iconWidth + 1px};
+      top: 0px;
+    }
   }
-  
+}
