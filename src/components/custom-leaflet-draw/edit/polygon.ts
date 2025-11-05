@@ -2,9 +2,19 @@
  * 既然是编辑工具，目前能想到的用户使用场景：
  * 1：双击激活编辑逻辑。
  * 2：编辑时，支持拖动。
+ * 3：绘制状态，外部ui要展示取消按钮，编辑状态，外部ui要展示编辑工具条，所以需要添加事件回调机制，外部监听状态的改变进行响应的ui调整
  * */
 import { booleanPointInPolygon, point } from '@turf/turf';
 import * as L from 'leaflet';
+
+// #region 用于事件回调机制
+export enum PolygonEditorState {
+    Idle = 'idle',       // 空闲状态：既不是绘制中，也不是编辑中
+    Drawing = 'drawing', // 正在绘制
+    Editing = 'editing'  // 正在编辑
+}
+// #endregion
+
 export default class LeafletEditPolygon {
 
     private map: L.Map;
@@ -16,12 +26,10 @@ export default class LeafletEditPolygon {
         fillOpacity: 0.3, // 设置填充透明度
     };
     private tempCoords: number[][] = [];
-    // 我们需要记录当前状态是否正处于绘制状态
-    private isDrawing: boolean = false;
-
+    // 我们需要记录当前状态是处于绘制状态--见：currentState变量
+    private currentState: PolygonEditorState = PolygonEditorState.Idle; // 默认空闲状态
     // #region【面编辑】里程碑第一步: 实现点的拖动、右键删除。下面三个变量就够了 
-    // 1: 我们需要记录当前状态是否正处于编辑状态
-    private isEditing: boolean = false;
+    // 1: 我们需要记录当前状态是否正处于编辑状态--见：currentState变量
     // 2：我们需要一个数组，存储所有的顶点（Marker），编辑时，我们应该展示这些Marker点。所以，这个数组的内容填充的时机是我们什么时候开始【编辑】，我们就在那一刻开始创建marker，注意不是在双击【绘制】结束后就创建。
     private vertexMarkers: L.Marker[] = [];
     // 3：编辑历史栈（用于撤销---存储的是编辑后的坐标点）
@@ -32,13 +40,17 @@ export default class LeafletEditPolygon {
     // 1： 我们需要一个数组，存储边线的中间点坐标
     private midpointMarkers: L.CircleMarker[] = [];
     // #endregion
+    // #region【面编辑】里程碑第三步: 实现编辑、绘制状态回调吐出，外界ui构建时需要用到
+    // 1： 我们需要一个数组，存储全部的监听事件，然后在状态改变时，触发所有这些事件的监听回调！
+    private stateListeners: ((state: PolygonEditorState) => void)[] = [];
+    // #endregion
 
 
     constructor(map: L.Map, options: L.PolylineOptions = {}) {
         this.map = map;
         if (this.map) {
-            // 初始化时，设置绘制状态为true(双击结束绘制时关闭绘制状态，其生命周期到头，且不再改变)
-            this.isDrawing = true;
+            // 初始化时，设置绘制状态为true(双击结束绘制时关闭绘制状态，其生命周期到头，且不再改变)，且发出状态通知
+            this.updateAndNotifyStateChange(PolygonEditorState.Drawing);
             // 鼠标手势设置为十字
             this.map.getContainer().style.cursor = 'crosshair';
             // 禁用双击地图放大功能
@@ -83,7 +95,7 @@ export default class LeafletEditPolygon {
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
         // 绘制时的逻辑
-        if (this.isDrawing) {
+        if (this.currentState === PolygonEditorState.Drawing) {
             this.tempCoords.push([e.latlng.lat, e.latlng.lng])
             return;
         }
@@ -98,23 +110,33 @@ export default class LeafletEditPolygon {
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
         if (this.polygonLayer) {
             // 情况1： 正在绘制状态时，绘制的逻辑
-            if (this.isDrawing) {
+            if (this.currentState === PolygonEditorState.Drawing) {
                 // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
                 const finalCoords = this.deduplicateCoordinates(this.tempCoords);
                 this.renderLayer([...finalCoords, finalCoords[0]]);
+                this.tempCoords = []; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
                 this.reset();
+                // 设置为空闲状态，并发出状态通知
+                this.updateAndNotifyStateChange(PolygonEditorState.Idle);
                 return;
-            }
-            // 情况 2：已绘制完成，后续双击事件的逻辑均走这个
-            const clickedLatLng = e.latlng;
-            if (!this.isDrawing) {
+            } else {
+                // 情况 2：已绘制完成后的后续双击事件的逻辑均走这个
+                const clickedLatLng = e.latlng;
                 const polygonGeoJSON = this.polygonLayer.toGeoJSON();
                 // 判断用户是否点击到了面上，是的话，就开始编辑模式
                 const turfPoint = point([clickedLatLng.lng, clickedLatLng.lat]);
                 const isInside = booleanPointInPolygon(turfPoint, polygonGeoJSON);
-                if (isInside && !this.isEditing) {
+                if (isInside && this.currentState !== PolygonEditorState.Editing) {
+                    // 1：禁用双击地图放大功能
+                    this.map.doubleClickZoom.disable();
+                    // 2：状态变更，并发出状态通知
+                    this.updateAndNotifyStateChange(PolygonEditorState.Editing);
+                    // 3: 进入编辑模式
                     this.enterEditMode();
-                } else if (this.isEditing) {
+                } else if (this.currentState === PolygonEditorState.Editing) {
+                    // 2：状态变更，并发出状态通知
+                    this.updateAndNotifyStateChange(PolygonEditorState.Idle);
+                    // 3: 退出编辑模式
                     this.exitEditMode();
                 }
             }
@@ -131,7 +153,7 @@ export default class LeafletEditPolygon {
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
         // 逻辑1： 绘制时的逻辑
-        if (this.isDrawing) {
+        if (this.currentState === PolygonEditorState.Drawing) {
             if (!this.tempCoords.length) return;
             const lastMoveEndPoint: L.LatLngExpression = [e.latlng.lat, e.latlng.lng];
             // 1：一个点也没有时，我们移动事件，也什么也不做。
@@ -147,7 +169,7 @@ export default class LeafletEditPolygon {
             return;
         }
 
-        if (this.isEditing) {
+        if (this.currentState === PolygonEditorState.Editing) {
             // 🎯 编辑模式下的逻辑（可扩展）
             // 例如：拖动整个面时显示辅助线、吸附提示等
         }
@@ -188,14 +210,9 @@ export default class LeafletEditPolygon {
      * @memberof LeafletDistance
      */
     private reset() {
-        // 清空坐标把，因为没什么用了
-        this.tempCoords = [];
-        // // 设置完毕就关闭地图事件监听
-        // this.offMapEvent(this.map);
         this.map.getContainer().style.cursor = 'grab';
         // 恢复双击地图放大事件
         this.map.doubleClickZoom.enable();
-        this.isDrawing = false;
     }
 
     /** 销毁图层，从地图中移除图层
@@ -204,15 +221,43 @@ export default class LeafletEditPolygon {
      * @memberof markerPoint
      */
     public destory() {
+        // #region 1：绘制图层用到的内容
+        this.destoryLayer();
+        // #endregion
+
+        // #region 2：编辑模式用到的内容
+        // 编辑模式的内容也重置
+        this.exitEditMode();
+        // #endregion
+
+        // #region3：地图相关内容处理（关闭事件监听，恢复部分交互功能【缩放、鼠标手势】）
+        this.offMapEvent(this.map);
+        this.reset();
+        // #endregion
+        // #region4：清除类自身绑定的相关事件
+        this.clearAllStateListeners();
+        // 设置为空闲状态，并发出状态通知
+        this.updateAndNotifyStateChange(PolygonEditorState.Idle);
+        // #endregion
+
+    }
+
+    /** 销毁绘制的图层
+     *
+     *
+     * @private
+     * @memberof LeafletEditPolygon
+     */
+    private destoryLayer() {
+        // 1.1清空坐标把，因为没什么用了
+        this.tempCoords = [];
+        // 1.2从地图中移除图层
         if (this.polygonLayer) {
             this.polygonLayer.remove();
             this.polygonLayer = null;
         }
-        this.reset();
-
-        // 编辑模式的内容也重置
-        this.exitEditMode();
     }
+
 
     /** 关闭地图事件监听
      *
@@ -272,9 +317,8 @@ export default class LeafletEditPolygon {
      */
     private enterEditMode(): void {
 
-        if (!this.polygonLayer || this.isEditing) return;
+        if (!this.polygonLayer) return;
 
-        this.isEditing = true;
         const latlngs = this.polygonLayer.getLatLngs()[0] as L.LatLng[];
 
         // 记录初始快照
@@ -330,11 +374,11 @@ export default class LeafletEditPolygon {
      * @memberof LeafletEditPolygon
      */
     private exitEditMode(): void {
+        // 移除真实拐点Marker
         this.vertexMarkers.forEach(marker => {
-            this.map.removeLayer(marker); // 移除 marker，同时清除事件
+            this.map.removeLayer(marker); // 移除 marker，会默认清除Marker自身的事件
         });
         this.vertexMarkers = [];
-        this.isEditing = false;
         // 移除边的中线点标记
         this.midpointMarkers.forEach(m => this.map.removeLayer(m));
         this.midpointMarkers = [];
@@ -347,7 +391,7 @@ export default class LeafletEditPolygon {
      * @memberof LeafletEditPolygon
      */
     private insertMidpointMarkers(): void {
-        if (!this.polygonLayer || !this.isEditing) return;
+        if (!this.polygonLayer || this.currentState !== PolygonEditorState.Editing) return;
 
         // 清除旧的中点标记（若数组中存在）
         this.midpointMarkers.forEach(m => this.map.removeLayer(m));
@@ -450,5 +494,46 @@ export default class LeafletEditPolygon {
     }
     // #endregion
 
+    // #region 绘制、编辑等状态改变时的事件回调
+    /** 【外部使用】的监听器，用于监听状态改变事件
+     *
+     *
+     * @param {(state: PolygonEditorState) => void} listener
+     * @memberof LeafletEditPolygon
+     */
+    public onStateChange(listener: (state: PolygonEditorState) => void): void {
+        // 存储回调事件并立刻触发一次
+        this.stateListeners.push(listener);
+        // 立即回调当前状态
+        listener(this.currentState);
+    }
+
+    /** 添加移除单个监听器的方法 
+     * 
+     */
+    public offStateChange(listener: (state: PolygonEditorState) => void): void {
+        const index = this.stateListeners.indexOf(listener);
+        if (index > -1) {
+            this.stateListeners.splice(index, 1);
+        }
+    }
+
+    /** 清空所有状态监听器 
+     * 
+     */
+    public clearAllStateListeners(): void {
+        this.stateListeners = [];
+    }
+
+    /** 内部使用，状态改变时，触发所有的监听事件
+     *
+     *
+     * @private
+     * @memberof LeafletEditPolygon
+     */
+    private updateAndNotifyStateChange(status: PolygonEditorState): void {
+        this.currentState = status;
+        this.stateListeners.forEach(fn => fn(this.currentState));
+    }
 
 }

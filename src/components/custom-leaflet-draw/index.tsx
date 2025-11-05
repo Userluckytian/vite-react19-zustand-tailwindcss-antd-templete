@@ -10,7 +10,7 @@ import LeafletCircle from './draw/circle';
 import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
-import LeafletEditPolygon from './edit/polygon';
+import LeafletEditPolygon, { PolygonEditorState } from './edit/polygon';
 interface CustomLeafLetDrawProps {
     mapInstance: L.Map; // 传入的地图实例
     drawGeoJsonResult?: (result: any) => void; // 绘制结果吐出
@@ -124,6 +124,11 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             case 'edit_polygon':
                 const editPolygonLayer = new LeafletEditPolygon(mapInstance);
                 setDrawLayers([...drawLayers, editPolygonLayer]);
+                // 添加监听逻辑
+                editPolygonLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+
+                })
                 break;
             case 'delete':
                 clearAllIfExist();
