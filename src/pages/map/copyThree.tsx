@@ -1,8 +1,9 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import "./index.scss";
 import { GlobalContext } from "@/main";
-import { throttle } from "@/utils/utils";
-import { App } from "antd";
+import { formatNumber, throttle } from "@/utils/utils";
+import { App, Checkbox } from "antd";
+import { Map, NavigationControl } from "react-bmapgl";
 interface MapPreviewProps {
   outputMapView?: (map: any) => void;
 }
@@ -17,36 +18,18 @@ type DrawingType =
   | "circle"
   | null;
 export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
   const { message } = App.useApp();
   const drawingManagerRef = useRef<any>(null);
-  // 在组件顶部添加状态
-  const [hasEarthInitialized, setHasEarthInitialized] = useState(false);
-  const [userMapSettings, setUserMapSettings] = useState(true);
+  const globalConfigContext = useContext(GlobalContext);
+  const baseMapSetting = globalConfigContext.baseMapSetting;
   const mapRef = useRef<any>(null);
-  // 创建全景图层
-  const panoramaLayerRef = useRef<any>(null);
+  // 在组件顶部添加路网图层引用
+  const roadNetLayerRef = useRef<any>(null);
   const [mapView, setMapView] = useState<any>(null);
   const [lnglat, setLngLat] = useState<any>(null);
   const [currentMapType, setCurrentMapType] = useState<MapType>("normal");
   const [currentDrawingType, setCurrentDrawingType] =
     useState<DrawingType>(null);
-  // 单一全景管理器引用
-  const panoramaManagerRef = useRef<{
-    layer: any;
-    control: any;
-    contextMenu: any;
-    isActive: boolean;
-  }>({
-    layer: null,
-    control: null,
-    contextMenu: null,
-    isActive: false,
-  });
-  // 切换到非全景地图时，移除全景图层
-  useEffect(() => {
-    console.log("切换地图类型", currentMapType);
-  }, [currentMapType]);
   // 地图类型配置
   const mapTypes = [
     {
@@ -91,34 +74,17 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     { key: "polygon" as DrawingType, name: "多边形", icon: "🔺" },
     { key: "circle" as DrawingType, name: "圆", icon: "⭕" },
   ];
-  // 简化的添加全景方法
-  const addPanoramaLayer = (map: any) => {
-    removePanoramaLayer(map); // 先清理
-    const { BMapGL } = window as any;
-    panoramaManagerRef.current.layer = new BMapGL.PanoramaCoverageLayer();
-    map.addTileLayer(panoramaManagerRef.current.layer);
-    // 添加右键菜单并保存引用
-    panoramaManagerRef.current.contextMenu = addContextMenu(map);
-    panoramaManagerRef.current.control = new BMapGL.PanoramaControl();
-    panoramaManagerRef.current.control.setOffset(new BMapGL.Size(20, 5));
-    map.addControl(panoramaManagerRef.current.control);
-    panoramaManagerRef.current.isActive = true;
-  };
-  // 简化的移除全景方法
-  const removePanoramaLayer = (map: any) => {
-    if (map && panoramaManagerRef.current.isActive) {
-      const { layer, control, contextMenu } = panoramaManagerRef.current;
-      if (layer) map.removeTileLayer(layer);
-      if (control) map.removeControl(control);
-      if (contextMenu) map.removeContextMenu(contextMenu);
-      // 4. 关键：禁用全景覆盖层（这会移除蓝色的全景图钉）
-      panoramaManagerRef.current = {
-        layer: null,
-        control: null,
-        contextMenu: null,
-        isActive: false,
-      };
-    }
+  // 初始化路网图层
+  const initRoadNetLayer = (map: any) => {
+    // 创建路网图层
+    const roadNetLayer = new (window as any).BMapGL.TrafficLayer({
+      predictDate: {
+        hour: 12,
+        minute: 0,
+      },
+    });
+    roadNetLayerRef.current = roadNetLayer;
+    return roadNetLayer;
   };
   // 初始化绘制工具
   const initDrawingManager = (map: any) => {
@@ -194,6 +160,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
       );
     }
   };
+
   // 停止绘制
   const stopDrawing = () => {
     if (drawingManagerRef.current) {
@@ -214,223 +181,166 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
   // 百度地图的缩放控制
   const zoomIn = () => {
     if (mapRef.current) {
-      mapRef.current.setZoom(mapRef.current.getZoom() + 1);
+      const map = mapRef.current.map;
+      map.setZoom(map.getZoom() + 1);
     }
   };
   const zoomOut = () => {
     if (mapRef.current) {
-      mapRef.current.setZoom(mapRef.current.getZoom() - 1);
+      const map = mapRef.current.map;
+      map.setZoom(map.getZoom() - 1);
     }
   };
-  // 百度地图的鼠标移动事件
+  // 切换地图类型
+  const switchMapType = (mapType: MapType) => {
+    if (!mapView) return;
+    setCurrentMapType(mapType);
+    // 获取百度地图实例
+    const map = mapRef.current.map;
+    try {
+      switch (mapType) {
+        case "normal":
+          // 普通地图 - 使用数字常量
+          map.setMapType((window as any).BMAP_NORMAL_MAP || 1);
+          map.setTilt(0); // 重置为2D视角
+          break;
+        case "earth":
+          // 地球模式 - 使用数字常量
+          map.setMapType((window as any).BMAP_EARTH_MAP || 2);
+          map.setTilt(60); // 设置3D视角
+          // 启用3D建筑（如果可用）
+          if (map.enable3DBuilding) {
+            map.enable3DBuilding();
+          }
+          break;
+        case "satellite":
+          // 卫星地图 - 使用数字常量
+          map.setMapType((window as any).BMAP_SATELLITE_MAP || 3);
+          map.setTilt(0); // 重置为2D视角
+          break;
+        case "panorama":
+          // 添加全景图层
+          map.addTileLayer(new (window as any).BMapGL.PanoramaCoverageLayer());
+          // 添加全景控件
+          const stCtrl = new (window as any).BMapGL.PanoramaControl();
+          stCtrl.setOffset(new (window as any).BMapGL.Size(0, 0));
+          map.addControl(stCtrl);
+          // 可选：设置到有全景数据的位置
+          map.centerAndZoom(
+            new (window as any).BMapGL.Point(116.40385, 39.913795),
+            18
+          );
+          break;
+      }
+
+      message.success(
+        `已切换到${mapTypes.find((m) => m.key === mapType)?.name}`
+      );
+    } catch (error) {
+      console.error("切换地图类型失败:", error);
+      message.error("地图切换失败");
+    }
+  };
+  // 使用数字常量直接设置地图类型（备选方案）
+  const switchMapTypeWithNumbers = (mapType: MapType) => {
+    if (!mapView) return;
+    setCurrentMapType(mapType);
+    const map = mapRef.current.map;
+    // 百度地图类型常量对应的数字值
+    const mapTypeConstants = {
+      normal: 1, // BMAP_NORMAL_MAP
+      earth: 2, // BMAP_EARTH_MAP
+      //   satellite: 3, // BMAP_SATELLITE_MAP
+      traffic: 3, // BMAP_PERSPECTIVE_MAP
+    };
+    try {
+      map.setMapType(mapTypeConstants[mapType]);
+      // 特殊处理地球模式
+      if (mapType === "earth") {
+        map.setTilt(60);
+        if (map.enable3DBuilding) {
+          map.enable3DBuilding();
+        }
+      } else {
+        map.setTilt(0);
+      }
+      message.success(
+        `已切换到${mapTypes.find((m) => m.key === mapType)?.name}`
+      );
+    } catch (error) {
+      console.error("切换地图类型失败:", error);
+      message.error("地图切换失败");
+    }
+  };
+  // 百度地图的鼠标移动事件 - 获取当前鼠标位置的经纬度
   const handleMapMove = throttle((e: any) => {
     if (!mapRef.current) return;
-    const center = mapRef.current.getCenter();
+    const map = mapRef.current.map;
+    // 方法1: 通过地图中心点获取经纬度
+    const center = map.getCenter();
     setLngLat({
       lng: center.lng,
       lat: center.lat,
     });
   }, 500);
   const handleCheck = (e: any, mapType: MapType) => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !roadNetLayerRef.current) return;
+    //   首选如果当前地图类型和悬浮的底图类型相同就直接叠加或者移除路网
     if (mapType === currentMapType) {
+      const map = mapRef.current.map;
+      const roadNetLayer = roadNetLayerRef.current;
+      // 判断当前按钮是否选中
       if (e.target.checked) {
-        setUserMapSettings(true);
-        showRoadNet(mapContainerRef.current);
+        //   如果选中就叠加路网
+        map.addTileLayer(roadNetLayer);
       } else {
-        hideRoadNet(mapContainerRef.current);
-        setUserMapSettings(false);
+        // 取消选中就移除路网
+        // 移除路网
+        map.removeTileLayer(roadNetLayer);
       }
     }
   };
-  // 切换地图类型
-  const switchMapType = (mapType: MapType) => {
-    if (!mapContainerRef.current) return;
-    setCurrentMapType(mapType);
-    // 如果已经有地图，只切换类型，不重新创建
-    if (mapRef.current) {
-      try {
-        const map = mapRef.current;
-        switch (mapType) {
-          case "normal":
-            removePanoramaLayer(map);
-            map.setMapType((window as any).BMAP_NORMAL_MAP);
-            map.setTilt(0);
-            break;
-          case "earth":
-            removePanoramaLayer(map);
-            map.setMapType((window as any).BMAP_EARTH_MAP);
-            map.setTilt(60);
-            // 地球模式特殊处理
-            if (!hasEarthInitialized) {
-              // 首次切换到地球模式：强制隐藏路网和POI
-              hideRoadNet(map);
-              setHasEarthInitialized(true);
-            } else {
-              if (!userMapSettings) {
-                hideRoadNet(map);
-              }
-            }
-            if (map.enable3DBuilding) {
-              map.enable3DBuilding();
-            }
-            break;
-          case "panorama":
-            map.setMapType((window as any).BMAP_SATELLITE_MAP);
-            addPanoramaLayer(map);
-            break;
-        }
-
-        message.success(
-          `已切换到${mapTypes.find((m) => m.key === mapType)?.name}`
-        );
-        return; // 直接返回，不重新创建地图
-      } catch (error) {
-        console.error("切换地图类型失败:", error);
-        // 如果切换失败，继续执行下面的创建逻辑
-      }
-    }
-    // 创建新的地图实例
-    const newMap = new (window as any).BMapGL.Map(mapContainerRef.current);
-    // 手动启用滚轮缩放（重要！）
-    newMap.enableScrollWheelZoom(true);
-    // 如果需要更精细的控制，可以使用
-    newMap.enableContinuousZoom(true); // 启用连续缩放
-    newMap.enableInertialDragging(true); // 启用惯性拖拽
-    // 将全景图层添加到地图中
-    newMap.addTileLayer(panoramaLayerRef.current);
-    // 设置中心点和缩放
-    newMap.centerAndZoom(
-      new (window as any).BMapGL.Point(116.402544, 39.928216),
-      1
-    );
-    // 监听鼠标右键事件
-    newMap.addEventListener("rightclick", function (e) {
-      // 判断是否已经存在菜单
-      if (panoramaManagerRef.current.contextMenu) {
-        removePanoramaLayer(newMap);
-      }
-    });
-    try {
-      switch (mapType) {
-        case "normal":
-          newMap.setMapType((window as any).BMAP_NORMAL_MAP);
-          newMap.setTilt(0);
-          break;
-        case "earth":
-          newMap.setMapType((window as any).BMAP_EARTH_MAP);
-          hideRoadNet(newMap);
-          newMap.setTilt(60);
-          if (newMap.enable3DBuilding) {
-            newMap.enable3DBuilding();
-          }
-          break;
-        case "panorama":
-          // 全景模式下添加全景图层和控件
-          newMap.addTileLayer(
-            new (window as any).BMapGL.PanoramaCoverageLayer()
-          );
-          const stCtrl = new (window as any).BMapGL.PanoramaControl();
-          stCtrl.setOffset(new (window as any).BMapGL.Size(0, 0));
-          newMap.addControl(stCtrl);
-          newMap.centerAndZoom(
-            new (window as any).BMapGL.Point(116.40385, 39.913795),
-            4
-          );
-          break;
-      }
-
-      // 更新引用
-      mapRef.current = newMap;
-      setMapView(newMap);
-      outputMapView?.(newMap);
-      // 初始化工具
-      initDrawingManager(newMap);
-      // 添加事件监听
-      newMap.addEventListener("movestart", handleMapMove);
-      newMap.addEventListener("moveend", handleMapMove);
-
-      message.success(
-        `已切换到${mapTypes.find((m) => m.key === mapType)?.name}`
-      );
-    } catch (error) {
-      console.error("创建地图失败:", error);
-      message.error("地图创建失败");
-    }
-    mapContainerRef.current = newMap;
-
-    // 不再强制重新渲染容器，避免地图实例被卸载
-  };
-  function showRoadNet(map) {
-    map.setDisplayOptions({
-      street: true, //是否显示路网（只对卫星图和地球模式有效）
-      poi: true,
-    });
-  }
-  function hideRoadNet(map) {
-    map.setDisplayOptions({
-      street: false, //是否显示路网（只对卫星图和地球模式有效）
-      poi: false,
-    });
-  }
-  // 鼠标右键添加菜单
-  function addContextMenu(map) {
-    const contextMenu = new (window as any).BMapGL.ContextMenu();
-    var txtMenuItem = [
-      {
-        text: "放大一级",
-        callback: function () {
-          map.zoomIn();
-        },
-      },
-      {
-        text: "缩小一级",
-        callback: function () {
-          map.zoomOut();
-        },
-      },
-      {
-        text: "全景预览",
-        callback: function () {
-          // 关闭全景
-          removePanoramaLayer(map);
-        },
-      },
-    ];
-    for (const k in txtMenuItem) {
-      contextMenu.addItem(
-        new (window as any).BMapGL.MenuItem(
-          txtMenuItem[k].text,
-          txtMenuItem[k].callback,
-          100
-        )
-      );
-    }
-    // 关键：将菜单添加到地图
-    map.addContextMenu(contextMenu);
-    return contextMenu; // 返回菜单引用以便后续管理
-  }
   // 初始化百度地图
   useEffect(() => {
-    // 使用 setTimeout 确保 DOM 已渲染
-    const timer = setTimeout(() => {
-      if (mapContainerRef.current) {
-        switchMapType("normal");
-      }
-    }, 1000);
+    if (mapRef.current && !mapView) {
+      const map = mapRef.current.map;
+      setMapView(map);
+      outputMapView?.(map);
+      // 初始化绘制工具
+      initDrawingManager(map);
+      // 初始化路网图层
+      initRoadNetLayer(map);
+      // 添加百度地图事件监听
+      map.addEventListener("movestart", handleMapMove);
+      map.addEventListener("moveend", handleMapMove);
+      // 等待地图加载完成后设置初始地图类型
+      setTimeout(() => {
+        switchMapTypeWithNumbers("normal");
+      }, 1000);
+      return () => {
+        if (mapView) {
+          mapView.removeEventListener("movestart", handleMapMove);
+          mapView.removeEventListener("moveend", handleMapMove);
+        }
+      };
+    }
+  }, [mapRef.current]);
 
-    return () => clearTimeout(timer);
-  }, []);
   return (
     <div className="map-container">
       {/* 百度地图 - 通过外部控制地图类型 */}
-      <div
-        ref={mapContainerRef}
+      <Map
+        ref={mapRef}
+        center={{ lng: 116.402544, lat: 39.928216 }}
+        zoom={11}
         style={{
           height: "calc(100vh - 80px)",
           width: "100vw",
         }}
-      />
+        enableScrollWheelZoom={true} // 确保这个属性为 true
+        // 设置鼠标可以拖动地图
+        enableDragging={true}
+      ></Map>
       <div className="layerList">
         {mapTypes.map((mapType: any, idx: number) => {
           return (
@@ -460,7 +370,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
         })}
       </div>
       {/* 绘制工具控件 */}
-      {/* <div className="drawing-control">
+      <div className="drawing-control">
         <div className="control-header">
           <span className="title">绘制工具</span>
           {currentDrawingType && (
@@ -494,7 +404,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
             </span>
           </button>
         </div>
-      </div> */}
+      </div>
       {/* 自定义缩放控件 */}
       <div className="custom-zoom-control">
         <button onClick={zoomIn} title="放大" className="custom-zoom-btn">
