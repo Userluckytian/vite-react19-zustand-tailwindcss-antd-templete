@@ -90,7 +90,6 @@ export default class LeafletEditPolygon {
         }
     }
 
-
     /** 初始化地图事件监听
      *
      *

@@ -284,7 +284,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         }
-    }, [])
+    }, [currEditLayer])
 
 
     return (
