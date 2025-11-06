@@ -11,6 +11,7 @@ import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import LeafletEditPolygon from './edit/polygon';
+import { PolygonEditorState } from './types';
 interface CustomLeafLetDrawProps {
     mapInstance: L.Map; // 传入的地图实例
     drawGeoJsonResult?: (result: any) => void; // 绘制结果吐出
@@ -21,6 +22,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const { mapInstance } = props;
     const [currSelTool, setCurrSelTool] = useState<string | null>(null);
     const [drawLayers, setDrawLayers] = useState<any[]>([]);
+    const [currEditLayer, setCurrEditLayer] = useState<any>(null);
     const [toolbarList, setToolBarList] = useState<any>([
         {
             id: 'point',
@@ -73,10 +75,10 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         },
         {
             id: 'edit_polygon',
-            title: '编辑面：双击打开编辑、右键删除点、',
-            icon: 'icon-cemian_0',
+            title: '编辑面：双击打开编辑右键删除点',
+            icon: 'icon-huizhiduobianxing1',
             type: 'edit_polygon',
-            desp: '测面'
+            desp: '编辑面'
         },
         {
             id: 'delete',
@@ -88,76 +90,251 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     ]
     )
 
-
     // 工具按钮点击
     const handleToolClick = (toolId: string) => {
+
+        // 如果点击的是当前已选中的工具，则取消
+        if (currSelTool === toolId) {
+            handleCancelDraw();
+            return;
+        }
+        // // 先清理之前的绘制
+        // clearCurrentDraw();
+
         setCurrSelTool(toolId);
+        // clearAllIfExist();
         switch (toolId) {
             case 'point':
                 const markerPoint = new MarkerPoint(mapInstance);
-                setDrawLayers([...drawLayers, markerPoint]);
+                setDrawLayers((pre: any[]) => [...pre, markerPoint]);
+                // 添加监听逻辑
+                markerPoint.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
+                })
                 break;
             case 'line':
                 const lineLayer = new LeafletLine(mapInstance);
-                setDrawLayers([...drawLayers, lineLayer]);
+                setDrawLayers((pre: any[]) => [...pre, lineLayer]);
+                // 添加监听逻辑
+                lineLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
+                })
                 break;
             case 'polygon':
                 const polygonLayer = new LeafletPolygon(mapInstance);
-                setDrawLayers([...drawLayers, polygonLayer]);
+                setDrawLayers((pre: any[]) => [...pre, polygonLayer]);
+                // 添加监听逻辑
+                polygonLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
+                })
                 break;
             case 'circle':
                 const circleLayer = new LeafletCircle(mapInstance);
-                setDrawLayers([...drawLayers, circleLayer]);
+                setDrawLayers((pre: any[]) => [...pre, circleLayer]);
+                // 添加监听逻辑
+                circleLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
+                })
                 break;
             case 'rectangle':
                 const rectangleLayer = new LeafletRectangle(mapInstance);
-                setDrawLayers([...drawLayers, rectangleLayer]);
+                setDrawLayers((pre: any[]) => [...pre, rectangleLayer]);
+                // 添加监听逻辑
+                rectangleLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
+                })
                 break;
             case 'measure_distance':
                 const distanceLayer = new LeafletDistance(mapInstance);
-                setDrawLayers([...drawLayers, distanceLayer]);
+                setDrawLayers((pre: any[]) => [...pre, distanceLayer]);
+                // 添加监听逻辑
+                distanceLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
+                })
                 break;
             case 'measure_area':
                 const areaLayer = new LeafletArea(mapInstance);
-                setDrawLayers([...drawLayers, areaLayer]);
+                setDrawLayers((pre: any[]) => [...pre, areaLayer]);
+                // 添加监听逻辑
+                areaLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Idle) {
+                        setCurrSelTool('');
+                    }
+                })
                 break;
             case 'edit_polygon':
                 const editPolygonLayer = new LeafletEditPolygon(mapInstance);
-                setDrawLayers([...drawLayers, editPolygonLayer]);
+                setDrawLayers((pre: any[]) => [...pre, editPolygonLayer]);
+                // 添加监听逻辑
+                editPolygonLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Editing) {
+                        setCurrEditLayer(editPolygonLayer);
+                    } else {
+                        if (status === PolygonEditorState.Idle) {
+                            setCurrSelTool('');
+                        }
+                        setCurrEditLayer(null);
+                    }
+                })
                 break;
             case 'delete':
+                // 销毁图层
                 clearAllIfExist();
+                // 关闭工具条
+                if (currEditLayer) {
+                    setCurrEditLayer(null);
+                }
                 break;
 
             default:
                 break;
         }
     };
+
+    // #region 绘制工具条事件
+    // 清理当前绘制（保留之前的）
+    const clearCurrentDraw = () => {
+        if (drawLayers.length > 0) {
+            const lastLayer = drawLayers[drawLayers.length - 1];
+            if (lastLayer && lastLayer.destroy) {
+                lastLayer.destroy();
+            }
+            setDrawLayers(prev => prev.slice(0, -1));
+        }
+    };
+
     const clearAllIfExist = () => {
         drawLayers.forEach((layer: any) => {
-            layer.destory();
+            layer.destroy();
         });
     }
+    // 处理取消绘制事件
+    const handleCancelDraw = () => {
+        clearCurrentDraw()
+        setCurrSelTool('');
+    }
+    // #endregion
 
+    // #region 编辑工具条事件
+    const undoEdit = () => {
+        currEditLayer && currEditLayer.undoEdit();
+
+    }
+    const redoEdit = () => {
+        currEditLayer && currEditLayer.redoEdit();
+    }
+    // 重置到最初状态
+    const resetToInitial = () => {
+        currEditLayer && currEditLayer.resetToInitial();
+    }
+    // 完成编辑
+    const saveEdit = () => {
+        currEditLayer && currEditLayer.commitEdit();
+    }
+    // #endregion
+
+    // #region 键盘快捷键
+    const handleKeyDown = (e: KeyboardEvent) => {
+        // 复杂的键盘操作放前面，比如：担心Ctrl + Z先执行
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            redoEdit();
+        }
+        if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            // 二次确认弹窗
+            const confirmed = window.confirm('确定要撤销全部操作吗？这将回到初始状态。');
+            if (confirmed) {
+                resetToInitial();
+            }
+        }
+        if (e.ctrlKey && e.key === 'z') {
+            e.preventDefault();
+            undoEdit();
+        }
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            saveEdit();
+        }
+    }
+    // #endregion
+
+    useEffect(() => {
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        }
+    }, [currEditLayer])
 
 
     return (
-        <div className="leaflet-draw-toolbar">
-            {toolbarList.map((tool: any, idx: number) => (
-                <Fragment key={tool.id}>
-                    <div
-                        className={`tool-button ${currSelTool === tool.id ? 'selected' : ''}`}
-                        title={tool.desp}
-                        onClick={() => handleToolClick(tool.id)}
-                    >
-                        <CustomIcon type={tool.icon} className={currSelTool === tool.id ? 'activeItem' : 'defaulted'}></CustomIcon>
-                        {/* {tool.title && <span>{tool.title}</span>} */}
+        <>
+            {/* 绘制工具条 */}
+            <div className="leaflet-draw-toolbar">
+                {toolbarList.map((tool: any, idx: number) => (
+                    <div className='tool-button-item' key={tool.id}>
+                        {/* 图标部分 */}
+                        <div
+                            className={`tool-button-icon ${currSelTool === tool.id ? 'item-selected' : ''}`}
+                            title={tool.desp}
+                            onClick={() => handleToolClick(tool.id)}
+                        >
+                            <CustomIcon type={tool.icon} className={currSelTool === tool.id ? 'activeItem' : 'defaulted'}></CustomIcon>
+                            {/* {tool.title && <span>{tool.title}</span>} */}
+                        </div>
+                        {/* 底部的分割线 */}
+                        <Activity mode={idx !== toolbarList.length ? 'visible' : 'hidden'}>
+                            <Divider type="horizontal" style={{ margin: '0px' }} />
+                        </Activity>
+                        {/* 绘制状态时的取消按钮 */}
+                        {currSelTool === tool.id && currSelTool !== 'delete' && <div className='cancel-btn' onClick={handleCancelDraw}>取消</div>}
+
                     </div>
-                    <Activity mode={idx !== toolbarList.length ? 'visible' : 'hidden'}>
-                        <Divider type="horizontal" style={{ margin: '0px' }} />
-                    </Activity>
-                </Fragment>
-            ))}
-        </div>
+                ))}
+            </div>
+            {/* 编辑工具条 */}
+            {currEditLayer
+                &&
+                <div className="leaflet-edit-toolbar">
+                    <div className='edit-tool-item' onClick={() => undoEdit()}>↩️ 后退(Ctrl + Z)</div>
+                    <div className='edit-tool-item' onClick={() => redoEdit()}>↩️ 向前(Ctrl + Shift + Z)</div>
+                    <div className='edit-tool-item' onClick={() => resetToInitial()}>🔄 撤销全部(Ctrl + Alt + Z)()</div>
+                    <div className='edit-tool-item' onClick={() => saveEdit()}>✅ 完成编辑(Ctrl + S)</div>
+                </div>
+            }
+            <div className="leaflet-edit-pane">
+                <h3 className='text-2xl font-bold'>说明：</h3>
+                <div className='tip-item'>1：点击：<CustomIcon type='icon-huizhiduobianxing1' /> 开始绘制可以被编辑的多边形</div>
+                <div className='tip-item'>2：双击刚才绘制的多边形，激活编辑功能</div>
+                <div className='tip-item'>3：目前已实现的编辑功能有：</div>
+                <div className='tip-item'>✔ 【编辑点】拖动顶点，以及右键实现顶点移除</div>
+                <div className='tip-item'>✔ 【中点插入】点击线中间的点，实现添加新的点</div>
+                <div className='tip-item'>✔ 【拖动面】可以拖动整个面移动</div>
+                <div className='tip-item'>✔ 【快捷键】关联键盘事件</div>
+                <div className='tip-item'>✔ 【撤销】撤销刚才的操作</div>
+                <div className='tip-item'>✔ 【重做】恢复刚才的操作</div>
+            </div>
+
+        </>
     );
 }
