@@ -26,18 +26,24 @@ export default class LeafletEditPolygon {
     // 2：我们需要一个数组，存储所有的顶点（Marker），编辑时，我们应该展示这些Marker点。所以，这个数组的内容填充的时机是我们什么时候开始【编辑】，我们就在那一刻开始创建marker，注意不是在双击【绘制】结束后就创建。
     private vertexMarkers: L.Marker[] = [];
     // 3：编辑历史栈（用于撤销---存储的是编辑后的坐标点）
-    private historyStack: number[][][] = [];
+    private historyStack: number[][][] = []; // ctrl + Z
+    private redoStack: number[][][] = []; // ctrl + Shift + Z
     // #endregion
 
     // #region【面编辑】里程碑第二步: 实现边中点插入新顶点
     // 1： 我们需要一个数组，存储边线的中间点坐标
     private midpointMarkers: L.CircleMarker[] = [];
     // #endregion
+
     // #region【面编辑】里程碑第三步: 实现编辑、绘制状态回调吐出，外界ui构建时需要用到
     // 1： 我们需要一个数组，存储全部的监听事件，然后在状态改变时，触发所有这些事件的监听回调！
     private stateListeners: ((state: PolygonEditorState) => void)[] = [];
     // #endregion
 
+    // #region【面编辑】里程碑第四步：编辑状态下：实现面拖动功能(你是否会想：把mouseup事件放到图层身上呢？ 为什么会放到map身上？)
+    private isDraggingPolygon = false;  // 编辑状态时，监听mouseDown事件，如果按下，则设置ture， mouseUp时，设置为false
+    private dragStartLatLng: L.LatLng | null = null; // 监听mousedown那一下的坐标位置，mouseMove时，与这个位置进行差值计算，更新多边形的各个坐标点
+    // #endregion
 
     constructor(map: L.Map, options: L.PolylineOptions = {}) {
         this.map = map;
@@ -62,8 +68,28 @@ export default class LeafletEditPolygon {
             ...options
         };
         this.polygonLayer = L.polygon([[181, 181], [181, 181], [181, 181], [181, 181]], polygonOptions);
+        this.initPolygonEvent();
         this.polygonLayer.addTo(this.map);
     }
+
+    /** 实例化面图层事件
+     *
+     *
+     * @private
+     * @memberof LeafletEditPolygon
+     */
+    private initPolygonEvent() {
+        if (this.polygonLayer) {
+            this.polygonLayer.on('mousedown', (e: L.LeafletMouseEvent) => {
+                if (this.currentState === PolygonEditorState.Editing) {
+                    this.isDraggingPolygon = true;
+                    this.dragStartLatLng = e.latlng;
+                    this.map.dragging.disable();
+                }
+            });
+        }
+    }
+
 
     /** 初始化地图事件监听
      *
@@ -76,6 +102,7 @@ export default class LeafletEditPolygon {
         map.on('click', this.mapClickEvent);
         map.on('dblclick', this.mapDblClickEvent);
         map.on('mousemove', this.mapMouseMoveEvent);
+        map.on('mouseup', this.mapMouseUpEvent);
     }
 
     // #region 工具函数，点图层的逻辑只需要看上面的内容就行了
@@ -126,12 +153,13 @@ export default class LeafletEditPolygon {
                     this.updateAndNotifyStateChange(PolygonEditorState.Editing);
                     // 3: 进入编辑模式
                     this.enterEditMode();
-                } else if (!isInside && this.currentState === PolygonEditorState.Editing) {
-                    // 2：状态变更，并发出状态通知
-                    this.updateAndNotifyStateChange(PolygonEditorState.Idle);
-                    // 3: 退出编辑模式
-                    this.exitEditMode();
                 }
+                //  else if (!isInside && this.currentState === PolygonEditorState.Editing) {
+                //     // 2：状态变更，并发出状态通知
+                //     this.updateAndNotifyStateChange(PolygonEditorState.Idle);
+                //     // 3: 退出编辑模式
+                //     this.exitEditMode();
+                // }
             }
 
         }
@@ -161,11 +189,54 @@ export default class LeafletEditPolygon {
             this.renderLayer(this.tempCoords);
             return;
         }
-
+        // 逻辑2：编辑状态下的逻辑（编辑状态下如果分多个逻辑，需要定义新的变量用于区分。但这些都是在编辑状态下才会执行）
         if (this.currentState === PolygonEditorState.Editing) {
-            // 🎯 编辑模式下的逻辑（可扩展）
-            // 例如：拖动整个面时显示辅助线、吸附提示等
+            // 🎯 编辑模式下的逻辑（可扩展），例如：拖动整个面时显示辅助线、吸附提示等
+            // 事件机制1：拖动机制时的事件。
+            if (this.isDraggingPolygon && this.dragStartLatLng) {
+                const deltaLat = e.latlng.lat - this.dragStartLatLng.lat;
+                const deltaLng = e.latlng.lng - this.dragStartLatLng.lng;
+
+                this.vertexMarkers.forEach(marker => {
+                    const old = marker.getLatLng();
+                    marker.setLatLng([old.lat + deltaLat, old.lng + deltaLng]);
+                });
+
+                const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
+                this.renderLayer([...updated, updated[0]]);
+                this.updateMidpoints();
+
+                this.dragStartLatLng = e.latlng; // 连续拖动
+            }
+            // 事件机制2：吸附事件
+
         }
+
+    }
+    /**  地图鼠标抬起事件，用于设置点的位置
+     *
+     *
+     * @private
+     * @param {L.LeafletMouseEvent} e
+     * @memberof markerPoint
+     */
+    private mapMouseUpEvent = (e: L.LeafletMouseEvent) => {
+        // 条件1: 编辑事件
+        if (this.currentState === PolygonEditorState.Editing) {
+            // 条件1-1： 编辑状态下： 拖动面的事件
+            if (this.isDraggingPolygon) {
+                this.isDraggingPolygon = false;
+                this.dragStartLatLng = null;
+                this.map.dragging.enable();
+                const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
+                this.renderLayer([...updated, updated[0]]);
+                this.historyStack.push(updated);
+                this.updateMidpoints();
+                return;
+            }
+        }
+
+
 
     }
     /** 渲染线图层
@@ -263,6 +334,7 @@ export default class LeafletEditPolygon {
         map.off('click', this.mapClickEvent);
         map.off('dblclick', this.mapDblClickEvent);
         map.off('mousemove', this.mapMouseMoveEvent);
+        map.off('mouseup', this.mapMouseUpEvent);
     }
 
     /**
@@ -465,9 +537,26 @@ export default class LeafletEditPolygon {
     public undoEdit(): void {
         if (this.historyStack.length < 2) return;
 
-        this.historyStack.pop(); // 弹出当前状态
+        const popItem = this.historyStack.pop(); // 弹出当前状态
+        if (popItem) this.redoStack.push(popItem); // 用于重做
         const previous = this.historyStack[this.historyStack.length - 1]; // 获取上一个状态
         this.reBuildMarkerAndRender(previous)
+    }
+
+    /** 悔一步，即:Ctrl + Shift + Z
+     *
+     *
+     * @return {*}  {void}
+     * @memberof LeafletEditPolygon
+     */
+    public redoEdit(): void {
+        if (!this.redoStack.length) return;
+
+        const next = this.redoStack.pop();
+        if (next) {
+            this.historyStack.push(next);
+            this.reBuildMarkerAndRender(next);
+        }
     }
 
     /** 全部撤回
@@ -481,19 +570,24 @@ export default class LeafletEditPolygon {
 
         if (!this.historyStack.length) return;
 
+        // 保存当前状态到重做栈，以便用户可以恢复（简言之，将撤销全部的操作也当作一个快照，方便用户后悔）
+        const currentState = this.historyStack[this.historyStack.length - 1];
         const initial = this.historyStack[0];
-        this.historyStack = [initial]; // 清空后只保留初始状态
+        // 存储快照
+        this.redoStack.push(currentState);
+        // 渲染初始状态
         this.reBuildMarkerAndRender(initial)
     }
 
-    /** 完成绘制
+    /** 完成编辑行为
      *
      *
      * @memberof LeafletEditPolygon
      */
     public commitEdit(): void {
         const current = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
-        this.historyStack = [current]; // 当前状态作为新的初始快照
+        this.historyStack = [current]; // 读取当前状态作为新的初始快照
+        this.redoStack = []; // 清空重做栈（如果有）
         this.exitEditMode();
         this.updateAndNotifyStateChange(PolygonEditorState.Idle);
     }
@@ -555,7 +649,6 @@ export default class LeafletEditPolygon {
         });
 
     }
-
 
     // #endregion
 

@@ -240,15 +240,51 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         currEditLayer && currEditLayer.undoEdit();
 
     }
+    const redoEdit = () => {
+        currEditLayer && currEditLayer.redoEdit();
+    }
     // 重置到最初状态
     const resetToInitial = () => {
         currEditLayer && currEditLayer.resetToInitial();
     }
     // 完成编辑
-    const exitEditMode = () => {
+    const saveEdit = () => {
         currEditLayer && currEditLayer.commitEdit();
     }
     // #endregion
+
+    // #region 键盘快捷键
+    const handleKeyDown = (e: KeyboardEvent) => {
+        // 复杂的键盘操作放前面，比如：担心Ctrl + Z先执行
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            redoEdit();
+        }
+        if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            // 二次确认弹窗
+            const confirmed = window.confirm('确定要撤销全部操作吗？这将回到初始状态。');
+            if (confirmed) {
+                resetToInitial();
+            }
+        }
+        if (e.ctrlKey && e.key === 'z') {
+            e.preventDefault();
+            undoEdit();
+        }
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            saveEdit();
+        }
+    }
+    // #endregion
+
+    useEffect(() => {
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        }
+    }, [])
 
 
     return (
@@ -280,9 +316,10 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             {currEditLayer
                 &&
                 <div className="leaflet-edit-toolbar">
-                    <div className='edit-tool-item' onClick={() => undoEdit()}>↩️ 撤销一步</div>
-                    <div className='edit-tool-item' onClick={() => resetToInitial()}>🔄 撤销全部</div>
-                    <div className='edit-tool-item' onClick={() => exitEditMode()}>✅ 完成编辑</div>
+                    <div className='edit-tool-item' onClick={() => undoEdit()}>↩️ 后退(Ctrl + Z)</div>
+                    <div className='edit-tool-item' onClick={() => redoEdit()}>↩️ 向前(Ctrl + Shift + Z)</div>
+                    <div className='edit-tool-item' onClick={() => resetToInitial()}>🔄 撤销全部(Ctrl + Alt + Z)()</div>
+                    <div className='edit-tool-item' onClick={() => saveEdit()}>✅ 完成编辑(Ctrl + S)</div>
                 </div>
             }
 
