@@ -322,6 +322,18 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     <div className='edit-tool-item' onClick={() => saveEdit()}>✅ 完成编辑(Ctrl + S)</div>
                 </div>
             }
+            <div className="leaflet-edit-pane">
+                <h3 className='text-2xl font-bold'>说明：</h3>
+                <div className='tip-item'>1：点击：<CustomIcon type='icon-huizhiduobianxing1' /> 开始绘制可以被编辑的多边形</div>
+                <div className='tip-item'>2：双击刚才绘制的多边形，激活编辑功能</div>
+                <div className='tip-item'>3：目前已实现的编辑功能有：</div>
+                <div className='tip-item'>✔ 【编辑点】拖动顶点，以及右键实现顶点移除</div>
+                <div className='tip-item'>✔ 【中点插入】点击线中间的点，实现添加新的点</div>
+                <div className='tip-item'>✔ 【拖动面】可以拖动整个面移动</div>
+                <div className='tip-item'>✔ 【快捷键】关联键盘事件</div>
+                <div className='tip-item'>✔ 【撤销】撤销刚才的操作</div>
+                <div className='tip-item'>✔ 【重做】恢复刚才的操作</div>
+            </div>
 
         </>
     );

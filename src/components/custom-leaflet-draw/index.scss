@@ -1,4 +1,5 @@
 $iconWidth: 36px;
+$tip-pane-width: 340px;
 .leaflet-draw-toolbar {
   border-radius: 4px;
   .tool-button-item {
@@ -51,5 +52,20 @@ $iconWidth: 36px;
   .edit-tool-item {
     padding: 3px;
     background: linear-gradient(41deg, #40d9ff5c 50%, #40d9ffa3 50%);
+  }
+}
+.leaflet-edit-pane{
+  position: absolute;
+  left: -#{$tip-pane-width - 35px};
+  top: 340px;
+  width: $tip-pane-width;
+  min-height: 120px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: -2px 0px 15px 0px #00000038;
+  text-align: left;
+  padding: 10px;
+  .tip-item{
+    font-size: 1rem;
   }
 }
