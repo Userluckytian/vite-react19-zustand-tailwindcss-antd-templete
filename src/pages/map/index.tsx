@@ -95,6 +95,7 @@ export default function SampleCheckEditMap({
             center: (baseMapSetting?.center as L.LatLngExpression) || [35.5, 109.1],
             // maxZoom: baseMapSetting?.defaultMaxZoom || 18,
             maxZoom: 18,
+            minZoom: 4,
             attributionControl: false, // 默认情况下，是否将 attribution 版权控件添加到地图中。
             zoomControl: false, // 默认情况下，是否将 zoom 缩放控件添加到地图中。
         });
@@ -160,9 +161,10 @@ export default function SampleCheckEditMap({
             mapScaleControl = addScaleControl(mapView);
             // 事件3： 添加地图Zoom工具条
             mapZoomControl = addZoomControl(mapView, { zoomInTitle: '放大', zoomOutTitle: '缩小' });
+            // todo: 事件4：添加zoomout和zoomin事件--设置和显示地图缩放范围
 
-            // 事件4：添加mousemove事件
-            mapView.on('mousemove', throttle(mouseMoveFun, 500))
+            // 事件5：添加mousemove事件--设置经纬度信息
+            mapView.on('mousemove', throttle(mouseMoveFun, 100))
         }
         return () => {
             mapScaleControl && mapScaleControl.remove();
