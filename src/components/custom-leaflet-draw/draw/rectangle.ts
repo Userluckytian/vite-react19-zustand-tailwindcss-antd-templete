@@ -130,7 +130,7 @@ export default class LeafletRectangle {
             const bounds = L.latLngBounds(coords);
             this.rectangleLayer.setBounds(bounds);
         } else {
-            throw new Error('线图层不存在，无法渲染');
+            throw new Error('图层不存在，无法渲染');
         }
     }
 

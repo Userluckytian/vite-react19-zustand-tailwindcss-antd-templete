@@ -7,10 +7,10 @@
 import { booleanPointInPolygon, point } from '@turf/turf';
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
+import { BaseEditor } from './BaseEditor';
 
-export default class LeafletEditPolygon {
+export default class LeafletEditPolygon extends BaseEditor {
 
-    private map: L.Map;
     private polygonLayer: L.Polygon | null = null;
     // 图层初始化时
     private drawLayerStyle = {
@@ -19,34 +19,9 @@ export default class LeafletEditPolygon {
         fillOpacity: 0.3, // 设置填充透明度
     };
     private tempCoords: number[][] = [];
-    // 我们需要记录当前状态是处于绘制状态--见：currentState变量
-    private currentState: PolygonEditorState = PolygonEditorState.Idle; // 默认空闲状态
-    // #region【面编辑】里程碑第一步: 实现点的拖动、右键删除。下面三个变量就够了 
-    // 1: 我们需要记录当前状态是否正处于编辑状态--见：currentState变量
-    // 2：我们需要一个数组，存储所有的顶点（Marker），编辑时，我们应该展示这些Marker点。所以，这个数组的内容填充的时机是我们什么时候开始【编辑】，我们就在那一刻开始创建marker，注意不是在双击【绘制】结束后就创建。
-    private vertexMarkers: L.Marker[] = [];
-    // 3：编辑历史栈（用于撤销---存储的是编辑后的坐标点）
-    private historyStack: number[][][] = []; // ctrl + Z
-    private redoStack: number[][][] = []; // ctrl + Shift + Z
-    // #endregion
-
-    // #region【面编辑】里程碑第二步: 实现边中点插入新顶点
-    // 1： 我们需要一个数组，存储边线的中间点坐标
-    private midpointMarkers: L.CircleMarker[] = [];
-    // #endregion
-
-    // #region【面编辑】里程碑第三步: 实现编辑、绘制状态回调吐出，外界ui构建时需要用到
-    // 1： 我们需要一个数组，存储全部的监听事件，然后在状态改变时，触发所有这些事件的监听回调！
-    private stateListeners: ((state: PolygonEditorState) => void)[] = [];
-    // #endregion
-
-    // #region【面编辑】里程碑第四步：编辑状态下：实现面拖动功能(你是否会想：把mouseup事件放到图层身上呢？ 为什么会放到map身上？)
-    private isDraggingPolygon = false;  // 编辑状态时，监听mouseDown事件，如果按下，则设置ture， mouseUp时，设置为false
-    private dragStartLatLng: L.LatLng | null = null; // 监听mousedown那一下的坐标位置，mouseMove时，与这个位置进行差值计算，更新多边形的各个坐标点
-    // #endregion
 
     constructor(map: L.Map, options: L.PolylineOptions = {}) {
-        this.map = map;
+        super(map);
         if (this.map) {
             // 初始化时，设置绘制状态为true(双击结束绘制时关闭绘制状态，其生命周期到头，且不再改变)，且发出状态通知
             this.updateAndNotifyStateChange(PolygonEditorState.Drawing);
@@ -98,9 +73,11 @@ export default class LeafletEditPolygon {
      * @memberof markerPoint
      */
     private initMapEvent(map: L.Map) {
+        // 绘制、编辑用前三个
         map.on('click', this.mapClickEvent);
         map.on('dblclick', this.mapDblClickEvent);
         map.on('mousemove', this.mapMouseMoveEvent);
+        // 拖动面用的这个
         map.on('mouseup', this.mapMouseUpEvent);
     }
 
@@ -127,42 +104,33 @@ export default class LeafletEditPolygon {
      * @memberof markerPoint
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
-        if (this.polygonLayer) {
-            // 情况1： 正在绘制状态时，绘制的逻辑
-            if (this.currentState === PolygonEditorState.Drawing) {
-                // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
-                const finalCoords = this.deduplicateCoordinates(this.tempCoords);
-                this.renderLayer([...finalCoords, finalCoords[0]]);
-                this.tempCoords = []; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
-                this.reset();
-                // 设置为空闲状态，并发出状态通知
-                this.updateAndNotifyStateChange(PolygonEditorState.Idle);
-                return;
-            } else {
-                // 情况 2：已绘制完成后的后续双击事件的逻辑均走这个
-                const clickedLatLng = e.latlng;
-                const polygonGeoJSON = this.polygonLayer.toGeoJSON();
-                // 判断用户是否点击到了面上，是的话，就开始编辑模式
-                const turfPoint = point([clickedLatLng.lng, clickedLatLng.lat]);
-                const isInside = booleanPointInPolygon(turfPoint, polygonGeoJSON);
-                if (isInside && this.currentState !== PolygonEditorState.Editing) {
-                    // 1：禁用双击地图放大功能
-                    this.map.doubleClickZoom.disable();
-                    // 2：状态变更，并发出状态通知
-                    this.updateAndNotifyStateChange(PolygonEditorState.Editing);
-                    // 3: 进入编辑模式
-                    this.enterEditMode();
-                }
-                //  else if (!isInside && this.currentState === PolygonEditorState.Editing) {
-                //     // 2：状态变更，并发出状态通知
-                //     this.updateAndNotifyStateChange(PolygonEditorState.Idle);
-                //     // 3: 退出编辑模式
-                //     this.exitEditMode();
-                // }
+        if (!this.polygonLayer) throw new Error('面图层实例化失败，无法完成图层创建，请重试');
+        // 情况1： 正在绘制状态时，绘制的逻辑
+        if (this.currentState === PolygonEditorState.Drawing) {
+            // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
+            const finalCoords = this.deduplicateCoordinates(this.tempCoords);
+            this.renderLayer([...finalCoords, finalCoords[0]]);
+            this.tempCoords = []; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
+            this.reset();
+            // 设置为空闲状态，并发出状态通知
+            this.updateAndNotifyStateChange(PolygonEditorState.Idle);
+            return;
+        } else {
+            // 情况 2：已绘制完成后的后续双击事件的逻辑均走这个
+            const clickedLatLng = e.latlng;
+            const polygonGeoJSON = this.polygonLayer.toGeoJSON();
+            // 判断用户是否点击到了面上，是的话，就开始编辑模式
+            const turfPoint = point([clickedLatLng.lng, clickedLatLng.lat]);
+            const isInside = booleanPointInPolygon(turfPoint, polygonGeoJSON);
+            if (isInside && this.currentState !== PolygonEditorState.Editing) {
+                // 1：禁用双击地图放大功能
+                this.map.doubleClickZoom.disable();
+                // 2：状态变更，并发出状态通知
+                this.updateAndNotifyStateChange(PolygonEditorState.Editing);
+                // 3: 进入编辑模式
+                this.enterEditMode();
             }
-
         }
-
     }
     /**  地图鼠标移动事件，用于设置点的位置
      *
@@ -249,7 +217,7 @@ export default class LeafletEditPolygon {
         if (this.polygonLayer) {
             this.polygonLayer.setLatLngs(coords as any);
         } else {
-            throw new Error('线图层不存在，无法渲染');
+            throw new Error('图层不存在，无法渲染');
         }
     }
 
@@ -525,77 +493,11 @@ export default class LeafletEditPolygon {
         });
     }
 
-    // 进阶：
-    /** 撤回上一步
-     *
-     *
-     * @private
-     * @return {*}  {void}
-     * @memberof LeafletEditPolygon
-     */
-    public undoEdit(): void {
-        if (this.historyStack.length < 2) return;
-
-        const popItem = this.historyStack.pop(); // 弹出当前状态
-        if (popItem) this.redoStack.push(popItem); // 用于重做
-        const previous = this.historyStack[this.historyStack.length - 1]; // 获取上一个状态
-        this.reBuildMarkerAndRender(previous)
-    }
-
-    /** 悔一步，即:Ctrl + Shift + Z
-     *
-     *
-     * @return {*}  {void}
-     * @memberof LeafletEditPolygon
-     */
-    public redoEdit(): void {
-        if (!this.redoStack.length) return;
-
-        const next = this.redoStack.pop();
-        if (next) {
-            this.historyStack.push(next);
-            this.reBuildMarkerAndRender(next);
-        }
-    }
-
-    /** 全部撤回
-     *
-     *
-     * @private
-     * @return {*}  {void}
-     * @memberof LeafletEditPolygon
-     */
-    public resetToInitial(): void {
-
-        if (!this.historyStack.length) return;
-
-        // 保存当前状态到重做栈，以便用户可以恢复（简言之，将撤销全部的操作也当作一个快照，方便用户后悔）
-        const currentState = this.historyStack[this.historyStack.length - 1];
-        const initial = this.historyStack[0];
-        // 存储快照
-        this.redoStack.push(currentState);
-        // 渲染初始状态
-        this.reBuildMarkerAndRender(initial)
-    }
-
-    /** 完成编辑行为
-     *
-     *
-     * @memberof LeafletEditPolygon
-     */
-    public commitEdit(): void {
-        const current = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
-        this.historyStack = [current]; // 读取当前状态作为新的初始快照
-        this.redoStack = []; // 清空重做栈（如果有）
-        this.exitEditMode();
-        this.updateAndNotifyStateChange(PolygonEditorState.Idle);
-    }
-
     /** 根据坐标重建 marker 和图形 + 重新渲染图层
      * 
      * @param latlngs 坐标数组
      */
-    private reBuildMarkerAndRender(latlngs: number[][]): void {
+    protected reBuildMarkerAndRender(latlngs: number[][]): void {
         this.renderLayer([...latlngs, latlngs[0]]);
 
         this.reBuildMarker(latlngs);
@@ -649,59 +551,6 @@ export default class LeafletEditPolygon {
 
     }
 
-    // #endregion
-
-    // #region 绘制、编辑等状态改变时的事件回调
-    /** 【外部使用】的监听器，用于监听状态改变事件
-     *
-     *
-     * @param {(state: PolygonEditorState) => void} listener
-     * @memberof LeafletEditPolygon
-     */
-    public onStateChange(listener: (state: PolygonEditorState) => void): void {
-        // 存储回调事件并立刻触发一次
-        this.stateListeners.push(listener);
-        // 立即回调当前状态
-        listener(this.currentState);
-    }
-
-    /** 添加移除单个监听器的方法 
-     * 
-     */
-    public offStateChange(listener: (state: PolygonEditorState) => void): void {
-        const index = this.stateListeners.indexOf(listener);
-        if (index > -1) {
-            this.stateListeners.splice(index, 1);
-        }
-    }
-
-    /** 清空所有状态监听器 
-     * 
-     */
-    public clearAllStateListeners(): void {
-        this.stateListeners = [];
-    }
-
-    /** 内部使用，状态改变时，触发所有的监听事件
-     *
-     *
-     * @private
-     * @memberof LeafletEditPolygon
-     */
-    private updateAndNotifyStateChange(status: PolygonEditorState): void {
-        this.currentState = status;
-        this.stateListeners.forEach(fn => fn(this.currentState));
-    }
-
-    /** 内部使用，状态改变时，触发所有的监听事件
-     *
-     *
-     * @public
-     * @memberof LeafletEditPolygon
-     */
-    public setCurrentState(status: PolygonEditorState): void {
-        this.currentState = status;
-    }
     // #endregion
 
 }

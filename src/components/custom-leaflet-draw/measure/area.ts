@@ -168,7 +168,7 @@ export default class LeafletArea {
         if (this.polygonLayer) {
             this.polygonLayer.setLatLngs(coords as any);
         } else {
-            throw new Error('线图层不存在，无法渲染');
+            throw new Error('图层不存在，无法渲染');
         }
 
         // 无论鼠标移动，还是双击结束绘制，这个事件都会触发，所以我索性直接在这个组件中计算面积信息了，这样就不用考虑在鼠标移动事件和双击事件中写2遍了。

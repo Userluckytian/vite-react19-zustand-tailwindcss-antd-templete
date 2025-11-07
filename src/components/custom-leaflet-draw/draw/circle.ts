@@ -119,7 +119,7 @@ export default class LeafletCircle {
             this.circleLayer.setLatLng(this.center);
             this.circleLayer.setRadius(this.radius);
         } else {
-            throw new Error('线图层不存在，无法渲染');
+            throw new Error('图层不存在，无法渲染');
         }
     }
 

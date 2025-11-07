@@ -140,7 +140,7 @@ export default class LeafletPolygon {
         if (this.polygonLayer) {
             this.polygonLayer.setLatLngs(coords as any);
         } else {
-            throw new Error('线图层不存在，无法渲染');
+            throw new Error('图层不存在，无法渲染');
         }
     }
 

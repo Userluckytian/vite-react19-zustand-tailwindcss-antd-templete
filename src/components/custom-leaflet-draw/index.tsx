@@ -102,7 +102,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         // clearCurrentDraw();
 
         setCurrSelTool(toolId);
-        // clearAllIfExist();
+        // clearAllIfExist(); // 根据需求来，有的时候，我们绘制新内容时，会期望移除上次绘制的结果
         switch (toolId) {
             case 'point':
                 const markerPoint = new MarkerPoint(mapInstance);
