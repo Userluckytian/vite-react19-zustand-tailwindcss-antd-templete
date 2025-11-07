@@ -38,7 +38,7 @@ const FunctionPanel = () => {
                         <div className="instruction-section">
                             <h4>操作说明：</h4>
                             <ol className="instruction-list">
-                                <li><strong>点击：</strong> <CustomIcon type='icon-huizhiduobianxing1' />开始绘制可以被编辑的多边形</li>
+                                <li><strong>点击：</strong> <CustomIcon type='icon-huizhiduobianxing1' />、<CustomIcon type='icon-juxinghuizhi1' />开始绘制可以被编辑的多边形</li>
                                 <li><strong>双击</strong>刚才绘制的多边形，激活编辑功能</li>
                             </ol>
                         </div>
