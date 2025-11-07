@@ -1,59 +1,61 @@
-import { useContext, useEffect, useRef, useState } from "react";
+/*
+    安装说明:
+    1：npm install leaflet webgis-maps @types/leaflet
+    2：会发现报错:mapboxgl相关的错误
+    3：npm install mapbox-gl@2 @types/mapbox-gl@2  // 安装2.x版本的mapboxgl
+*/
+import * as L from "leaflet";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import "./index.scss";
 import { GlobalContext } from "@/main";
-import { throttle } from "@/utils/utils";
+import { addScaleControl, addZoomControl } from "./map-utils";
+import { formatNumber, throttle } from "@/utils/utils";
 import { App } from "antd";
+import {
+  addLeafletGeoJsonLayer,
+  bingGeojsonLayerEditEvent,
+} from "@/utils/leafletUtils";
+import CustomLeafLetDraw from "@/components/custom-leaflet-draw";
 interface MapPreviewProps {
-  outputMapView?: (map: any) => void;
+  outputMapView?: (map: L.Map) => void;
 }
-// 地图类型定义
-type MapType = "normal" | "earth" | "satellite" | "traffic" | "panorama";
-// 绘制类型定义
-type DrawingType =
-  | "marker"
-  | "polyline"
-  | "rectangle"
-  | "polygon"
-  | "circle"
-  | null;
+let Cesium: any = (window as any).Cesium;
+const tdtKey = "e6372a5333c4bac9b9ef6097453c3cd6";
+const tdtUrl = "https://t{s}.tianditu.gov.cn/";
+const subdomains = ["0", "1", "2", "3", "4", "5", "6", "7"];
 export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapStyle: any = {
+    attribution: "stamen",
+    subdomains: "01234567",
+    maxZoom: 18,
+    tileSize: 256,
+  };
   const { message } = App.useApp();
-  const drawingManagerRef = useRef<any>(null);
-  // 在组件顶部添加状态
-  const [hasEarthInitialized, setHasEarthInitialized] = useState(false);
-  const [userMapSettings, setUserMapSettings] = useState(true);
-  const mapRef = useRef<any>(null);
-  // 创建全景图层
-  const panoramaLayerRef = useRef<any>(null);
-  const [mapView, setMapView] = useState<any>(null);
-  const [lnglat, setLngLat] = useState<any>(null);
-  const [currentMapType, setCurrentMapType] = useState<MapType>("normal");
-  const [currentDrawingType, setCurrentDrawingType] =
-    useState<DrawingType>(null);
-  // 单一全景管理器引用
-  const panoramaManagerRef = useRef<{
-    layer: any;
-    control: any;
-    contextMenu: any;
-    isActive: boolean;
+  const globalConfigContext = useContext(GlobalContext);
+  const baseMapSetting = globalConfigContext.baseMapSetting;
+  const [mapView, setMapView] = useState<L.Map | null>(null);
+  const mapRef = useRef(null);
+  // 记录当前底图图层，便于切换时移除
+  const currentBaseLayersRef = useRef<{
+    type: string | null;
+    layers: L.TileLayer[];
   }>({
-    layer: null,
-    control: null,
-    contextMenu: null,
-    isActive: false,
+    type: null,
+    layers: [],
   });
-  // 切换到非全景地图时，移除全景图层
-  useEffect(() => {
-    console.log("切换地图类型", currentMapType);
-  }, [currentMapType]);
-  // 地图类型配置
-  const mapTypes = [
+  //   设置一个变量来判断是否添加矢量注记
+  const [isAddVectorLabel, setIsAddVectorLabel] = useState(false);
+  // 3D 地球（Cesium）相关
+  const [isCesium, setIsCesium] = useState(false);
+  const cesiumContainerRef = useRef<HTMLDivElement | null>(null);
+  const cesiumViewerRef = useRef<any>(null);
+  //  创建一个矢量注记图层
+  const vectorLabelLayerRef = useRef<L.TileLayer | null>(null);
+  // 经纬度信息
+  const [lnglat, setLngLat] = useState<any>(null);
+  const baseLayers = [
     {
-      key: "normal" as MapType,
-      name: "常规地图",
-      icon: "🗺️",
-      description: "标准矢量地图",
+      name: "地图",
       positionStyle: {
         backgroundPosition: "-1px -1px",
         transform: "translateX(180px)",
@@ -61,448 +63,307 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
       },
     },
     {
-      key: "earth" as MapType,
-      name: "地球模式",
-      icon: "🌍",
-      description: "3D地球视图",
+      name: "地球",
+      option: "开启路网",
       positionStyle: {
         backgroundPosition: "-1px -181px",
         transform: "translateX(90px)",
         width: "0px",
       },
-      option: "开启路网",
     },
     {
-      key: "panorama" as MapType,
-      name: "全景地图",
-      icon: "🏙️",
-      description: "街景全景视图",
-      positionStyle: {
-        backgroundPosition: "-1px -121px", // 根据你的样式调整
-        width: "86px",
-      },
+      name: "地形",
+      positionStyle: { backgroundPosition: "-1px -61px", width: "86px" },
     },
   ];
-  // 绘制工具配置
-  const drawingTools = [
-    { key: "marker" as DrawingType, name: "点", icon: "📍" },
-    { key: "polyline" as DrawingType, name: "线", icon: "📏" },
-    { key: "rectangle" as DrawingType, name: "矩形", icon: "⬜" },
-    { key: "polygon" as DrawingType, name: "多边形", icon: "🔺" },
-    { key: "circle" as DrawingType, name: "圆", icon: "⭕" },
-  ];
-  // 简化的添加全景方法
-  const addPanoramaLayer = (map: any) => {
-    removePanoramaLayer(map); // 先清理
-    const { BMapGL } = window as any;
-    panoramaManagerRef.current.layer = new BMapGL.PanoramaCoverageLayer();
-    map.addTileLayer(panoramaManagerRef.current.layer);
-    // 添加右键菜单并保存引用
-    panoramaManagerRef.current.contextMenu = addContextMenu(map);
-    panoramaManagerRef.current.control = new BMapGL.PanoramaControl();
-    panoramaManagerRef.current.control.setOffset(new BMapGL.Size(20, 5));
-    map.addControl(panoramaManagerRef.current.control);
-    panoramaManagerRef.current.isActive = true;
-  };
-  // 简化的移除全景方法
-  const removePanoramaLayer = (map: any) => {
-    if (map && panoramaManagerRef.current.isActive) {
-      const { layer, control, contextMenu } = panoramaManagerRef.current;
-      if (layer) map.removeTileLayer(layer);
-      if (control) map.removeControl(control);
-      if (contextMenu) map.removeContextMenu(contextMenu);
-      // 4. 关键：禁用全景覆盖层（这会移除蓝色的全景图钉）
-      panoramaManagerRef.current = {
-        layer: null,
-        control: null,
-        contextMenu: null,
-        isActive: false,
-      };
-    }
-  };
-  // 初始化绘制工具
-  const initDrawingManager = (map: any) => {
-    const styleOptions = {
-      strokeColor: "#5E87DB",
-      fillColor: "#5E87DB",
-      strokeWeight: 2,
-      strokeOpacity: 1,
-      fillOpacity: 0.2,
-    };
 
-    const labelOptions = {
-      borderRadius: "2px",
-      background: "#FFFBCC",
-      border: "1px solid #E1E1E1",
-      color: "#703A04",
-      fontSize: "12px",
-      letterSpacing: "0",
-      padding: "5px",
-    };
-
-    // 实例化鼠标绘制工具
-    const drawingManager = new (window as any).BMapGLLib.DrawingManager(map, {
-      enableCalculate: false,
-      enableSorption: true,
-      sorptiondistance: 20,
-      circleOptions: styleOptions,
-      polylineOptions: styleOptions,
-      polygonOptions: styleOptions,
-      rectangleOptions: styleOptions,
-      labelOptions: labelOptions,
-    });
-
-    // 监听绘制完成事件
-    drawingManager.addEventListener("overlaycomplete", (e: any) => {
-      console.log("绘制完成:", e);
-      message.success(
-        `绘制完成: ${
-          drawingTools.find((t) => t.key === currentDrawingType)?.name
-        }`
-      );
-
-      // 这里可以处理绘制完成的图形
-      // 例如保存图形数据、显示属性等
-    });
-
-    drawingManagerRef.current = drawingManager;
-    return drawingManager;
-  };
-  // 开始绘制
-  const startDrawing = (drawingType: DrawingType) => {
-    if (!mapView || !drawingManagerRef.current) return;
-    // 如果点击的是当前已激活的工具，则关闭绘制
-    if (currentDrawingType === drawingType) {
-      stopDrawing();
-      return;
-    }
-    setCurrentDrawingType(drawingType);
-    // 映射绘制类型常量
-    const drawingTypeConstants: Record<string, any> = {
-      marker: (window as any).BMAP_DRAWING_MARKER,
-      polyline: (window as any).BMAP_DRAWING_POLYLINE,
-      rectangle: (window as any).BMAP_DRAWING_RECTANGLE,
-      polygon: (window as any).BMAP_DRAWING_POLYGON,
-      circle: (window as any).BMAP_DRAWING_CIRCLE,
-    };
-    const drawingMode = drawingTypeConstants[drawingType];
-    if (drawingMode) {
-      drawingManagerRef.current.setDrawingMode(drawingMode);
-      drawingManagerRef.current.open();
-      message.info(
-        `开始绘制${drawingTools.find((t) => t.key === drawingType)?.name}`
-      );
-    }
-  };
-  // 停止绘制
-  const stopDrawing = () => {
-    if (drawingManagerRef.current) {
-      drawingManagerRef.current.close();
-      setCurrentDrawingType(null);
-      message.info("已退出绘制模式");
-    }
-  };
-  // 清除所有绘制图形
-  const clearAllDrawings = () => {
-    console.log("清除所有绘制图形", drawingManagerRef.current);
-    if (drawingManagerRef.current) {
-      // 清除所有绘制图形
-      drawingManagerRef.current.clear();
-      message.success("已清除所有绘制图形");
-    }
-  };
-  // 百度地图的缩放控制
-  const zoomIn = () => {
-    if (mapRef.current) {
-      mapRef.current.setZoom(mapRef.current.getZoom() + 1);
-    }
-  };
-  const zoomOut = () => {
-    if (mapRef.current) {
-      mapRef.current.setZoom(mapRef.current.getZoom() - 1);
-    }
-  };
-  // 百度地图的鼠标移动事件
-  const handleMapMove = throttle((e: any) => {
-    if (!mapRef.current) return;
-    const center = mapRef.current.getCenter();
-    setLngLat({
-      lng: center.lng,
-      lat: center.lat,
-    });
-  }, 500);
-  const handleCheck = (e: any, mapType: MapType) => {
-    if (!mapRef.current) return;
-    if (mapType === currentMapType) {
-      if (e.target.checked) {
-        setUserMapSettings(true);
-        showRoadNet(mapContainerRef.current);
-      } else {
-        hideRoadNet(mapContainerRef.current);
-        setUserMapSettings(false);
-      }
-    }
-  };
-  // 切换地图类型
-  const switchMapType = (mapType: MapType) => {
-    if (!mapContainerRef.current) return;
-    setCurrentMapType(mapType);
-    // 如果已经有地图，只切换类型，不重新创建
-    if (mapRef.current) {
-      try {
-        const map = mapRef.current;
-        switch (mapType) {
-          case "normal":
-            removePanoramaLayer(map);
-            map.setMapType((window as any).BMAP_NORMAL_MAP);
-            map.setTilt(0);
-            break;
-          case "earth":
-            removePanoramaLayer(map);
-            map.setMapType((window as any).BMAP_EARTH_MAP);
-            map.setTilt(60);
-            // 地球模式特殊处理
-            if (!hasEarthInitialized) {
-              // 首次切换到地球模式：强制隐藏路网和POI
-              hideRoadNet(map);
-              setHasEarthInitialized(true);
-            } else {
-              if (!userMapSettings) {
-                hideRoadNet(map);
-              }
-            }
-            if (map.enable3DBuilding) {
-              map.enable3DBuilding();
-            }
-            break;
-          case "panorama":
-            map.setMapType((window as any).BMAP_SATELLITE_MAP);
-            addPanoramaLayer(map);
-            break;
-        }
-
-        message.success(
-          `已切换到${mapTypes.find((m) => m.key === mapType)?.name}`
-        );
-        return; // 直接返回，不重新创建地图
-      } catch (error) {
-        console.error("切换地图类型失败:", error);
-        // 如果切换失败，继续执行下面的创建逻辑
-      }
-    }
-    // 创建新的地图实例
-    const newMap = new (window as any).BMapGL.Map(mapContainerRef.current);
-    // 手动启用滚轮缩放（重要！）
-    newMap.enableScrollWheelZoom(true);
-    // 如果需要更精细的控制，可以使用
-    newMap.enableContinuousZoom(true); // 启用连续缩放
-    newMap.enableInertialDragging(true); // 启用惯性拖拽
-    // 将全景图层添加到地图中
-    newMap.addTileLayer(panoramaLayerRef.current);
-    // 设置中心点和缩放
-    newMap.centerAndZoom(
-      new (window as any).BMapGL.Point(116.402544, 39.928216),
-      1
-    );
-    // 监听鼠标右键事件
-    newMap.addEventListener("rightclick", function (e) {
-      // 判断是否已经存在菜单
-      if (panoramaManagerRef.current.contextMenu) {
-        removePanoramaLayer(newMap);
-      }
-    });
-    try {
-      switch (mapType) {
-        case "normal":
-          newMap.setMapType((window as any).BMAP_NORMAL_MAP);
-          newMap.setTilt(0);
-          break;
-        case "earth":
-          newMap.setMapType((window as any).BMAP_EARTH_MAP);
-          hideRoadNet(newMap);
-          newMap.setTilt(60);
-          if (newMap.enable3DBuilding) {
-            newMap.enable3DBuilding();
+  function mouseMoveFun(e: any) {
+    setLngLat(e.latlng);
+  }
+  // 清除绘制信息和所选择的行政区划信息
+  function clearDrawAndDistrict() {}
+  // 创建3d地球
+  function createCesiumViewer(type) {
+    setIsCesium(true);
+    if (!Cesium) {
+      message.error("Cesium 未加载，无法显示三维地球");
+    } else {
+      if (!cesiumViewerRef.current && cesiumContainerRef.current) {
+        // 初始化 Cesium Viewer（关闭不需要的 UI）
+        cesiumViewerRef.current = new Cesium.Viewer(
+          cesiumContainerRef.current,
+          {
+            animation: false,
+            baseLayerPicker: false,
+            fullscreenButton: false,
+            geocoder: false,
+            homeButton: false,
+            infoBox: false,
+            sceneModePicker: false,
+            timeline: false,
+            navigationHelpButton: false,
+            selectionIndicator: false,
+            shadows: false,
+            imageryProvider: false, // 禁用默认底图，避免访问 Ion
+            terrainProvider: new Cesium.EllipsoidTerrainProvider(), // 禁用 Ion 地形
           }
-          break;
-        case "panorama":
-          // 全景模式下添加全景图层和控件
-          newMap.addTileLayer(
-            new (window as any).BMapGL.PanoramaCoverageLayer()
-          );
-          const stCtrl = new (window as any).BMapGL.PanoramaControl();
-          stCtrl.setOffset(new (window as any).BMapGL.Size(0, 0));
-          newMap.addControl(stCtrl);
-          newMap.centerAndZoom(
-            new (window as any).BMapGL.Point(116.40385, 39.913795),
-            4
-          );
-          break;
+        );
+        // 影像底图
+        const tdtUrl = "https://t{s}.tianditu.gov.cn/";
+        const subdomains = ["0", "1", "2", "3", "4", "5", "6", "7"];
+        const imgProvider = new Cesium.UrlTemplateImageryProvider({
+          url: `${tdtUrl}DataServer?T=img_w&x={x}&y={y}&l={z}&tk=${tdtKey}`,
+          subdomains,
+          tilingScheme: new Cesium.WebMercatorTilingScheme(),
+          maximumLevel: 18,
+        });
+        cesiumViewerRef.current.imageryLayers.addImageryProvider(imgProvider);
+        // 矢量注记
+        if (isAddVectorLabel) {
+          const ciaProvider = new Cesium.UrlTemplateImageryProvider({
+            url: `${tdtUrl}DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=${tdtKey}`,
+            subdomains,
+            tilingScheme: new Cesium.WebMercatorTilingScheme(),
+            maximumLevel: 18,
+          });
+          vectorLabelLayerRef.current =
+            cesiumViewerRef.current.imageryLayers.addImageryProvider(
+              ciaProvider
+            );
+        }
+        // 初始飞到中国
+        cesiumViewerRef.current.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(103.84, 31.15, 17850000),
+        });
       }
-
-      // 更新引用
-      mapRef.current = newMap;
-      setMapView(newMap);
-      outputMapView?.(newMap);
-      // 初始化工具
-      initDrawingManager(newMap);
-      // 添加事件监听
-      newMap.addEventListener("movestart", handleMapMove);
-      newMap.addEventListener("moveend", handleMapMove);
-
-      message.success(
-        `已切换到${mapTypes.find((m) => m.key === mapType)?.name}`
-      );
-    } catch (error) {
-      console.error("创建地图失败:", error);
-      message.error("地图创建失败");
     }
-    mapContainerRef.current = newMap;
-
-    // 不再强制重新渲染容器，避免地图实例被卸载
-  };
-  function showRoadNet(map) {
-    map.setDisplayOptions({
-      street: true, //是否显示路网（只对卫星图和地球模式有效）
-      poi: true,
-    });
+    // 切换到三维地球时，移除 Leaflet 的图层
+    currentBaseLayersRef.current = { type, layers: [] };
   }
-  function hideRoadNet(map) {
-    map.setDisplayOptions({
-      street: false, //是否显示路网（只对卫星图和地球模式有效）
-      poi: false,
+  // 切换底图：地图(矢量)、地球(三维)、地形
+  function setBaseMap(type: "地图" | "地球" | "地形") {
+    if (!mapView) return;
+    // 如果类型相同则不处理
+    if (currentBaseLayersRef.current.type === type) return;
+    // 1) 移除旧图层
+    currentBaseLayersRef.current.layers.forEach((lyr) => {
+      try {
+        mapView.removeLayer(lyr);
+      } catch {}
     });
-  }
-  // 鼠标右键添加菜单
-  function addContextMenu(map) {
-    const contextMenu = new (window as any).BMapGL.ContextMenu();
-    var txtMenuItem = [
-      {
-        text: "放大一级",
-        callback: function () {
-          map.zoomIn();
-        },
-      },
-      {
-        text: "缩小一级",
-        callback: function () {
-          map.zoomOut();
-        },
-      },
-      {
-        text: "全景预览",
-        callback: function () {
-          // 关闭全景
-          removePanoramaLayer(map);
-        },
-      },
-    ];
-    for (const k in txtMenuItem) {
-      contextMenu.addItem(
-        new (window as any).BMapGL.MenuItem(
-          txtMenuItem[k].text,
-          txtMenuItem[k].callback,
-          100
-        )
-      );
+    currentBaseLayersRef.current.layers = [];
+    // 2) 根据类型创建并添加新图层
+    const style = mapStyle;
+    let newLayers: L.TileLayer[] = [];
+    if (type === "地图") {
+      setIsCesium(false);
+      // 关闭并销毁已有的 Cesium 实例
+      if (cesiumViewerRef.current) {
+        try {
+          cesiumViewerRef.current.destroy();
+        } catch {}
+        cesiumViewerRef.current = null;
+        vectorLabelLayerRef.current = null;
+      }
+      const vecUrl = `http://t{s}.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&tk=${tdtKey}&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}`;
+      const cvaUrl = `http://t{s}.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&tk=${tdtKey}&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}`;
+      const base = L.tileLayer(vecUrl, style);
+      const label = L.tileLayer(cvaUrl, style);
+      newLayers = [base, label];
+    } else if (type === "地球") {
+      createCesiumViewer(type);
+      return; // 不向 Leaflet 添加任何图层
+    } else if (type === "地形") {
+      setIsCesium(false);
+      // 关闭并销毁已有的 Cesium 实例
+      if (cesiumViewerRef.current) {
+        try {
+          cesiumViewerRef.current.destroy();
+        } catch {}
+        cesiumViewerRef.current = null;
+        vectorLabelLayerRef.current = null;
+      }
+      // 地形底图 + 地形注记
+      const terUrl = `http://t{s}.tianditu.gov.cn/ter_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ter&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&tk=${tdtKey}&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}`;
+      const ctaUrl = `http://t{s}.tianditu.gov.cn/cta_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cta&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&tk=${tdtKey}&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}`;
+      const base = L.tileLayer(terUrl, style);
+      const label = L.tileLayer(ctaUrl, style);
+      newLayers = [base, label];
     }
-    // 关键：将菜单添加到地图
-    map.addContextMenu(contextMenu);
-    return contextMenu; // 返回菜单引用以便后续管理
+    if (mapView) {
+      newLayers.forEach((lyr) => lyr.addTo(mapView));
+    }
+    currentBaseLayersRef.current = { type, layers: newLayers };
   }
-  // 初始化百度地图
+
+  // 绘制多边形
+  function drawPolygon(value: { geometry: any }) {
+    console.log("value", value);
+    // const geoLayerOption = {
+    //     style: {
+    //         color: "#000dff",
+    //         weight: 3,
+    //         opacity: 0.8,
+    //         fill: true, // 设置false的话，就只能点击边才能触发了！
+    //         id: 'xxx'
+    //     },
+    // };
+    // const geoJsonLayer = addLeafletGeoJsonLayer(mapView!, value.geometry, 'layerGeoJsonPane', 3, geoLayerOption);
+    // bingGeojsonLayerEditEvent(geoJsonLayer, mapView!);
+    // drawLayerGroup.current?.addLayer(geoJsonLayer).addTo(mapView!);
+  }
   useEffect(() => {
-    // 使用 setTimeout 确保 DOM 已渲染
-    const timer = setTimeout(() => {
-      if (mapContainerRef.current) {
-        switchMapType("normal");
-      }
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    if (!mapRef.current) return;
+    // 初始化地图
+    const localMapView = new L.Map(mapRef.current, {
+      zoom: baseMapSetting?.zoom || 4,
+      center: (baseMapSetting?.center as L.LatLngExpression) || [35.5, 109.1],
+      // maxZoom: baseMapSetting?.defaultMaxZoom || 18,
+      maxZoom: 18,
+      minZoom: 4,
+      attributionControl: false, // 默认情况下，是否将 attribution 版权控件添加到地图中。
+      zoomControl: false, // 默认情况下，是否将 zoom 缩放控件添加到地图中。
+    });
+    if (baseMapSetting?.maxBounds) {
+      const maxBounds = L.latLngBounds(
+        baseMapSetting.maxBounds as L.LatLngBoundsLiteral
+      );
+      localMapView.setMaxBounds(maxBounds);
+    }
+    setMapView && setMapView(localMapView);
+    return () => {
+      setMapView && setMapView(null);
+      localMapView.remove();
+    };
   }, []);
+  useEffect(() => {
+    let mapScaleControl: any = null;
+    let mapZoomControl: any = null;
+    if (mapView) {
+      // 获取到地图后，触发事件：
+      // 事件1: 添加底图
+      // 默认加载矢量底图
+      setBaseMap("地图");
+
+      // 事件2： 添加地图比例尺工具条
+      mapScaleControl = addScaleControl(mapView);
+      // 事件3： 添加地图Zoom工具条
+      mapZoomControl = addZoomControl(mapView, {
+        zoomInTitle: "放大",
+        zoomOutTitle: "缩小",
+      });
+      // todo: 事件4：添加zoomout和zoomin事件--设置和显示地图缩放范围
+
+      // 事件5：添加mousemove事件--设置经纬度信息
+      mapView.on("mousemove", throttle(mouseMoveFun, 100));
+    }
+    return () => {
+      mapScaleControl && mapScaleControl.remove();
+      mapZoomControl && mapZoomControl.remove();
+    };
+  }, [mapView]);
+  const handleCheck = (e: any) => {
+    const { checked } = e.target;
+    setIsAddVectorLabel(checked);
+  };
+  useEffect(() => {
+    // 仅在三维地球且 viewer 存在时响应
+    if (!isCesium || !cesiumViewerRef.current) return;
+    if (isAddVectorLabel) {
+      if (!vectorLabelLayerRef.current) {
+        const ciaProvider = new Cesium.UrlTemplateImageryProvider({
+          url: `${tdtUrl}DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=${tdtKey}`,
+          subdomains,
+          tilingScheme: new Cesium.WebMercatorTilingScheme(),
+          maximumLevel: 18,
+        });
+        vectorLabelLayerRef.current =
+          cesiumViewerRef.current.imageryLayers.addImageryProvider(ciaProvider);
+      }
+    } else {
+      if (vectorLabelLayerRef.current) {
+        cesiumViewerRef.current.imageryLayers.remove(
+          vectorLabelLayerRef.current
+        );
+        vectorLabelLayerRef.current = null;
+      }
+    }
+  }, [isAddVectorLabel, isCesium]);
   return (
     <div className="map-container">
-      {/* 百度地图 - 通过外部控制地图类型 */}
+      {/* 待加入内容：
+                1: 地图底图、以及底图切换
+                2: 放大缩小工具条、绘制点、线、矩形、圆、多边
+                3: 面积测量
+             */}
       <div
-        ref={mapContainerRef}
+        className="sample-check-edit-map"
+        id="sample-check-edit-map"
+        ref={mapRef}
+        style={{ display: isCesium ? "none" : "block" }}
+      ></div>
+      {/* Cesium 三维容器 */}
+      <div
+        id="cesiumContainer"
+        ref={cesiumContainerRef}
         style={{
-          height: "calc(100vh - 80px)",
-          width: "100vw",
+          display: isCesium ? "block" : "none",
+          width: "100%",
+          height: "100%",
         }}
-      />
+      ></div>
+      {/* 工具条1: 底图切换 */}
       <div className="layerList">
-        {mapTypes.map((mapType: any, idx: number) => {
+        {baseLayers.map((layer: any, idx: number) => {
           return (
             <div
               className="layerItem"
               key={`baselayer_${idx}`}
-              style={mapType.positionStyle}
-              onClick={() => switchMapType(mapType.key)}
+              style={layer.positionStyle}
+              onClick={(e) => {
+                setBaseMap(layer.name as any);
+              }}
             >
-              {mapType.option && (
+              {" "}
+              {layer.option && (
                 <div className="layerOption">
                   <div>
                     <input
                       type="checkbox"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleCheck(e, mapType.key);
+                        handleCheck(e);
                       }}
                     ></input>
                   </div>
-                  <div>{mapType.option}</div>
+                  <div>{layer.option}</div>
                 </div>
               )}
-              <div className="layerName">{mapType.name}</div>
+              <div className="layerName">{layer.name}</div>
             </div>
           );
         })}
       </div>
-      {/* 绘制工具控件 */}
-      {/* <div className="drawing-control">
-        <div className="control-header">
-          <span className="title">绘制工具</span>
-          {currentDrawingType && (
-            <button className="stop-drawing-btn" onClick={stopDrawing}>
-              退出绘制
-            </button>
-          )}
-        </div>
-        <div className="drawing-buttons">
-          {drawingTools.map((tool) => (
-            <button
-              key={tool.key}
-              className={`drawing-button ${
-                currentDrawingType === tool.key ? "active" : ""
-              }`}
-              onClick={() => startDrawing(tool.key)}
-              title={tool.name}
-            >
-              <span className="icon">{tool.icon}</span>
-              <span className="name">{tool.name}</span>
-            </button>
-          ))}
-          <button
-            className="drawing-button clear-btn"
-            onClick={clearAllDrawings}
-            title="清除所有图形"
-          >
-            <span className="icon">🗑️</span>
-            <span className="name" onClick={clearAllDrawings}>
-              清除
-            </span>
-          </button>
-        </div>
-      </div> */}
-      {/* 自定义缩放控件 */}
-      <div className="custom-zoom-control">
-        <button onClick={zoomIn} title="放大" className="custom-zoom-btn">
-          +
-        </button>
-        <button onClick={zoomOut} title="缩小" className="custom-zoom-btn">
-          -
-        </button>
+
+      {/* 工具条2: 绘制工具 */}
+      <div className="draw-tools">
+        <CustomLeafLetDraw mapInstance={mapView}></CustomLeafLetDraw>
+      </div>
+      {/* 工具条3: 绘制面积 */}
+      <div className="area-info"></div>
+      {/* 工具条3: 删除绘制内容的按钮 */}
+
+      {/* 工具条4: 显示经纬度信息 */}
+      <div className="lnglat">
+        <span>经度：</span>
+        <span className="text-blue-600 font-bold">
+          {(lnglat && formatNumber(lnglat.lng, 3)) || 0}
+        </span>
+        <span>纬度：</span>
+        <span className="text-blue-600 font-bold">
+          {(lnglat && formatNumber(lnglat.lat, 3)) || 0}
+        </span>
+        <span> 中科天启</span>
       </div>
     </div>
   );
