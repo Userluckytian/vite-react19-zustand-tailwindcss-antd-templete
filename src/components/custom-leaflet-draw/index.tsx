@@ -12,6 +12,7 @@ import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import LeafletEditPolygon from './edit/polygon';
 import { PolygonEditorState } from './types';
+import LeafletEditRectangle from './edit/rectangle';
 interface CustomLeafLetDrawProps {
     mapInstance: L.Map; // 传入的地图实例
     drawGeoJsonResult?: (result: any) => void; // 绘制结果吐出
@@ -75,9 +76,16 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         },
         {
             id: 'edit_polygon',
-            title: '编辑面：双击打开编辑右键删除点',
+            title: '可编辑面',
             icon: 'icon-huizhiduobianxing1',
             type: 'edit_polygon',
+            desp: '编辑面'
+        },
+        {
+            id: 'edit_rectangle',
+            title: '可编辑矩形',
+            icon: 'icon-juxinghuizhi1',
+            type: 'edit_rectangle',
             desp: '编辑面'
         },
         {
@@ -189,6 +197,22 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     console.log('status', status);
                     if (status === PolygonEditorState.Editing) {
                         setCurrEditLayer(editPolygonLayer);
+                    } else {
+                        if (status === PolygonEditorState.Idle) {
+                            setCurrSelTool('');
+                        }
+                        setCurrEditLayer(null);
+                    }
+                })
+                break;
+            case 'edit_rectangle':
+                const editRectangleLayer = new LeafletEditRectangle(mapInstance);
+                setDrawLayers((pre: any[]) => [...pre, editRectangleLayer]);
+                // 添加监听逻辑
+                editRectangleLayer.onStateChange((status: PolygonEditorState) => {
+                    console.log('status', status);
+                    if (status === PolygonEditorState.Editing) {
+                        setCurrEditLayer(editRectangleLayer);
                     } else {
                         if (status === PolygonEditorState.Idle) {
                             setCurrSelTool('');

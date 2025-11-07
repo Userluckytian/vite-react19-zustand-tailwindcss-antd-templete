@@ -56,7 +56,7 @@ export default class LeafletPolyline {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletPolyLine
      */
     private initMapEvent(map: L.Map) {
         map.on('click', this.mapClickEvent);
@@ -70,7 +70,7 @@ export default class LeafletPolyline {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletPolyLine
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
         this.tempCoords.push([e.latlng.lat, e.latlng.lng])
@@ -80,7 +80,7 @@ export default class LeafletPolyline {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletPolyLine
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
         if (this.lineLayer) {
@@ -95,7 +95,7 @@ export default class LeafletPolyline {
      *
      *
      * @private
-     * @memberof LeafletDistance
+     * @memberof LeafletPolyLine
      */
     private reset() {
         // 清空坐标把，因为没什么用了
@@ -113,7 +113,7 @@ export default class LeafletPolyline {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletPolyLine
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
         if (!this.tempCoords.length) return;
@@ -130,7 +130,7 @@ export default class LeafletPolyline {
         this.renderLayer(this.tempCoords);
     }
 
-    /** 渲染线图层
+    /** 渲染图层
      *
      *
      * @private
@@ -148,20 +148,20 @@ export default class LeafletPolyline {
     /** 返回图层的空间信息 
      * 
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
-     * @memberof markerPoint
+     * @memberof LeafletPolyLine
      */
     public geojson() {
         if (this.lineLayer) {
             return this.lineLayer.toGeoJSON();
         } else {
-            throw new Error("未捕获到marker图层，无法获取到geojson数据");
+            throw new Error("未捕获到图层，无法获取到geojson数据");
         }
     }
 
     /** 销毁图层，从地图中移除图层
      *
      *
-     * @memberof markerPoint
+     * @memberof LeafletPolyLine
      */
     public destroy() {
         if (this.lineLayer) {
@@ -176,7 +176,7 @@ export default class LeafletPolyline {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletPolyLine
      */
     private offMapEvent(map: L.Map) {
         map.off('click', this.mapClickEvent);
@@ -222,7 +222,7 @@ export default class LeafletPolyline {
      *
      *
      * @param {(state: PolygonEditorState) => void} listener
-     * @memberof LeafletEditPolygon
+     * @memberof LeafletPolyLine
      */
     public onStateChange(listener: (state: PolygonEditorState) => void): void {
         // 存储回调事件并立刻触发一次
@@ -252,7 +252,7 @@ export default class LeafletPolyline {
      *
      *
      * @private
-     * @memberof LeafletEditPolygon
+     * @memberof LeafletPolyLine
      */
     private updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;

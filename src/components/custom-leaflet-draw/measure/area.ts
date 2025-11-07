@@ -84,7 +84,7 @@ export default class LeafletArea {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletArea
      */
     private initMapEvent(map: L.Map) {
         map.on('click', this.mapClickEvent);
@@ -98,7 +98,7 @@ export default class LeafletArea {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletArea
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
         this.tempCoords.push([e.latlng.lat, e.latlng.lng])
@@ -108,7 +108,7 @@ export default class LeafletArea {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletArea
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
         if (this.polygonLayer) {
@@ -122,7 +122,7 @@ export default class LeafletArea {
      *
      *
      * @private
-     * @memberof LeafletDistance
+     * @memberof LeafletArea
      */
     private reset() {
         // 清空坐标把，因为没什么用了
@@ -140,7 +140,7 @@ export default class LeafletArea {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletArea
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
         if (!this.tempCoords.length) return;
@@ -157,12 +157,12 @@ export default class LeafletArea {
         this.renderLayer(this.tempCoords);
     }
 
-    /** 渲染线图层
+    /** 渲染图层
      *
      *
      * @private
      * @param { [][]} coords
-     * @memberof LeafletLine
+     * @memberof LeafletArea
      */
     private renderLayer(coords: number[][]) {
         if (this.polygonLayer) {
@@ -197,20 +197,20 @@ export default class LeafletArea {
     /** 返回图层的空间信息 
      * 
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
-     * @memberof markerPoint
+     * @memberof LeafletArea
      */
     public geojson() {
         if (this.polygonLayer) {
             return this.polygonLayer.toGeoJSON();
         } else {
-            throw new Error("未捕获到marker图层，无法获取到geojson数据");
+            throw new Error("未捕获到图层，无法获取到geojson数据");
         }
     }
 
     /** 销毁图层，从地图中移除图层
      *
      *
-     * @memberof markerPoint
+     * @memberof LeafletArea
      */
     public destroy() {
         if (this.polygonLayer) {
@@ -229,7 +229,7 @@ export default class LeafletArea {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletArea
      */
     private offMapEvent(map: L.Map) {
         map.off('click', this.mapClickEvent);
@@ -243,7 +243,7 @@ export default class LeafletArea {
      * @private
      * @param {FormattedArea} area
      * @return {*}  {L.DivIcon}
-     * @memberof LeafletDistance
+     * @memberof LeafletArea
      */
     private measureMarkerIcon(area: FormattedArea): L.DivIcon {
         return L.divIcon({
@@ -344,7 +344,7 @@ export default class LeafletArea {
      *
      *
      * @param {(state: PolygonEditorState) => void} listener
-     * @memberof LeafletEditPolygon
+     * @memberof LeafletArea
      */
     public onStateChange(listener: (state: PolygonEditorState) => void): void {
         // 存储回调事件并立刻触发一次
@@ -374,7 +374,7 @@ export default class LeafletArea {
      *
      *
      * @private
-     * @memberof LeafletEditPolygon
+     * @memberof LeafletArea
      */
     private updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;

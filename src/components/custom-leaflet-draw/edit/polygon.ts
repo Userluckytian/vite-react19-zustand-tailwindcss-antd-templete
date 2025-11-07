@@ -43,8 +43,8 @@ export default class LeafletEditPolygon extends BaseEditor {
             ...options
         };
         this.polygonLayer = L.polygon([[181, 181], [181, 181], [181, 181], [181, 181]], polygonOptions);
-        this.initPolygonEvent();
         this.polygonLayer.addTo(this.map);
+        this.initPolygonEvent();
     }
 
     /** 实例化面图层事件
@@ -70,7 +70,7 @@ export default class LeafletEditPolygon extends BaseEditor {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletEditPolygon
      */
     private initMapEvent(map: L.Map) {
         // 绘制、编辑用前三个
@@ -101,7 +101,7 @@ export default class LeafletEditPolygon extends BaseEditor {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletEditPolygon
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
         if (!this.polygonLayer) throw new Error('面图层实例化失败，无法完成图层创建，请重试');
@@ -137,7 +137,7 @@ export default class LeafletEditPolygon extends BaseEditor {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletEditPolygon
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
         // 逻辑1： 绘制时的逻辑
@@ -185,7 +185,7 @@ export default class LeafletEditPolygon extends BaseEditor {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletEditPolygon
      */
     private mapMouseUpEvent = (e: L.LeafletMouseEvent) => {
         // 条件1: 编辑事件
@@ -202,16 +202,13 @@ export default class LeafletEditPolygon extends BaseEditor {
                 return;
             }
         }
-
-
-
     }
-    /** 渲染线图层
+    /** 渲染图层
      *
      *
      * @private
      * @param { [][]} coords
-     * @memberof LeafletLine
+     * @memberof LeafletEditPolygon
      */
     private renderLayer(coords: number[][]) {
         if (this.polygonLayer) {
@@ -224,13 +221,13 @@ export default class LeafletEditPolygon extends BaseEditor {
     /** 返回图层的空间信息 
      * 
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
-     * @memberof markerPoint
+     * @memberof LeafletEditPolygon
      */
     public geojson() {
         if (this.polygonLayer) {
             return this.polygonLayer.toGeoJSON();
         } else {
-            throw new Error("未捕获到marker图层，无法获取到geojson数据");
+            throw new Error("未捕获到图层，无法获取到geojson数据");
         }
     }
 
@@ -238,7 +235,7 @@ export default class LeafletEditPolygon extends BaseEditor {
      *
      *
      * @private
-     * @memberof LeafletDistance
+     * @memberof LeafletEditPolygon
      */
     private reset() {
         this.map.getContainer().style.cursor = 'grab';
@@ -249,7 +246,7 @@ export default class LeafletEditPolygon extends BaseEditor {
     /** 销毁图层，从地图中移除图层
      *
      *
-     * @memberof markerPoint
+     * @memberof LeafletEditPolygon
      */
     public destroy() {
         // #region 1：绘制图层用到的内容
@@ -295,7 +292,7 @@ export default class LeafletEditPolygon extends BaseEditor {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletEditPolygon
      */
     private offMapEvent(map: L.Map) {
         map.off('click', this.mapClickEvent);

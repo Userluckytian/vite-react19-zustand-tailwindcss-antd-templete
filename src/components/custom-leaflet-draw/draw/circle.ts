@@ -61,7 +61,7 @@ export default class LeafletCircle {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletCircle
      */
     private initMapEvent(map: L.Map) {
         map.on('click', this.mapClickEvent);
@@ -74,7 +74,7 @@ export default class LeafletCircle {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletCircle
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
         // this.tempCoords.push([e.latlng.lat, e.latlng.lng])
@@ -91,7 +91,7 @@ export default class LeafletCircle {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletCircle
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
         // 1：一个点也没有时，我们移动事件，也什么也不做。
@@ -105,12 +105,12 @@ export default class LeafletCircle {
         this.renderLayer(this.tempCoords);
     }
 
-    /** 渲染线图层
+    /** 渲染图层
      *
      *
      * @private
      * @param { [][]} coords
-     * @memberof LeafletPolyLine
+     * @memberof LeafletCircle
      */
     private renderLayer(coords: L.LatLng[]) {
         if (this.circleLayer) {
@@ -124,11 +124,11 @@ export default class LeafletCircle {
     }
 
     /** 状态重置
- *
- *
- * @private
- * @memberof LeafletDistance
- */
+     *
+     *
+     * @private
+     * @memberof LeafletCircle
+     */
     private reset() {
         // 清空坐标把，因为没什么用了
         this.tempCoords = [];
@@ -143,7 +143,7 @@ export default class LeafletCircle {
     /** 返回图层的空间信息 
      * 
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
-     * @memberof markerPoint
+     * @memberof LeafletCircle
      */
     public geojson() {
         if (this.circleLayer) {
@@ -153,14 +153,14 @@ export default class LeafletCircle {
             const geojson = circle(lnglat, this.radius / km_value, options); // 获取图形！
             return geojson;
         } else {
-            throw new Error("未捕获到marker图层，无法获取到geojson数据");
+            throw new Error("未捕获到图层，无法获取到geojson数据");
         }
     }
 
     /** 销毁图层，从地图中移除图层
      *
      *
-     * @memberof markerPoint
+     * @memberof LeafletCircle
      */
     public destroy() {
         if (this.circleLayer) {
@@ -175,7 +175,7 @@ export default class LeafletCircle {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletCircle
      */
     private offMapEvent(map: L.Map) {
         map.off('click', this.mapClickEvent);
@@ -190,7 +190,7 @@ export default class LeafletCircle {
      *
      *
      * @param {(state: PolygonEditorState) => void} listener
-     * @memberof LeafletEditPolygon
+     * @memberof LeafletCircle
      */
     public onStateChange(listener: (state: PolygonEditorState) => void): void {
         // 存储回调事件并立刻触发一次
@@ -220,7 +220,7 @@ export default class LeafletCircle {
      *
      *
      * @private
-     * @memberof LeafletEditPolygon
+     * @memberof LeafletCircle
      */
     private updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;
