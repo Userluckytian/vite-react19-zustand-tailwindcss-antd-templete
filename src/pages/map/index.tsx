@@ -30,6 +30,13 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     maxZoom: 18,
     tileSize: 256,
   };
+  const zhujimapStyle: any = {
+    attribution: "stamen",
+    subdomains: "01234567",
+    name: "注记",
+    maxZoom: 18,
+    tileSize: 256,
+  };
   const { message } = App.useApp();
   const globalConfigContext = useContext(GlobalContext);
   const baseMapSetting = globalConfigContext.baseMapSetting;
@@ -43,19 +50,23 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     type: null,
     layers: [],
   });
-  //   设置一个变量来判断是否添加矢量注记
-  const [isAddVectorLabel, setIsAddVectorLabel] = useState(false);
-  // 3D 地球（Cesium）相关
-  const [isCesium, setIsCesium] = useState(false);
-  const cesiumContainerRef = useRef<HTMLDivElement | null>(null);
-  const cesiumViewerRef = useRef<any>(null);
-  //  创建一个矢量注记图层
-  const vectorLabelLayerRef = useRef<L.TileLayer | null>(null);
+  const verorLayersRef = useRef<{
+    mapOne: boolean;
+    mapTwo: boolean;
+    mapThree: boolean;
+  }>({
+    mapOne: true,
+    mapTwo: true,
+    mapThree: true,
+  });
   // 经纬度信息
   const [lnglat, setLngLat] = useState<any>(null);
   const baseLayers = [
     {
       name: "地图",
+      option: "开启注记",
+      baseUrl: `http://t{s}.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&tk=${tdtKey}&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}`,
+      zhujiUrl: `http://t{s}.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&tk=${tdtKey}&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}`,
       positionStyle: {
         backgroundPosition: "-1px -1px",
         transform: "translateX(180px)",
@@ -65,6 +76,8 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     {
       name: "地球",
       option: "开启路网",
+      baseUrl: `http://t0.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=${tdtKey}`,
+      zhujiUrl: `http://t{s}.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&tk=${tdtKey}&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}`,
       positionStyle: {
         backgroundPosition: "-1px -181px",
         transform: "translateX(90px)",
@@ -73,75 +86,46 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     },
     {
       name: "地形",
+      option: "开启注记",
+      baseUrl: `http://t{s}.tianditu.gov.cn/ter_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ter&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&tk=${tdtKey}&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}`,
+      zhujiUrl: `http://t{s}.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&tk=${tdtKey}&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}`,
       positionStyle: { backgroundPosition: "-1px -61px", width: "86px" },
     },
   ];
-
   function mouseMoveFun(e: any) {
     setLngLat(e.latlng);
   }
-  // 清除绘制信息和所选择的行政区划信息
-  function clearDrawAndDistrict() {}
-  // 创建3d地球
-  function createCesiumViewer(type) {
-    setIsCesium(true);
-    if (!Cesium) {
-      message.error("Cesium 未加载，无法显示三维地球");
-    } else {
-      if (!cesiumViewerRef.current && cesiumContainerRef.current) {
-        // 初始化 Cesium Viewer（关闭不需要的 UI）
-        cesiumViewerRef.current = new Cesium.Viewer(
-          cesiumContainerRef.current,
-          {
-            animation: false,
-            baseLayerPicker: false,
-            fullscreenButton: false,
-            geocoder: false,
-            homeButton: false,
-            infoBox: false,
-            sceneModePicker: false,
-            timeline: false,
-            navigationHelpButton: false,
-            selectionIndicator: false,
-            shadows: false,
-            imageryProvider: false, // 禁用默认底图，避免访问 Ion
-            terrainProvider: new Cesium.EllipsoidTerrainProvider(), // 禁用 Ion 地形
-          }
-        );
-        // 影像底图
-        const tdtUrl = "https://t{s}.tianditu.gov.cn/";
-        const subdomains = ["0", "1", "2", "3", "4", "5", "6", "7"];
-        const imgProvider = new Cesium.UrlTemplateImageryProvider({
-          url: `${tdtUrl}DataServer?T=img_w&x={x}&y={y}&l={z}&tk=${tdtKey}`,
-          subdomains,
-          tilingScheme: new Cesium.WebMercatorTilingScheme(),
-          maximumLevel: 18,
-        });
-        cesiumViewerRef.current.imageryLayers.addImageryProvider(imgProvider);
-        // 矢量注记
-        if (isAddVectorLabel) {
-          const ciaProvider = new Cesium.UrlTemplateImageryProvider({
-            url: `${tdtUrl}DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=${tdtKey}`,
-            subdomains,
-            tilingScheme: new Cesium.WebMercatorTilingScheme(),
-            maximumLevel: 18,
-          });
-          vectorLabelLayerRef.current =
-            cesiumViewerRef.current.imageryLayers.addImageryProvider(
-              ciaProvider
-            );
-        }
-        // 初始飞到中国
-        cesiumViewerRef.current.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(103.84, 31.15, 17850000),
-        });
+  // 按照类别添加注记图层
+  const handleAddLabel = (checked, cvaUrl) => {
+    const style = zhujimapStyle;
+    let newLayers: L.TileLayer[] = [];
+    if (checked) {
+      const label = L.tileLayer(cvaUrl, style);
+      newLayers = [label, ...currentBaseLayersRef.current.layers];
+      if (mapView) {
+        newLayers.forEach((lyr) => lyr.addTo(mapView));
       }
+      currentBaseLayersRef.current = { type: "地图", layers: newLayers };
+    } else {
+      currentBaseLayersRef.current.layers.forEach((lyr) => {
+        const name = (lyr.options as any)?.name;
+        if (name == "注记") {
+          lyr.remove();
+        }
+      });
+      currentBaseLayersRef.current = {
+        type: "地图",
+        layers: [],
+      };
     }
-    // 切换到三维地球时，移除 Leaflet 的图层
-    currentBaseLayersRef.current = { type, layers: [] };
-  }
+  };
   // 切换底图：地图(矢量)、地球(三维)、地形
-  function setBaseMap(type: "地图" | "地球" | "地形") {
+  function setBaseMap(type: "地图" | "地球" | "地形", layer) {
+    const mapConfig = {
+      地图: verorLayersRef.current.mapOne,
+      地球: verorLayersRef.current.mapTwo,
+      地形: verorLayersRef.current.mapThree,
+    };
     if (!mapView) return;
     // 如果类型相同则不处理
     if (currentBaseLayersRef.current.type === type) return;
@@ -155,62 +139,20 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     // 2) 根据类型创建并添加新图层
     const style = mapStyle;
     let newLayers: L.TileLayer[] = [];
-    if (type === "地图") {
-      setIsCesium(false);
-      // 关闭并销毁已有的 Cesium 实例
-      if (cesiumViewerRef.current) {
-        try {
-          cesiumViewerRef.current.destroy();
-        } catch {}
-        cesiumViewerRef.current = null;
-        vectorLabelLayerRef.current = null;
-      }
-      const vecUrl = `http://t{s}.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&tk=${tdtKey}&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}`;
-      const cvaUrl = `http://t{s}.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&tk=${tdtKey}&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}`;
-      const base = L.tileLayer(vecUrl, style);
-      const label = L.tileLayer(cvaUrl, style);
-      newLayers = [base, label];
-    } else if (type === "地球") {
-      createCesiumViewer(type);
-      return; // 不向 Leaflet 添加任何图层
-    } else if (type === "地形") {
-      setIsCesium(false);
-      // 关闭并销毁已有的 Cesium 实例
-      if (cesiumViewerRef.current) {
-        try {
-          cesiumViewerRef.current.destroy();
-        } catch {}
-        cesiumViewerRef.current = null;
-        vectorLabelLayerRef.current = null;
-      }
-      // 地形底图 + 地形注记
-      const terUrl = `http://t{s}.tianditu.gov.cn/ter_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ter&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&tk=${tdtKey}&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}`;
-      const ctaUrl = `http://t{s}.tianditu.gov.cn/cta_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cta&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&tk=${tdtKey}&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}`;
-      const base = L.tileLayer(terUrl, style);
-      const label = L.tileLayer(ctaUrl, style);
-      newLayers = [base, label];
+    const baseUrl = layer.baseUrl;
+    const base = L.tileLayer(baseUrl, style);
+    const zhujiUrl = layer.zhujiUrl;
+    const zhuji = L.tileLayer(zhujiUrl, zhujimapStyle);
+    const targetMap = mapConfig[type];
+    if (targetMap) {
+      newLayers = [base, zhuji];
+    } else {
+      newLayers = [base];
     }
     if (mapView) {
       newLayers.forEach((lyr) => lyr.addTo(mapView));
     }
     currentBaseLayersRef.current = { type, layers: newLayers };
-  }
-
-  // 绘制多边形
-  function drawPolygon(value: { geometry: any }) {
-    console.log("value", value);
-    // const geoLayerOption = {
-    //     style: {
-    //         color: "#000dff",
-    //         weight: 3,
-    //         opacity: 0.8,
-    //         fill: true, // 设置false的话，就只能点击边才能触发了！
-    //         id: 'xxx'
-    //     },
-    // };
-    // const geoJsonLayer = addLeafletGeoJsonLayer(mapView!, value.geometry, 'layerGeoJsonPane', 3, geoLayerOption);
-    // bingGeojsonLayerEditEvent(geoJsonLayer, mapView!);
-    // drawLayerGroup.current?.addLayer(geoJsonLayer).addTo(mapView!);
   }
   useEffect(() => {
     if (!mapRef.current) return;
@@ -243,7 +185,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
       // 获取到地图后，触发事件：
       // 事件1: 添加底图
       // 默认加载矢量底图
-      setBaseMap("地图");
+      setBaseMap("地图", baseLayers[0]);
 
       // 事件2： 添加地图比例尺工具条
       mapScaleControl = addScaleControl(mapView);
@@ -262,33 +204,33 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
       mapZoomControl && mapZoomControl.remove();
     };
   }, [mapView]);
-  const handleCheck = (e: any) => {
+  const handleCheck = (e: any, layer) => {
     const { checked } = e.target;
-    setIsAddVectorLabel(checked);
-  };
-  useEffect(() => {
-    // 仅在三维地球且 viewer 存在时响应
-    if (!isCesium || !cesiumViewerRef.current) return;
-    if (isAddVectorLabel) {
-      if (!vectorLabelLayerRef.current) {
-        const ciaProvider = new Cesium.UrlTemplateImageryProvider({
-          url: `${tdtUrl}DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=${tdtKey}`,
-          subdomains,
-          tilingScheme: new Cesium.WebMercatorTilingScheme(),
-          maximumLevel: 18,
-        });
-        vectorLabelLayerRef.current =
-          cesiumViewerRef.current.imageryLayers.addImageryProvider(ciaProvider);
-      }
-    } else {
-      if (vectorLabelLayerRef.current) {
-        cesiumViewerRef.current.imageryLayers.remove(
-          vectorLabelLayerRef.current
-        );
-        vectorLabelLayerRef.current = null;
-      }
+    const { name } = layer;
+    if (name == "地图") {
+      const params = {
+        mapOne: checked,
+        mapTwo: verorLayersRef.current.mapTwo,
+        mapThree: verorLayersRef.current.mapThree,
+      };
+      verorLayersRef.current = params;
+    } else if (name == "地球") {
+      const params = {
+        mapTwo: checked,
+        mapOne: verorLayersRef.current.mapOne,
+        mapThree: verorLayersRef.current.mapThree,
+      };
+      verorLayersRef.current = params;
+    } else if (name == "地形") {
+      const params = {
+        mapOne: verorLayersRef.current.mapOne,
+        mapTwo: verorLayersRef.current.mapTwo,
+        mapThree: checked,
+      };
+      verorLayersRef.current = params;
     }
-  }, [isAddVectorLabel, isCesium]);
+    handleAddLabel(checked, layer.zhujiUrl);
+  };
   return (
     <div className="map-container">
       {/* 待加入内容：
@@ -300,17 +242,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
         className="sample-check-edit-map"
         id="sample-check-edit-map"
         ref={mapRef}
-        style={{ display: isCesium ? "none" : "block" }}
-      ></div>
-      {/* Cesium 三维容器 */}
-      <div
-        id="cesiumContainer"
-        ref={cesiumContainerRef}
-        style={{
-          display: isCesium ? "block" : "none",
-          width: "100%",
-          height: "100%",
-        }}
+        style={{ display: "block" }}
       ></div>
       {/* 工具条1: 底图切换 */}
       <div className="layerList">
@@ -321,7 +253,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
               key={`baselayer_${idx}`}
               style={layer.positionStyle}
               onClick={(e) => {
-                setBaseMap(layer.name as any);
+                setBaseMap(layer.name as any, layer);
               }}
             >
               {" "}
@@ -330,9 +262,10 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
                   <div>
                     <input
                       type="checkbox"
+                      defaultChecked={true}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleCheck(e);
+                        handleCheck(e, layer);
                       }}
                     ></input>
                   </div>
