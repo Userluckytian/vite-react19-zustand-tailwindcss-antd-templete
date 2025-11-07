@@ -14,6 +14,7 @@ import { formatNumber, throttle } from '@/utils/utils';
 import { App } from 'antd';
 import { addLeafletGeoJsonLayer, bingGeojsonLayerEditEvent } from '@/utils/leafletUtils';
 import CustomLeafLetDraw from '@/components/custom-leaflet-draw';
+import FunctionPanel from './opt-description';
 
 interface MapPreviewProps {
     outputMapView?: (map: L.Map) => void;
@@ -209,6 +210,10 @@ export default function SampleCheckEditMap({
                 <span>纬度：</span>
                 <span className='text-blue-600 font-bold'>{lnglat && formatNumber(lnglat.lat, 3) || 0}</span>
                 <span> 中科天启</span>
+            </div>
+            {/* 说明信息 */}
+            <div className="leaflet-edit-pane">
+                <FunctionPanel />
             </div>
 
         </div>
