@@ -277,6 +277,19 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     }
     // #endregion
 
+
+    // #region 拓扑工具条事件
+    // 选择图层
+    const pickLayer = () => {
+    }
+    // 裁切
+    const cut = () => {
+    }
+    // 合并图层
+    const union = () => {
+    }
+    // #endregion
+
     // #region 键盘快捷键
     const handleKeyDown = (e: KeyboardEvent) => {
         // 复杂的键盘操作放前面，比如：担心Ctrl + Z先执行
@@ -339,11 +352,22 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             {/* 编辑工具条 */}
             {currEditLayer
                 &&
-                <div className="leaflet-edit-toolbar">
-                    <div className='edit-tool-item' onClick={() => undoEdit()}>↩️ 后退(Ctrl + Z)</div>
-                    <div className='edit-tool-item' onClick={() => redoEdit()}>↩️ 向前(Ctrl + Shift + Z)</div>
-                    <div className='edit-tool-item' onClick={() => resetToInitial()}>🔄 撤销全部(Ctrl + Alt + Z)()</div>
-                    <div className='edit-tool-item' onClick={() => saveEdit()}>✅ 完成编辑(Ctrl + S)</div>
+                <div className="leaflet-edit-toolbar leaflet-bar">
+                    <div>编辑工具条：</div>
+                    <div className='edit-tool-item item-bar' onClick={() => undoEdit()}>↩️ 后退(Ctrl + Z)</div>
+                    <div className='edit-tool-item item-bar' onClick={() => redoEdit()}>↩️ 向前(Ctrl + Shift + Z)</div>
+                    <div className='edit-tool-item item-bar' onClick={() => resetToInitial()}>🔄 撤销全部(Ctrl + Alt + Z)()</div>
+                    <div className='edit-tool-item item-bar' onClick={() => saveEdit()}>✅ 完成编辑(Ctrl + S)</div>
+                </div>
+            }
+            {/* 拓扑工具条(当地图上存在图层，切不是编辑模式时，展示拓扑工具条) */}
+            {!currEditLayer
+                &&
+                <div className="leaflet-topology-toolbar leaflet-bar">
+                    <div>拓扑工具条：</div>
+                    <div className='topology-tool-item item-bar' onClick={() => pickLayer()}>↩️ 选择</div>
+                    <div className='topology-tool-item item-bar' onClick={() => cut()}>↩️ 裁切</div>
+                    <div className='topology-tool-item item-bar' onClick={() => union()}>🔄 合并</div>
                 </div>
             }
         </>
