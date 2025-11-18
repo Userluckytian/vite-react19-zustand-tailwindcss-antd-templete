@@ -7,6 +7,7 @@
  * */
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
+import { modeManager } from '../interaction/InteractionModeManager';
 export default class MarkerPoint {
     // 常量
     private map: L.Map;
@@ -153,6 +154,18 @@ export default class MarkerPoint {
     private updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;
         this.stateListeners.forEach(fn => fn(this.currentState));
+        // ✅ 同步设置交互模式
+        switch (status) {
+            case PolygonEditorState.Drawing:
+                modeManager.setMode('draw');
+                break;
+            case PolygonEditorState.Editing:
+                modeManager.setMode('edit');
+                break;
+            case PolygonEditorState.Idle:
+                modeManager.reset();
+                break;
+        }
     }
     // #endregion
 

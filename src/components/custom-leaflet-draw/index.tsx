@@ -21,9 +21,6 @@ interface CustomLeafLetDrawProps {
 export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const { message } = App.useApp();
     const { mapInstance } = props;
-    const [currSelTool, setCurrSelTool] = useState<string | null>(null);
-    const [drawLayers, setDrawLayers] = useState<any[]>([]);
-    const [currEditLayer, setCurrEditLayer] = useState<any>(null);
     const [toolbarList, setToolBarList] = useState<any>([
         {
             id: 'point',
@@ -96,7 +93,10 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             desp: '清空绘制和查询内容'
         }
     ]
-    )
+    ) // 工具栏列表
+    const [currSelTool, setCurrSelTool] = useState<string | null>(null); // 当前使用的【绘制条上的绘制工具】
+    const [drawLayers, setDrawLayers] = useState<any[]>([]); // 存放绘制的图层
+    const [currEditLayer, setCurrEditLayer] = useState<any>(null); // 当前编辑的图层【我们设置的是一次仅可编辑一个图层】
 
     // 工具按钮点击
     const handleToolClick = (toolId: string) => {
@@ -316,12 +316,26 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     }
     // #endregion
 
+    // #region 地图点击、双击事件（事件中的变量需要通过ref读取，不然可能拿不到最新的值）
+    const mapClickFun = (e: any) => { };
+    const mapDblClickFun = (e: any) => { };
+    // #endregion 
+
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         }
     }, [currEditLayer])
+    useEffect(() => {
+        if (mapInstance) {
+            mapInstance.on('click', mapClickFun); // 点击事件中： 根据图层是编辑状态， 还是拓扑状态， 进行不同操作
+            mapInstance.on('dblclick', mapDblClickFun); // 鼠标双击事件中： 根据图层是编辑状态， 还是拓扑状态， 进行不同操作
+        }
+        return () => {
+
+        }
+    }, [mapInstance])
 
 
     return (
@@ -345,7 +359,6 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                         </Activity>
                         {/* 绘制状态时的取消按钮 */}
                         {currSelTool === tool.id && currSelTool !== 'delete' && <div className='cancel-btn' onClick={handleCancelDraw}>取消</div>}
-
                     </div>
                 ))}
             </div>
@@ -360,7 +373,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     <div className='edit-tool-item item-bar' onClick={() => saveEdit()}>✅ 完成编辑(Ctrl + S)</div>
                 </div>
             }
-            {/* 拓扑工具条(当地图上存在图层，切不是编辑模式时，展示拓扑工具条) */}
+            {/* 拓扑工具条(俩条件：1：地图上存在图层 2：不是编辑模式时。才展示拓扑工具条) */}
             {!currEditLayer
                 &&
                 <div className="leaflet-topology-toolbar leaflet-bar">

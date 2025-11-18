@@ -8,6 +8,7 @@
 import { circle } from '@turf/turf';
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
+import { modeManager } from '../interaction/InteractionModeManager';
 const km_value = 1000; // 1千米 = 1000米
 export default class LeafletCircle {
 
@@ -225,6 +226,19 @@ export default class LeafletCircle {
     private updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;
         this.stateListeners.forEach(fn => fn(this.currentState));
+
+        // ✅ 同步设置交互模式
+        switch (status) {
+            case PolygonEditorState.Drawing:
+                modeManager.setMode('draw');
+                break;
+            case PolygonEditorState.Editing:
+                modeManager.setMode('edit');
+                break;
+            case PolygonEditorState.Idle:
+                modeManager.reset();
+                break;
+        }
     }
     // #endregion
 }
