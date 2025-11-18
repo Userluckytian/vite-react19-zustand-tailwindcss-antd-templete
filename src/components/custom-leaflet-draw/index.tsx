@@ -13,6 +13,7 @@ import LeafletArea from './measure/area';
 import LeafletEditPolygon from './edit/polygon';
 import { PolygonEditorState } from './types';
 import LeafletEditRectangle from './edit/rectangle';
+import { LeafletTopology } from './topo/topo';
 interface CustomLeafLetDrawProps {
     mapInstance: L.Map; // 传入的地图实例
     drawGeoJsonResult?: (result: any) => void; // 绘制结果吐出
@@ -281,6 +282,8 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     // #region 拓扑工具条事件
     // 选择图层
     const pickLayer = () => {
+       const topology = new LeafletTopology(mapInstance);
+       topology.select();
     }
     // 裁切
     const cut = () => {
