@@ -231,17 +231,6 @@ export default class LeafletEditPolygon extends BaseEditor {
         }
     }
 
-    /** 状态重置
-     *
-     *
-     * @private
-     * @memberof LeafletEditPolygon
-     */
-    private reset() {
-        this.map.getContainer().style.cursor = 'grab';
-        // 恢复双击地图放大事件
-        this.map.doubleClickZoom.enable();
-    }
 
     /** 销毁图层，从地图中移除图层
      *

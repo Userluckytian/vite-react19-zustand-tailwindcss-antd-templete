@@ -195,18 +195,6 @@ export default class LeafletEditRectangle extends BaseEditor {
         }
     }
 
-    /** 状态重置
-     *
-     *
-     * @private
-     * @memberof LeafletEditRectangle
-     */
-    private reset() {
-        this.map.getContainer().style.cursor = 'grab';
-        // 恢复双击地图放大事件
-        this.map.doubleClickZoom.enable();
-    }
-
     /** 渲染图层
      *
      *

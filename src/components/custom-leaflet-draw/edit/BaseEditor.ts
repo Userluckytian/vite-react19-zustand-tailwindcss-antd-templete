@@ -19,7 +19,7 @@ export abstract class BaseEditor {
     protected dragStartLatLng: L.LatLng | null = null; // 拖动多边形时，用户鼠标按下（mousedown）那一刻的坐标点，然后鼠标移动（mousemove）时，遍历全部的marker，做坐标偏移计算。
 
     constructor(map: L.Map) {
-        if(!map) throw new Error('传入的地图对象异常，请先确保地图对象已实例完成。');
+        if (!map) throw new Error('传入的地图对象异常，请先确保地图对象已实例完成。');
         this.map = map;
     }
 
@@ -137,8 +137,20 @@ export abstract class BaseEditor {
         this.redoStack = []; // 清空重做栈（如果有）
         this.exitEditMode();
         this.updateAndNotifyStateChange(PolygonEditorState.Idle);
+        this.reset();
     }
 
+    /** 地图状态重置
+     *
+     *
+     * @private
+     * @memberof LeafletEditRectangle
+     */
+    public reset() {
+        this.map.getContainer().style.cursor = 'grab';
+        // 恢复双击地图放大事件
+        this.map.doubleClickZoom.enable();
+    }
     // #endregion
 
     // #region 渲染行为
