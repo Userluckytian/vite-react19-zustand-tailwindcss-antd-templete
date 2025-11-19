@@ -62,7 +62,7 @@ export function queryLayerOnClick(map: L.Map, e: L.LeafletMouseEvent) {
                     }
                     break;
                 }
-            // fall through
+                break;
             case "MultiPoint":
                 for (i = 0; i < coords.length; i++) {
                     if (selectBounds.contains(L.latLng([coords[i][1], coords[i][0]]))) {
@@ -72,7 +72,7 @@ export function queryLayerOnClick(map: L.Map, e: L.LeafletMouseEvent) {
                 break;
             case "LineString":
                 coords = [coords];
-            // fall through
+                break;
             case "MultiLineString":
                 for (i = 0; i < coords.length; i++) {
                     if (
@@ -85,7 +85,7 @@ export function queryLayerOnClick(map: L.Map, e: L.LeafletMouseEvent) {
                 break;
             case "Polygon":
                 coords = [coords];
-            // fall through
+                break;
             case "MultiPolygon":
                 for (i = 0; i < coords.length; i++) {
                     if (
