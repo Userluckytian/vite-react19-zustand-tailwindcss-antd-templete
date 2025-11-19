@@ -4,7 +4,7 @@ import { App, Divider } from 'antd';
 import * as L from 'leaflet';
 import './index.scss';
 import MarkerPoint from './draw/markerPoint';
-import LeafletLine from './draw/polyline';
+import LeafletPolyline from './draw/polyline';
 import LeafletPolygon from './draw/polygon';
 import LeafletCircle from './draw/circle';
 import LeafletRectangle from './draw/rectangle';
@@ -98,7 +98,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const [currSelTool, setCurrSelTool] = useState<string | null>(null); // 当前使用的【绘制条上的绘制工具】
     const [drawLayers, setDrawLayers] = useState<any[]>([]); // 存放绘制的图层
     const [currEditLayer, setCurrEditLayer] = useState<any>(null); // 当前编辑的图层【我们设置的是一次仅可编辑一个图层】
-
+    const [topologyInstance, setTopologyInstance] = useState<any>(null);
     // 工具按钮点击
     const handleToolClick = (toolId: string) => {
 
@@ -125,7 +125,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 })
                 break;
             case 'line':
-                const lineLayer = new LeafletLine(mapInstance);
+                const lineLayer = new LeafletPolyline(mapInstance);
                 setDrawLayers((pre: any[]) => [...pre, lineLayer]);
                 // 添加监听逻辑
                 lineLayer.onStateChange((status: PolygonEditorState) => {
@@ -282,14 +282,19 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     // #region 拓扑工具条事件
     // 选择图层
     const pickLayer = () => {
-       const topology = new LeafletTopology(mapInstance);
-       topology.select();
+        topologyInstance && topologyInstance.select();
     }
     // 裁切
     const cut = () => {
+        topologyInstance && topologyInstance.clipByLine();
     }
     // 合并图层
     const union = () => {
+        topologyInstance && topologyInstance.merge();
+    }
+    // 清除拓扑
+    const clearTopo = () => {
+        topologyInstance && topologyInstance.cleanAll();
     }
     // #endregion
 
@@ -332,8 +337,8 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     }, [currEditLayer])
     useEffect(() => {
         if (mapInstance) {
-            mapInstance.on('click', mapClickFun); // 点击事件中： 根据图层是编辑状态， 还是拓扑状态， 进行不同操作
-            mapInstance.on('dblclick', mapDblClickFun); // 鼠标双击事件中： 根据图层是编辑状态， 还是拓扑状态， 进行不同操作
+            const topology = LeafletTopology.getInstance(mapInstance);
+            setTopologyInstance(topology);
         }
         return () => {
 
@@ -384,6 +389,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     <div className='topology-tool-item item-bar' onClick={() => pickLayer()}>↩️ 选择</div>
                     <div className='topology-tool-item item-bar' onClick={() => cut()}>↩️ 裁切</div>
                     <div className='topology-tool-item item-bar' onClick={() => union()}>🔄 合并</div>
+                    <div className='topology-tool-item item-bar' onClick={() => clearTopo()}>🔄 清除</div>
                 </div>
             }
         </>

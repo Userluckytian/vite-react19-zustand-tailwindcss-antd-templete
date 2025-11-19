@@ -8,6 +8,7 @@ import { booleanPointInPolygon, point } from '@turf/turf';
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
 import { BaseEditor } from './BaseEditor';
+import { modeManager } from '../interaction/InteractionModeManager';
 
 export default class LeafletEditPolygon extends BaseEditor {
 
@@ -54,6 +55,7 @@ export default class LeafletEditPolygon extends BaseEditor {
      * @memberof LeafletEditPolygon
      */
     private initPolygonEvent() {
+        if (modeManager.getMode() !== 'edit') return;
         if (this.polygonLayer) {
             this.polygonLayer.on('mousedown', (e: L.LeafletMouseEvent) => {
                 if (this.currentState === PolygonEditorState.Editing) {
@@ -90,6 +92,7 @@ export default class LeafletEditPolygon extends BaseEditor {
      * @memberof markerPoint
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
+        if (modeManager.getMode() !== 'draw') return;
         // 绘制时的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
             this.tempCoords.push([e.latlng.lat, e.latlng.lng])
@@ -104,6 +107,7 @@ export default class LeafletEditPolygon extends BaseEditor {
      * @memberof LeafletEditPolygon
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
+        if (!['draw', 'edit'].includes(modeManager.getMode())) return;
         if (!this.polygonLayer) throw new Error('面图层实例化失败，无法完成图层创建，请重试');
         // 情况1： 正在绘制状态时，绘制的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
@@ -140,6 +144,7 @@ export default class LeafletEditPolygon extends BaseEditor {
      * @memberof LeafletEditPolygon
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
+        if (!['draw', 'edit'].includes(modeManager.getMode())) return;
         // 逻辑1： 绘制时的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
             if (!this.tempCoords.length) return;
@@ -188,6 +193,7 @@ export default class LeafletEditPolygon extends BaseEditor {
      * @memberof LeafletEditPolygon
      */
     private mapMouseUpEvent = (e: L.LeafletMouseEvent) => {
+        if (modeManager.getMode() !== 'edit') return;
         // 条件1: 编辑事件
         if (this.currentState === PolygonEditorState.Editing) {
             // 条件1-1： 编辑状态下： 拖动面的事件

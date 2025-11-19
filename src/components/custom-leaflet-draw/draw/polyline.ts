@@ -74,6 +74,7 @@ export default class LeafletPolyline {
      * @memberof LeafletPolyLine
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
+        if (modeManager.getMode() !== 'draw') return;
         this.tempCoords.push([e.latlng.lat, e.latlng.lng])
     }
     /**  地图双击事件，用于设置点的位置
@@ -84,6 +85,7 @@ export default class LeafletPolyline {
      * @memberof LeafletPolyLine
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
+        if (modeManager.getMode() !== 'draw') return;
         if (this.lineLayer) {
             // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
             const finalCoords = this.deduplicateCoordinates(this.tempCoords);
@@ -108,6 +110,8 @@ export default class LeafletPolyline {
         this.map.doubleClickZoom.enable();
         // 设置为空闲状态，并发出状态通知
         this.updateAndNotifyStateChange(PolygonEditorState.Idle);
+        // 关闭全部监听器
+        this.clearAllStateListeners();
     }
     /**  地图鼠标移动事件，用于设置点的位置
      *
@@ -117,6 +121,7 @@ export default class LeafletPolyline {
      * @memberof LeafletPolyLine
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
+        if (modeManager.getMode() !== 'draw') return;
         if (!this.tempCoords.length) return;
         const lastMoveEndPoint: L.LatLngExpression = [e.latlng.lat, e.latlng.lng];
         // 1：一个点也没有时，我们移动事件，也什么也不做。
@@ -166,6 +171,7 @@ export default class LeafletPolyline {
      */
     public destroy() {
         if (this.lineLayer) {
+            this.map.removeLayer(this.lineLayer);
             this.lineLayer.remove();
             this.lineLayer = null;
         }

@@ -2,23 +2,27 @@ import * as L from 'leaflet';
 import { modeManager } from '../interaction/InteractionModeManager';
 import { queryLayerOnClick } from '../utils/commonUtils';
 import { union } from '@turf/turf';
+import LeafletPolyline from '../draw/polyline';
+import { PolygonEditorState } from '../types';
+import { clipSelectedLayersByLine, mergePolygon } from '../utils/topoUtils';
 
 export class LeafletTopology {
+  private static instance: LeafletTopology;
   private map: L.Map;
-  private selectedLayers: L.Polygon[] = [];
-  private highlightStyle = {
-    // fillColor: 'rgba(0, 0, 0, 0)',
-    color: '#ff0',
-    dashArray: '10, 8', // 虚线模式
-    // dashOffset: '8', // 虚线偏移量
-    fillOpacity: .5,
-    // 边框大小
-    weight: 2,
-  };
+  drawLineLayer: LeafletPolyline | null = null;
+  private selectedLayers: L.GeoJSON[] = [];
   private clickHandler: ((e: L.LeafletMouseEvent) => void) | null = null;
+  private drawLineListener: ((status: PolygonEditorState) => void) | null = null;
 
   constructor(map: L.Map) {
     this.map = map;
+  }
+
+  public static getInstance(map: L.Map): LeafletTopology {
+    if (!LeafletTopology.instance) {
+      LeafletTopology.instance = new LeafletTopology(map);
+    }
+    return LeafletTopology.instance;
   }
 
   /** 选择图层
@@ -27,18 +31,29 @@ export class LeafletTopology {
    * @memberof LeafletTopology
    */
   public select() {
-    this.cleanup();
+    this.cleanAll();
     modeManager.setMode('topo');
     this.map.getContainer().style.cursor = 'pointer';
+    this.disableMapOpt();
 
     this.clickHandler = (e: L.LeafletMouseEvent) => {
+      if (modeManager.getMode() !== 'topo') return;
       const hits = queryLayerOnClick(this.map, e);
-      console.log('hits', hits);
-      
-      hits.forEach(layer => {
-        if (!this.selectedLayers.includes(layer)) {
-          this.selectedLayers.push(layer);
-          layer.setStyle?.(this.highlightStyle); // 高亮选中
+      // console.log('这里返回的是全部被选择的图层，其中我们高亮的图层携带有属性： options.linkLayerId，所以我们可以判断出，这是一个高亮图层，从而跳过处理', hits);
+      const realPickedLayer = hits.filter(layer => !(layer.options && layer.options.linkLayerId));
+      // console.log('realPickedLayer', realPickedLayer);
+      realPickedLayer.forEach(layer => {
+        const pickerLayerId = layer._leaflet_id;
+        // console.log('this.selectedLayers', this.selectedLayers);
+        const findLayerIdx = this.selectedLayers.findIndex((layer: any) => layer?.options && layer?.options?.linkLayerId === pickerLayerId);
+        if (findLayerIdx !== -1) {
+          const pickLayer = this.selectedLayers[findLayerIdx];
+          this.map.removeLayer(pickLayer);
+          pickLayer.remove();
+          this.selectedLayers.splice(findLayerIdx, 1);
+        } else {
+          // 基于选中的图层的空间信息，添加对应的高亮图层
+          this.addHighLightLayerByPickLayerGeom(layer);
         }
       });
     };
@@ -53,35 +68,99 @@ export class LeafletTopology {
     if (this.selectedLayers.length < 2) {
       throw new Error('请至少选择两个图层进行合并');
     }
-
-    // const features = this.selectedLayers.map(layer => layer.toGeoJSON());
-    // const merged = features.reduce((acc, cur) => union(acc, cur));
-    // this.selectedLayers.forEach(layer => layer.remove());
-    // L.geoJSON(merged).addTo(this.map);
-
-    // this.cleanup();
+    const mergedGeom = mergePolygon(this.selectedLayers);
+    console.log('合并--mergedGeom', mergedGeom);
   }
 
   /** 
    * 执行线裁剪操作 
    * */
-  public clipByLine(lineFeature: any) {
+  public clipByLine() {
     if (this.selectedLayers.length === 0) {
       throw new Error('请先选择要裁剪的图层');
     }
-
-    // saveClipSelectedLayers(lineFeature, this.selectedLayers);
-    this.cleanup();
+    modeManager.setMode('draw');
+    this.drawLineLayer = new LeafletPolyline(this.map);
+    // 添加绘制完毕后，重新调整状态为topo状态
+    this.drawLineListener = (status: PolygonEditorState) => {
+      if (status === PolygonEditorState.Idle) {
+        modeManager.setMode('topo');
+        const geoJson = this.drawLineLayer.geojson();
+        // console.log('绘制的线图层的空间信息：', geoJson);
+        const { clipsPolygons, waitingDelLayer } = clipSelectedLayersByLine(geoJson, this.selectedLayers);
+        setTimeout(() => {
+          console.log('clipsPolygons', clipsPolygons, 'waitingDelLayer', waitingDelLayer);
+          this.drawLineLayer.destroy();
+        }, 2000);
+      }
+    }
+    this.drawLineLayer.onStateChange(this.drawLineListener)
   }
 
-  /** 清理状态和事件 */
-  public cleanup() {
+
+  /** 基于选中的图层的空间信息，添加对应的高亮图层
+   *
+   *
+   * @private
+   * @param {*} layer
+   * @memberof LeafletTopology
+   */
+  private addHighLightLayerByPickLayerGeom(layer: any) {
+    const layerGeom = layer.toGeoJSON();
+    // 暂时不支持点类型的
+    if (layerGeom.geometry.type === 'Point') {
+      throw new Error('不支持的数据类型：' + layerGeom.geometry.type + '，不支持高亮');
+    }
+    const highlightStyle = {
+      // fillColor: 'rgba(0, 0, 0, 0)',
+      color: '#ff0',
+      dashArray: '10, 8', // 虚线模式
+      // dashOffset: '8', // 虚线偏移量
+      fillOpacity: .5,
+      // 边框大小
+      weight: 2,
+    };
+    const highlightLayer = L.geoJSON(layerGeom, {
+      style: highlightStyle,
+      ['linkLayerId' as any]: layer._leaflet_id, // 添加自定义属性
+    });
+    this.selectedLayers.push(highlightLayer);
+    this.map.addLayer(highlightLayer);
+  }
+
+  private disableMapOpt() {
+    // 1：禁用双击地图放大功能
+    this.map.doubleClickZoom.disable();
+  }
+  private enableMapOpt() {
+    // 1：恢复双击地图放大功能
+    this.map.doubleClickZoom.enable();
+  }
+  /** 
+   * 清理状态和事件
+   * 1： off click事件
+   * 2： 移除高亮图层
+   * 3： 恢复地图事件
+   * 4： 重置模式管理器
+   * */
+  public cleanAll() {
     if (this.clickHandler) {
       this.map.off('click', this.clickHandler);
       this.clickHandler = null;
     }
     this.map.getContainer().style.cursor = 'default';
+    this.selectedLayers.forEach(layer => {
+      this.map.removeLayer(layer);
+      layer.remove();
+    });
+    // 如果绘制功能实例化了，则移除
+    if (this.drawLineLayer) {
+      this.drawLineListener && this.drawLineLayer.offStateChange(this.drawLineListener)
+      this.drawLineLayer.destroy();
+      this.drawLineLayer = null;
+    }
     this.selectedLayers = [];
+    this.enableMapOpt();
     modeManager.reset();
   }
 }

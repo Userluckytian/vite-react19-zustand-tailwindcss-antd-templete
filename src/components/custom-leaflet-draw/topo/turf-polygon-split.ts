@@ -1,6 +1,6 @@
 /* eslint-disable */
 
-import { booleanDisjoint, buffer, center, difference, featureCollection, intersect, lineIntersect, lineOffset, multiPolygon, pointToLineDistance, polygonToLine, union } from "@turf/turf";
+import { booleanDisjoint, buffer, center, difference, featureCollection, intersect, lineIntersect, lineOffset, multiPolygon, pointToLineDistance, polygon, polygonToLine, union } from "@turf/turf";
 
 
 function splitPolygon(polygon: any, splitter: any) {
@@ -31,16 +31,15 @@ function unionPolygon(polygons: any) {
  * 面类型只能是polygon 但可以是环
  * 注:线与多边形必须有两个交点
  */
-function splitPolygonWithLine(polygon: any, splitter: any) {
+function splitPolygonWithLine(polygonFeature: any, splitter: any) {
   let p1 = null
   let p2 = null
-
   // 判断线与面的交点个数
-  let intersects = lineIntersect(polygonToLine(polygon), splitter)
+  let intersects = lineIntersect(polygonToLine(polygonFeature), splitter)
   if (!intersects || intersects.features.length < 2) { return }
 
   let bufferPolygon = buffer(splitter, 0.0001, { units: 'meters' })
-  const newPoly: any = featureCollection([polygon, bufferPolygon])
+  const newPoly: any = featureCollection([polygonFeature, bufferPolygon])
   let poly: any = difference(newPoly);
   
   if (poly.geometry.coordinates.length < 2) {
