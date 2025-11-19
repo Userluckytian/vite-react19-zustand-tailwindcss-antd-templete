@@ -5,7 +5,6 @@
 import { distance, type Units } from '@turf/turf';
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
-import { modeManager } from '../interaction/InteractionModeManager';
 type distanceOptions = {
     units?: Units;
     precision?: number;
@@ -527,18 +526,6 @@ export default class LeafletDistance {
     private updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;
         this.stateListeners.forEach(fn => fn(this.currentState));
-        // ✅ 同步到全局状态里：设置交互模式
-        switch (status) {
-            case PolygonEditorState.Drawing:
-                modeManager.setMode('draw');
-                break;
-            case PolygonEditorState.Editing:
-                modeManager.setMode('edit');
-                break;
-            case PolygonEditorState.Idle:
-                modeManager.reset();
-                break;
-        }
     }
     // #endregion
 

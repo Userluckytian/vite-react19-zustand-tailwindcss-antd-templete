@@ -1,5 +1,4 @@
 import * as L from 'leaflet';
-import { modeManager } from '../interaction/InteractionModeManager';
 import { queryLayerOnClick } from '../utils/commonUtils';
 import { union } from '@turf/turf';
 import LeafletPolyline from '../draw/polyline';
@@ -32,16 +31,14 @@ export class LeafletTopology {
    */
   public select() {
     this.cleanAll();
-    modeManager.setMode('topo');
     this.map.getContainer().style.cursor = 'pointer';
     this.disableMapOpt();
 
     this.clickHandler = (e: L.LeafletMouseEvent) => {
-      if (modeManager.getMode() !== 'topo') return;
       const hits = queryLayerOnClick(this.map, e);
-      // console.log('这里返回的是全部被选择的图层，其中我们高亮的图层携带有属性： options.linkLayerId，所以我们可以判断出，这是一个高亮图层，从而跳过处理', hits);
+      console.log('这里返回的是全部被选择的图层，其中我们高亮的图层携带有属性： options.linkLayerId，所以我们可以判断出，这是一个高亮图层，从而跳过处理', hits);
       const realPickedLayer = hits.filter(layer => !(layer.options && layer.options.linkLayerId));
-      // console.log('realPickedLayer', realPickedLayer);
+      console.log('realPickedLayer', realPickedLayer);
       realPickedLayer.forEach(layer => {
         const pickerLayerId = layer._leaflet_id;
         // console.log('this.selectedLayers', this.selectedLayers);
@@ -79,12 +76,10 @@ export class LeafletTopology {
     if (this.selectedLayers.length === 0) {
       throw new Error('请先选择要裁剪的图层');
     }
-    modeManager.setMode('draw');
     this.drawLineLayer = new LeafletPolyline(this.map);
     // 添加绘制完毕后，重新调整状态为topo状态
     this.drawLineListener = (status: PolygonEditorState) => {
       if (status === PolygonEditorState.Idle) {
-        modeManager.setMode('topo');
         const geoJson = this.drawLineLayer.geojson();
         // console.log('绘制的线图层的空间信息：', geoJson);
         const { clipsPolygons, waitingDelLayer } = clipSelectedLayersByLine(geoJson, this.selectedLayers);
@@ -161,6 +156,5 @@ export class LeafletTopology {
     }
     this.selectedLayers = [];
     this.enableMapOpt();
-    modeManager.reset();
   }
 }

@@ -7,7 +7,6 @@
  * */
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
-import { modeManager } from '../interaction/InteractionModeManager';
 export default class LeafletPolyline {
 
     private map: L.Map;
@@ -74,7 +73,6 @@ export default class LeafletPolyline {
      * @memberof LeafletPolyLine
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
-        if (modeManager.getMode() !== 'draw') return;
         this.tempCoords.push([e.latlng.lat, e.latlng.lng])
     }
     /**  地图双击事件，用于设置点的位置
@@ -85,7 +83,6 @@ export default class LeafletPolyline {
      * @memberof LeafletPolyLine
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
-        if (modeManager.getMode() !== 'draw') return;
         if (this.lineLayer) {
             // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
             const finalCoords = this.deduplicateCoordinates(this.tempCoords);
@@ -121,7 +118,6 @@ export default class LeafletPolyline {
      * @memberof LeafletPolyLine
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
-        if (modeManager.getMode() !== 'draw') return;
         if (!this.tempCoords.length) return;
         const lastMoveEndPoint: L.LatLngExpression = [e.latlng.lat, e.latlng.lng];
         // 1：一个点也没有时，我们移动事件，也什么也不做。
@@ -264,18 +260,6 @@ export default class LeafletPolyline {
     private updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;
         this.stateListeners.forEach(fn => fn(this.currentState));
-        // ✅ 同步设置交互模式
-        switch (status) {
-            case PolygonEditorState.Drawing:
-                modeManager.setMode('draw');
-                break;
-            case PolygonEditorState.Editing:
-                modeManager.setMode('edit');
-                break;
-            case PolygonEditorState.Idle:
-                modeManager.reset();
-                break;
-        }
     }
     // #endregion
 

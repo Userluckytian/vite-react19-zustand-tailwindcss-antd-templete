@@ -8,7 +8,6 @@ import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
 import { BaseEditor } from './BaseEditor';
 import { booleanPointInPolygon, point } from '@turf/turf';
-import { modeManager } from '../interaction/InteractionModeManager';
 export default class LeafletEditRectangle extends BaseEditor {
 
     private rectangleLayer: L.Rectangle | null = null;
@@ -57,7 +56,6 @@ export default class LeafletEditRectangle extends BaseEditor {
     private initPolygonEvent() {
         if (this.rectangleLayer) {
             this.rectangleLayer.on('mousedown', (e: L.LeafletMouseEvent) => {
-                if (modeManager.getMode() !== 'edit') return;
                 if (this.currentState === PolygonEditorState.Editing) {
                     this.isDraggingPolygon = true;
                     this.dragStartLatLng = e.latlng;
@@ -93,7 +91,6 @@ export default class LeafletEditRectangle extends BaseEditor {
      * @memberof LeafletEditRectangle
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
-        if (modeManager.getMode() !== 'draw') return;
         // 绘制时的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
             if (this.tempCoords.length === 0) {
@@ -117,7 +114,6 @@ export default class LeafletEditRectangle extends BaseEditor {
      * @memberof LeafletEditRectangle
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
-        if (!['idle', 'edit'].includes(modeManager.getMode())) return;
         if (!this.rectangleLayer) throw new Error('图层实例化失败，无法完成图层创建，请重试');
         const clickedLatLng = e.latlng;
         const polygonGeoJSON = this.rectangleLayer.toGeoJSON();
@@ -143,7 +139,6 @@ export default class LeafletEditRectangle extends BaseEditor {
      * @memberof LeafletEditRectangle
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
-        if (!['draw', 'edit'].includes(modeManager.getMode())) return;
         if (this.currentState === PolygonEditorState.Drawing) {
             // 1：一个点也没有时，我们移动事件，也什么也不做。
             if (!this.tempCoords.length) return;
@@ -183,7 +178,6 @@ export default class LeafletEditRectangle extends BaseEditor {
      * @memberof LeafletEditRectangle
      */
     private mapMouseUpEvent = (e: L.LeafletMouseEvent) => {
-        if (modeManager.getMode() !== 'edit') return;
         // 条件1: 编辑事件
         if (this.currentState === PolygonEditorState.Editing) {
             // 条件1-1： 编辑状态下： 拖动面的事件

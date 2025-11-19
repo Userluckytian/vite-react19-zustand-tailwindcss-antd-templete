@@ -4,7 +4,6 @@
 
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
-import { modeManager } from '../interaction/InteractionModeManager';
 
 // 抽象类里面的抽象函数，需要外部继承类自己实现
 export abstract class BaseEditor {
@@ -34,18 +33,6 @@ export abstract class BaseEditor {
     protected updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;
         this.stateListeners.forEach(fn => fn(this.currentState));
-        // ✅ 同步设置交互模式
-        switch (status) {
-            case PolygonEditorState.Drawing:
-                modeManager.setMode('draw');
-                break;
-            case PolygonEditorState.Editing:
-                modeManager.setMode('edit');
-                break;
-            case PolygonEditorState.Idle:
-                modeManager.reset();
-                break;
-        }
     }
 
     /** 设置当前的状态，
