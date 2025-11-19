@@ -1,9 +1,9 @@
 import * as L from 'leaflet';
 import { queryLayerOnClick } from '../utils/commonUtils';
-import { union } from '@turf/turf';
 import LeafletPolyline from '../draw/polyline';
 import { PolygonEditorState } from '../types';
 import { clipSelectedLayersByLine, mergePolygon } from '../utils/topoUtils';
+import { editorRegistry } from '../interaction/EditorRegistry';
 
 export class LeafletTopology {
   private static instance: LeafletTopology;
@@ -31,6 +31,10 @@ export class LeafletTopology {
    */
   public select() {
     this.cleanAll();
+
+    // 拓扑开始时，自动停用所有编辑状态
+    editorRegistry.deactivateAllEditors();
+
     this.map.getContainer().style.cursor = 'pointer';
     this.disableMapOpt();
 

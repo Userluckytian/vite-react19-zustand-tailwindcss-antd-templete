@@ -4,6 +4,7 @@
 
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
+import { editorRegistry } from '../interaction/EditorRegistry';
 
 // 抽象类里面的抽象函数，需要外部继承类自己实现
 export abstract class BaseEditor {
@@ -21,6 +22,8 @@ export abstract class BaseEditor {
     constructor(map: L.Map) {
         if (!map) throw new Error('传入的地图对象异常，请先确保地图对象已实例完成。');
         this.map = map;
+        // 自动注册到全局注册表
+        editorRegistry.registerEditor(this);
     }
 
     // #region 事件回调
@@ -33,6 +36,16 @@ export abstract class BaseEditor {
     protected updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;
         this.stateListeners.forEach(fn => fn(this.currentState));
+    }
+
+    /** 获取当前状态的方法（供注册表使用）
+     *
+     *
+     * @return {*}  {PolygonEditorState}
+     * @memberof BaseEditor
+     */
+    public getCurrentState(): PolygonEditorState {
+        return this.currentState;
     }
 
     /** 设置当前的状态，
@@ -153,6 +166,30 @@ export abstract class BaseEditor {
     }
     // #endregion
 
+    // #region 子类需要实现事件注册和注销
+
+    /** 图形销毁事件
+     *
+     *
+     * @memberof BaseEditor
+     */
+    public destroy(): void {
+        // 从注册表注销
+        editorRegistry.unregisterEditor(this);
+
+        // 原有的销毁逻辑
+        this.unregisterMapEvents();
+        this.exitEditMode();
+        this.clearAllStateListeners();
+
+        // 重置状态
+        this.updateAndNotifyStateChange(PolygonEditorState.Idle);
+    }
+
+    protected abstract registerMapEvents(): void;
+    protected abstract unregisterMapEvents(): void;
+    // #endregion
+
     // #region 渲染行为
 
     /** 根据坐标重建 marker 和图形 + 重新渲染图层
@@ -174,4 +211,6 @@ export abstract class BaseEditor {
     public abstract exitEditMode(): void;
 
     // #endregion
+
+
 }

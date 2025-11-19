@@ -30,7 +30,8 @@ export default class LeafletEditRectangle extends BaseEditor {
             // 禁用双击地图放大功能
             this.map.doubleClickZoom.disable();
             this.initLayers(options);
-            this.initMapEvent(this.map);
+            // this.initMapEvent(this.map);
+            this.registerMapEvents(); // 注册地图事件
         }
     }
 
@@ -46,6 +47,32 @@ export default class LeafletEditRectangle extends BaseEditor {
         this.rectangleLayer.addTo(this.map);
         this.initPolygonEvent();
     }
+
+    /** 初始化地图事件监听
+     *
+     *
+     * @private
+     * @param {L.Map} map 地图对象
+     * @memberof LeafletEditRectangle
+     */
+    protected registerMapEvents(): void {
+        // 绘制操作会用到这俩
+        this.map.on('click', this.mapClickEvent);
+        this.map.on('mousemove', this.mapMouseMoveEvent);
+        // 编辑操作会用到双击事件
+        this.map.on('dblclick', this.mapDblClickEvent);
+        // 拖动面用的这个
+        this.map.on('mouseup', this.mapMouseUpEvent);
+    }
+
+    // 实现抽象方法 - 注销地图事件
+    protected unregisterMapEvents(): void {
+        this.map.off('click', this.mapClickEvent);
+        this.map.off('mousemove', this.mapMouseMoveEvent);
+        this.map.off('dblclick', this.mapDblClickEvent);
+        this.map.off('mouseup', this.mapMouseUpEvent);
+    }
+
 
     /** 实例化矩形图层事件
      *
@@ -65,22 +92,6 @@ export default class LeafletEditRectangle extends BaseEditor {
         }
     }
 
-    /** 初始化地图事件监听
-     *
-     *
-     * @private
-     * @param {L.Map} map 地图对象
-     * @memberof LeafletEditRectangle
-     */
-    private initMapEvent(map: L.Map) {
-        // 绘制操作会用到这俩
-        map.on('click', this.mapClickEvent);
-        map.on('mousemove', this.mapMouseMoveEvent);
-        // 编辑操作会用到双击事件
-        map.on('dblclick', this.mapDblClickEvent);
-        // 拖动面用的这个
-        map.on('mouseup', this.mapMouseUpEvent);
-    }
 
     // #region 工具函数，点图层的逻辑只需要看上面的内容就行了
     /**  地图点击事件，用于设置点的位置
@@ -243,6 +254,10 @@ export default class LeafletEditRectangle extends BaseEditor {
      * @memberof LeafletEditRectangle
      */
     public destroy() {
+        // #region3：地图相关内容处理（关闭事件监听，恢复部分交互功能【缩放、鼠标手势】）
+        this.unregisterMapEvents();
+        this.reset();
+        // #endregion
         // #region 1：绘制图层用到的内容
         this.destroyLayer();
         // #endregion
@@ -250,15 +265,13 @@ export default class LeafletEditRectangle extends BaseEditor {
         // 编辑模式的内容也重置
         this.exitEditMode();
         // #endregion
-        // #region3：地图相关内容处理（关闭事件监听，恢复部分交互功能【缩放、鼠标手势】）
-        this.offMapEvent(this.map);
-        this.reset();
-        // #endregion
         // #region4：清除类自身绑定的相关事件
         this.clearAllStateListeners();
         // 设置为空闲状态，并发出状态通知
         this.updateAndNotifyStateChange(PolygonEditorState.Idle);
         // #endregion
+        // 调用父类的销毁方法（会从注册表注销）
+        super.destroy();
     }
 
 
@@ -278,22 +291,7 @@ export default class LeafletEditRectangle extends BaseEditor {
         }
     }
 
-    /** 关闭地图事件监听
-     *
-     *
-     * @private
-     * @param {L.Map} map 地图对象
-     * @memberof LeafletEditRectangle
-     */
-    private offMapEvent(map: L.Map) {
-        // 绘制操作会用到这俩
-        map.off('click', this.mapClickEvent);
-        map.off('mousemove', this.mapMouseMoveEvent);
-        // 编辑操作会用到双击事件
-        map.off('dblclick', this.mapDblClickEvent);
-        // 拖动面用的这个
-        map.off('mouseup', this.mapMouseUpEvent);
-    }
+
 
     // #endregion
 
