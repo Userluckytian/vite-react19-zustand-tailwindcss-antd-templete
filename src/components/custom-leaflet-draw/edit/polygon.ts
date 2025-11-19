@@ -55,9 +55,9 @@ export default class LeafletEditPolygon extends BaseEditor {
      * @memberof LeafletEditPolygon
      */
     private initPolygonEvent() {
-        if (modeManager.getMode() !== 'edit') return;
         if (this.polygonLayer) {
             this.polygonLayer.on('mousedown', (e: L.LeafletMouseEvent) => {
+                if (modeManager.getMode() !== 'edit') return;
                 if (this.currentState === PolygonEditorState.Editing) {
                     this.isDraggingPolygon = true;
                     this.dragStartLatLng = e.latlng;
@@ -107,7 +107,7 @@ export default class LeafletEditPolygon extends BaseEditor {
      * @memberof LeafletEditPolygon
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
-        if (!['draw', 'edit'].includes(modeManager.getMode())) return;
+        if (!['idle', 'draw', 'edit'].includes(modeManager.getMode())) return;
         if (!this.polygonLayer) throw new Error('面图层实例化失败，无法完成图层创建，请重试');
         // 情况1： 正在绘制状态时，绘制的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {

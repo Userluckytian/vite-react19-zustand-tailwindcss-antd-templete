@@ -55,9 +55,9 @@ export default class LeafletEditRectangle extends BaseEditor {
      * @memberof LeafletEditRectangle
      */
     private initPolygonEvent() {
-        if (modeManager.getMode() !== 'edit') return;
         if (this.rectangleLayer) {
             this.rectangleLayer.on('mousedown', (e: L.LeafletMouseEvent) => {
+                if (modeManager.getMode() !== 'edit') return;
                 if (this.currentState === PolygonEditorState.Editing) {
                     this.isDraggingPolygon = true;
                     this.dragStartLatLng = e.latlng;
@@ -117,7 +117,7 @@ export default class LeafletEditRectangle extends BaseEditor {
      * @memberof LeafletEditRectangle
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
-        if (modeManager.getMode() !== 'edit') return;
+        if (!['idle', 'edit'].includes(modeManager.getMode())) return;
         if (!this.rectangleLayer) throw new Error('图层实例化失败，无法完成图层创建，请重试');
         const clickedLatLng = e.latlng;
         const polygonGeoJSON = this.rectangleLayer.toGeoJSON();
@@ -168,8 +168,6 @@ export default class LeafletEditRectangle extends BaseEditor {
                 });
 
                 const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
-                // const finalCoords: any = [updated[0], updated[2]];
-                // this.renderLayer(finalCoords);
                 this.renderLayerFromCoords(updated);
 
                 this.dragStartLatLng = e.latlng; // 连续拖动
