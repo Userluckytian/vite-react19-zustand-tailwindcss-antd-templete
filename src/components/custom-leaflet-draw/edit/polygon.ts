@@ -23,6 +23,8 @@ export default class LeafletEditPolygon extends BaseEditor {
     constructor(map: L.Map, options: L.PolylineOptions = {}) {
         super(map);
         if (this.map) {
+            // 创建时激活
+            this.activate();
             // 初始化时，设置绘制状态为true(双击结束绘制时关闭绘制状态，其生命周期到头，且不再改变)，且发出状态通知
             this.updateAndNotifyStateChange(PolygonEditorState.Drawing);
             // 鼠标手势设置为十字
@@ -56,6 +58,8 @@ export default class LeafletEditPolygon extends BaseEditor {
     private initPolygonEvent() {
         if (this.polygonLayer) {
             this.polygonLayer.on('mousedown', (e: L.LeafletMouseEvent) => {
+                // 关键：只有激活的实例才处理事件
+                if (!this.isActive()) return;
                 if (this.currentState === PolygonEditorState.Editing) {
                     this.isDraggingPolygon = true;
                     this.dragStartLatLng = e.latlng;
@@ -90,6 +94,8 @@ export default class LeafletEditPolygon extends BaseEditor {
      * @memberof markerPoint
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
+        // 关键：只有激活的实例才处理事件
+        if (!this.isActive()) return;
         // 绘制时的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
             this.tempCoords.push([e.latlng.lat, e.latlng.lng])
@@ -104,6 +110,8 @@ export default class LeafletEditPolygon extends BaseEditor {
      * @memberof LeafletEditPolygon
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
+        // 关键：只有激活的实例才处理事件
+        if (!this.canConsume(e)) return;
         if (!this.polygonLayer) throw new Error('面图层实例化失败，无法完成图层创建，请重试');
         // 情况1： 正在绘制状态时，绘制的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
@@ -127,7 +135,9 @@ export default class LeafletEditPolygon extends BaseEditor {
                 this.map.doubleClickZoom.disable();
                 // 2：状态变更，并发出状态通知
                 this.updateAndNotifyStateChange(PolygonEditorState.Editing);
-                // 3: 进入编辑模式
+                // 3: 设置当前激活态是本实例，因为事件监听和激活态实例是关联的，只有激活的实例才处理事件
+                this.isActive()
+                // 4: 进入编辑模式
                 this.enterEditMode();
             }
         }
@@ -140,6 +150,8 @@ export default class LeafletEditPolygon extends BaseEditor {
      * @memberof LeafletEditPolygon
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
+        // 关键：只有激活的实例才处理事件
+        if (!this.isActive()) return;
         // 逻辑1： 绘制时的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
             if (!this.tempCoords.length) return;
@@ -188,6 +200,8 @@ export default class LeafletEditPolygon extends BaseEditor {
      * @memberof LeafletEditPolygon
      */
     private mapMouseUpEvent = (e: L.LeafletMouseEvent) => {
+        // 关键：只有激活的实例才处理事件
+        if (!this.isActive()) return;
         // 条件1: 编辑事件
         if (this.currentState === PolygonEditorState.Editing) {
             // 条件1-1： 编辑状态下： 拖动面的事件
@@ -243,6 +257,8 @@ export default class LeafletEditPolygon extends BaseEditor {
         // #endregion
 
         // #region 2：编辑模式用到的内容
+        // 关闭事件监听内容
+        this.deactivate();
         // 编辑模式的内容也重置
         this.exitEditMode();
         // #endregion
@@ -296,7 +312,7 @@ export default class LeafletEditPolygon extends BaseEditor {
      * @param {number} precision - 精度（小数位数），默认6位
      * @returns {Array} 去重后的坐标数组
      */
-    private deduplicateCoordinates(coordinates, precision = 6) {
+    private deduplicateCoordinates(coordinates: string | any[], precision = 6) {
         if (!Array.isArray(coordinates) || coordinates.length === 0) {
             return [];
         }
@@ -469,12 +485,12 @@ export default class LeafletEditPolygon extends BaseEditor {
      * @return {*}  {L.DivIcon}
      * @memberof LeafletEditPolygon
      */
-    private buildMarkerIcon(iconStyle = "border-radius: 50%;background: #ffffff;border: solid 3px red;", iconSize: L.PointExpression = [20, 20], options?: L.DivIconOptions): L.DivIcon {
+    private buildMarkerIcon(iconStyle = "border-radius: 50%;background: #ffffff;border: solid 3px red;", iconSize: number[] = [20, 20], options?: L.DivIconOptions): L.DivIcon {
         let defaultIconStyle = `width:${iconSize[0]}px; height: ${iconSize[1]}px;`
         return L.divIcon({
             className: 'edit-polygon-marker',
             html: `<div style="${iconStyle + defaultIconStyle}"></div>`,
-            iconSize: iconSize,
+            iconSize: iconSize as L.PointExpression,
             ...options
         });
     }
@@ -538,5 +554,46 @@ export default class LeafletEditPolygon extends BaseEditor {
     }
 
     // #endregion
+
+
+    // #region 辅助函数
+
+    /**  判断点击事件是否自己身上
+     *
+     *
+     *
+     * @private
+     * @param {L.LeafletMouseEvent} e
+     * @return {*}  {boolean}
+     * @memberof LeafletEditRectangle
+     */
+    private isClickOnMyLayer(e: L.LeafletMouseEvent): boolean {
+        if (!this.polygonLayer) return false;
+
+        try {
+            const polygonGeoJSON = this.polygonLayer.toGeoJSON();
+            const turfPoint = point([e.latlng.lng, e.latlng.lat]);
+            return booleanPointInPolygon(turfPoint, polygonGeoJSON);
+        } catch (error) {
+            console.error('检查点击图层时出错:', error);
+            return false;
+        }
+    }
+
+    private canConsume(e: L.LeafletMouseEvent): boolean {
+        if (!this.isActive()) {
+            if (this.isClickOnMyLayer(e)) {
+                // console.log('重新激活编辑器');
+                this.activate();
+                return true;
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // #endregion
+
 
 }

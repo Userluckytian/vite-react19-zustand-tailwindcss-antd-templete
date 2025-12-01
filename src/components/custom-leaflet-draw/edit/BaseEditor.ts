@@ -8,6 +8,9 @@ import { PolygonEditorState } from '../types';
 // 抽象类里面的抽象函数，需要外部继承类自己实现
 export abstract class BaseEditor {
 
+    // 静态属性 - 所有编辑器实例共享同一个激活状态
+    private static currentActiveEditor: BaseEditor | null = null;
+
     protected map: L.Map; // 地图对象
     protected currentState: PolygonEditorState = PolygonEditorState.Idle; // 当前状态
     protected vertexMarkers: L.Marker[] = []; // 存储顶点标记的数组
@@ -18,10 +21,76 @@ export abstract class BaseEditor {
     protected isDraggingPolygon = false; // 是否是拖动多边形
     protected dragStartLatLng: L.LatLng | null = null; // 拖动多边形时，用户鼠标按下（mousedown）那一刻的坐标点，然后鼠标移动（mousemove）时，遍历全部的marker，做坐标偏移计算。
 
+
     constructor(map: L.Map) {
         if (!map) throw new Error('传入的地图对象异常，请先确保地图对象已实例完成。');
         this.map = map;
     }
+
+    // #region 实例是否是激活状态（编辑时，就是激活态，否则就是非激活态，这时，关闭全部事件） 
+
+    /**
+     * 激活当前编辑器实例
+     */
+    protected activate(): void {
+        // console.log('激活编辑器:', this.constructor.name);
+
+        // 保存之前的激活编辑器
+        const previousActiveEditor = BaseEditor.currentActiveEditor;
+
+        // 停用之前激活的编辑器
+        if (previousActiveEditor && previousActiveEditor !== this) {
+            // console.log('停用之前的编辑器:', previousActiveEditor.constructor.name);
+            previousActiveEditor.forceExitEditMode(); // 强制退出编辑模式
+            previousActiveEditor.deactivate(); // 停用激活状态
+        }
+
+        // 设置当前实例为激活状态
+        BaseEditor.currentActiveEditor = this;
+    }
+
+    /**
+         * 停用当前编辑器实例
+         */
+    protected deactivate(): void {
+        // console.log('停用编辑器:', this.constructor.name);
+
+        if (BaseEditor.currentActiveEditor === this) {
+            BaseEditor.currentActiveEditor = null;
+        }
+    }
+
+    /**
+     * 检查当前实例是否激活
+     */
+    protected isActive(): boolean {
+        return BaseEditor.currentActiveEditor === this;
+    }
+
+    /**
+     * 静态方法：停用所有编辑器（压根不用，我都不想写！）
+     */
+    public static deactivateAllEditors(): void {
+        // console.log('停用所有编辑器');
+        if (BaseEditor.currentActiveEditor) {
+            BaseEditor.currentActiveEditor.deactivate();
+        }
+    }
+
+    /**
+     * 强制停用编辑状态（但不改变激活状态）
+     */
+    protected forceExitEditMode(): void {
+        // console.log('强制退出编辑模式:', this.constructor.name);
+        this.exitEditMode();
+        if (this.currentState === PolygonEditorState.Editing) {
+            this.updateAndNotifyStateChange(PolygonEditorState.Idle);
+        }
+        this.isDraggingPolygon = false;
+        this.dragStartLatLng = null;
+    }
+
+    // #endregion
 
     // #region 事件回调
     /** 状态改变时，触发存储的所有监听事件的回调
@@ -136,6 +205,8 @@ export abstract class BaseEditor {
         this.historyStack = [current]; // 读取当前状态作为新的初始快照
         this.redoStack = []; // 清空重做栈（如果有）
         this.exitEditMode();
+        // 事件监听停止。
+        this.deactivate();
         this.updateAndNotifyStateChange(PolygonEditorState.Idle);
         this.reset();
     }
