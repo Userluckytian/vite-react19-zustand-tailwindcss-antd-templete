@@ -144,7 +144,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     }
   };
   // 切换底图
-  const setBaseMap = (
+  const changeBaseMap = (
     type: "地图" | "地球" | "地形",
     layer: BaseLayerConfig
   ) => {
@@ -222,7 +222,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     let mapScaleControl: L.Control | null = null;
     let mapZoomControl: L.Control | null = null;
     // 设置默认底图
-    setBaseMap("地图", BASE_LAYERS[0]);
+    changeBaseMap("地图", BASE_LAYERS[0]);
     // 添加控件
     // 事件2： 添加地图比例尺工具条
     mapScaleControl = addScaleControl(mapView);
@@ -257,7 +257,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
             className="layerItem"
             key={`baselayer_${idx}`}
             style={layer.positionStyle}
-            onClick={() => setBaseMap(layer.name, layer)}
+            onClick={() => changeBaseMap(layer.name, layer)}
           >
             {layer.option && (
               <div className="layerOption">
