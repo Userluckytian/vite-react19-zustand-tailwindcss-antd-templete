@@ -92,6 +92,13 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             type: 'delete',
             icon: 'icon-shanchu_0',
             desp: '清空绘制和查询内容'
+        },
+        {
+            id: 'add',
+            title: '添加默认图层',
+            type: 'add',
+            icon: 'icon-shujudaoru',
+            desp: '添加默认图层'
         }
     ]
     ) // 工具栏列表
@@ -230,6 +237,40 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     setCurrEditLayer(null);
                 }
                 break;
+            case 'add':
+                const geometry: any = {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [
+                                129.726563,
+                                42.032974
+                            ],
+                            [
+                                154.335938,
+                                41.574361
+                            ],
+                            [
+                                151.347656,
+                                31.503629
+                            ],
+                            [
+                                136.40625,
+                                30.600094
+                            ],
+                            [
+                                129.814453,
+                                35.675147
+                            ],
+                            [
+                                129.726563,
+                                42.032974
+                            ]
+                        ]
+                    ]
+                };
+                const polygonEditor = new LeafletEditPolygon(mapInstance!, {}, geometry);
+                break;
 
             default:
                 break;
@@ -366,7 +407,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                             <Divider type="horizontal" style={{ margin: '0px' }} />
                         </Activity>
                         {/* 绘制状态时的取消按钮 */}
-                        {currSelTool === tool.id && currSelTool !== 'delete' && <div className='cancel-btn' onClick={handleCancelDraw}>取消</div>}
+                        {currSelTool === tool.id && !['delete', 'add'].includes(currSelTool) && <div className='cancel-btn' onClick={handleCancelDraw}>取消</div>}
                     </div>
                 ))}
             </div>
