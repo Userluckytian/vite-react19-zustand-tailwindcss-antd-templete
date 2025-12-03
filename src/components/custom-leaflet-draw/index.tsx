@@ -11,7 +11,7 @@ import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import LeafletEditPolygon from './edit/polygon';
-import { PolygonEditorState } from './types';
+import { PolygonEditorState, type imageSkyEditorInstance } from './types';
 import LeafletEditRectangle from './edit/rectangle';
 import { LeafletTopology } from './topo/topo';
 interface CustomLeafLetDrawProps {
@@ -87,18 +87,18 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             desp: '编辑面'
         },
         {
-            id: 'delete',
-            title: '清空',
-            type: 'delete',
-            icon: 'icon-shanchu_0',
-            desp: '清空绘制和查询内容'
-        },
-        {
             id: 'add',
             title: '添加默认图层',
             type: 'add',
             icon: 'icon-shujudaoru',
             desp: '添加默认图层'
+        },
+        {
+            id: 'delete',
+            title: '清空',
+            type: 'delete',
+            icon: 'icon-shanchu_0',
+            desp: '清空绘制和查询内容'
         }
     ]
     ) // 工具栏列表
@@ -122,120 +122,40 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         switch (toolId) {
             case 'point':
                 const markerPoint = new MarkerPoint(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, markerPoint]);
-                // 添加监听逻辑
-                markerPoint.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
-                    }
-                })
+                saveEditorAndAddListener(markerPoint);
                 break;
             case 'line':
                 const lineLayer = new LeafletPolyline(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, lineLayer]);
-                // 添加监听逻辑
-                lineLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
-                    }
-                })
+                saveEditorAndAddListener(lineLayer);
                 break;
             case 'polygon':
                 const polygonLayer = new LeafletPolygon(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, polygonLayer]);
-                // 添加监听逻辑
-                polygonLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
-                    }
-                })
+                saveEditorAndAddListener(polygonLayer);
                 break;
             case 'circle':
                 const circleLayer = new LeafletCircle(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, circleLayer]);
-                // 添加监听逻辑
-                circleLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
-                    }
-                })
+                saveEditorAndAddListener(circleLayer);
                 break;
             case 'rectangle':
                 const rectangleLayer = new LeafletRectangle(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, rectangleLayer]);
-                // 添加监听逻辑
-                rectangleLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
-                    }
-                })
+                saveEditorAndAddListener(rectangleLayer);
                 break;
             case 'measure_distance':
                 const distanceLayer = new LeafletDistance(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, distanceLayer]);
-                // 添加监听逻辑
-                distanceLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
-                    }
-                })
+                saveEditorAndAddListener(distanceLayer);
                 break;
             case 'measure_area':
                 const areaLayer = new LeafletArea(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, areaLayer]);
-                // 添加监听逻辑
-                areaLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
-                    }
-                })
+                saveEditorAndAddListener(areaLayer);
                 break;
             case 'edit_polygon':
                 const editPolygonLayer = new LeafletEditPolygon(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, editPolygonLayer]);
-                // 添加监听逻辑
-                editPolygonLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Editing) {
-                        setCurrEditLayer(editPolygonLayer);
-                    } else {
-                        if (status === PolygonEditorState.Idle) {
-                            setCurrSelTool('');
-                        }
-                        setCurrEditLayer(null);
-                    }
-                })
+                saveEditorAndAddListener(editPolygonLayer);
                 break;
             case 'edit_rectangle':
                 const editRectangleLayer = new LeafletEditRectangle(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, editRectangleLayer]);
-                // 添加监听逻辑
-                editRectangleLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Editing) {
-                        setCurrEditLayer(editRectangleLayer);
-                    } else {
-                        if (status === PolygonEditorState.Idle) {
-                            setCurrSelTool('');
-                        }
-                        setCurrEditLayer(null);
-                    }
-                })
-                break;
-            case 'delete':
-                // 销毁图层
-                clearAllIfExist();
-                // 关闭工具条
-                if (currEditLayer) {
-                    setCurrEditLayer(null);
-                }
+                saveEditorAndAddListener(editRectangleLayer);
+
                 break;
             case 'add':
                 const geometry: any = {
@@ -270,12 +190,42 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     ]
                 };
                 const polygonEditor = new LeafletEditPolygon(mapInstance!, {}, geometry);
+                saveEditorAndAddListener(polygonEditor);
+                break;
+            case 'delete':
+                // 销毁图层
+                clearAllIfExist();
+                // 关闭工具条
+                if (currEditLayer) {
+                    setCurrEditLayer(null);
+                }
                 break;
 
             default:
                 break;
         }
     };
+
+    /** 保存编辑器实例，并添加监听
+     *
+     *
+     * @param {imageSkyEditorInstance} editor
+     */
+    const saveEditorAndAddListener = (editor: imageSkyEditorInstance) => {
+        setDrawLayers((pre: any[]) => [...pre, editor]);
+        // 添加监听逻辑
+        editor.onStateChange((status: PolygonEditorState) => {
+            console.log('status', status);
+            if (status === PolygonEditorState.Editing) {
+                setCurrEditLayer(editor);
+            } else {
+                if (status === PolygonEditorState.Idle) {
+                    setCurrSelTool('');
+                }
+                setCurrEditLayer(null);
+            }
+        })
+    }
 
     // #region 绘制工具条事件
     // 清理当前绘制（保留之前的）
@@ -318,7 +268,6 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         currEditLayer && currEditLayer.commitEdit();
     }
     // #endregion
-
 
     // #region 拓扑工具条事件
     // 选择图层
