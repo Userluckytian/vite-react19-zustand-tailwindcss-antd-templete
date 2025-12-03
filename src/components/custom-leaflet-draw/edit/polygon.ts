@@ -3,11 +3,13 @@
  * 1：双击激活编辑逻辑。
  * 2：编辑时，支持拖动。
  * 3：绘制状态，外部ui要展示取消按钮，编辑状态，外部ui要展示编辑工具条，所以需要添加事件回调机制，外部监听状态的改变进行响应的ui调整
+ * 4: 用户希望传入默认的空间geometry数据，那构造函数需要支持。
  * */
 import { booleanPointInPolygon, point } from '@turf/turf';
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
 import { BaseEditor } from './BaseEditor';
+
 
 export default class LeafletEditPolygon extends BaseEditor {
 
@@ -20,31 +22,44 @@ export default class LeafletEditPolygon extends BaseEditor {
     };
     private tempCoords: number[][] = [];
 
-    constructor(map: L.Map, options: L.PolylineOptions = {}) {
+    /** 创建一个多边形编辑类
+     *
+     * @param {L.Map} map 地图对象
+     * @param {L.PolylineOptions} [options={}] 要构建的多边形的样式属性
+     * @param {GeoJSON.Geometry} [defaultGeometry] 默认的空间信息
+     * @memberof LeafletEditPolygon
+     */
+    constructor(map: L.Map, options: L.PolylineOptions = {}, defaultGeometry?: GeoJSON.Geometry) {
         super(map);
         if (this.map) {
             // 创建时激活
             this.activate();
+            const existGeometry = !!defaultGeometry;
             // 初始化时，设置绘制状态为true(双击结束绘制时关闭绘制状态，其生命周期到头，且不再改变)，且发出状态通知
-            this.updateAndNotifyStateChange(PolygonEditorState.Drawing);
+            this.updateAndNotifyStateChange(existGeometry ? PolygonEditorState.Idle : PolygonEditorState.Drawing);
             // 鼠标手势设置为十字
-            this.map.getContainer().style.cursor = 'crosshair';
-            // 禁用双击地图放大功能
-            this.map.doubleClickZoom.disable();
-            this.initLayers(options);
+            this.map.getContainer().style.cursor = existGeometry ? 'grab' : 'crosshair';
+            // 不需要设置十字光标和禁用双击放大
+            existGeometry ? this.map.doubleClickZoom.enable() : this.map.doubleClickZoom.disable();
+            this.initLayers(options, existGeometry ? defaultGeometry : undefined);
             this.initMapEvent(this.map);
         }
     }
 
     // 初始化图层
-    private initLayers(options: L.PolylineOptions) {
+    private initLayers(options: L.PolylineOptions, defaultGeometry?: GeoJSON.Geometry): void {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[[-90, -180], [-90, -180], [-90, -180], [-90, -180]]坐标，也就是页面的左下角
         const polygonOptions: L.PolylineOptions = {
             pane: 'overlayPane',
             ...this.drawLayerStyle,
             ...options
         };
-        this.polygonLayer = L.polygon([[181, 181], [181, 181], [181, 181], [181, 181]], polygonOptions);
+
+        let coords: L.LatLngExpression[] | L.LatLngExpression[][] | L.LatLngExpression[][][] = [[181, 181], [181, 181], [181, 181], [181, 181]]; // 默认空图形
+        if (defaultGeometry) {
+            coords = this.convertGeoJSONToLatLngs(defaultGeometry);
+        }
+        this.polygonLayer = L.polygon(coords, polygonOptions);
         this.polygonLayer.addTo(this.map);
         this.initPolygonEvent();
     }
@@ -56,6 +71,7 @@ export default class LeafletEditPolygon extends BaseEditor {
      * @memberof LeafletEditPolygon
      */
     private initPolygonEvent() {
+
         if (this.polygonLayer) {
             this.polygonLayer.on('mousedown', (e: L.LeafletMouseEvent) => {
                 // 关键：只有激活的实例才处理事件
@@ -139,6 +155,9 @@ export default class LeafletEditPolygon extends BaseEditor {
                 this.isActive()
                 // 4: 进入编辑模式
                 this.enterEditMode();
+
+            } else {
+                this.commitEdit();
             }
         }
     }
@@ -155,7 +174,7 @@ export default class LeafletEditPolygon extends BaseEditor {
         // 逻辑1： 绘制时的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
             if (!this.tempCoords.length) return;
-            const lastMoveEndPoint: L.LatLngExpression = [e.latlng.lat, e.latlng.lng];
+                        const lastMoveEndPoint: L.LatLngExpression = [e.latlng.lat, e.latlng.lng];
             // 1：一个点也没有时，我们移动事件，也什么也不做。
             // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。
             if (this.tempCoords.length === 1) {
@@ -245,6 +264,19 @@ export default class LeafletEditPolygon extends BaseEditor {
         }
     }
 
+    /** 返回绘制的图层
+     * 
+     * 应用场景1： 地图上存在多个图层实例，每个图层的options属性中有其唯一id标识。现在若要删除其中一个图层，就需要先找到这个图层实例的options中存储的id标识，然后调用后台的删除接口。
+     * 
+     * 应用场景2： 更改图层样式。
+     *
+     * （简言之： 场景太多，索性直接返回图层对象即可）
+     * @return {*} 
+     * @memberof LeafletEditPolygon
+     */
+    public getLayer(){
+        return this.polygonLayer;
+    }
 
     /** 销毁图层，从地图中移除图层
      *
@@ -385,6 +417,7 @@ export default class LeafletEditPolygon extends BaseEditor {
         this.midpointMarkers.forEach(m => this.map.removeLayer(m));
         this.midpointMarkers = [];
     }
+
     /** 插入中间点坐标
      *
      *
@@ -460,6 +493,7 @@ export default class LeafletEditPolygon extends BaseEditor {
             this.midpointMarkers.push(marker);
         }
     }
+
     /** 实时更新中线点的位置
      *
      *
@@ -507,6 +541,7 @@ export default class LeafletEditPolygon extends BaseEditor {
         this.updateMidpoints();
 
     }
+
     /** 根据坐标重建 marker 和图形
      * 
      * @param latlngs 坐标数组
@@ -555,7 +590,6 @@ export default class LeafletEditPolygon extends BaseEditor {
 
     // #endregion
 
-
     // #region 辅助函数
 
     /**  判断点击事件是否自己身上
@@ -591,6 +625,16 @@ export default class LeafletEditPolygon extends BaseEditor {
             }
         }
         return true;
+    }
+
+    private convertGeoJSONToLatLngs(geometry: GeoJSON.Geometry): L.LatLngExpression[] | L.LatLngExpression[][] | L.LatLngExpression[][][] {
+        if (geometry.type === 'Polygon') {
+            return geometry.coordinates[0].map(([lng, lat]) => [lat, lng]);
+        } else if (geometry.type === 'MultiPolygon') {
+            return geometry.coordinates[0][0].map(([lng, lat]) => [lat, lng]);
+        } else {
+            throw new Error('不支持的 geometry 类型: ' + geometry.type);
+        }
     }
 
     // #endregion
