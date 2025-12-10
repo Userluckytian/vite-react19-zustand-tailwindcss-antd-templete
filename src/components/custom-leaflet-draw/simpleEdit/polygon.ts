@@ -5,6 +5,7 @@
  * 3：绘制状态，外部ui要展示取消按钮，编辑状态，外部ui要展示编辑工具条，所以需要添加事件回调机制，外部监听状态的改变进行响应的ui调整
  * 4: 用户希望传入默认的空间geometry数据，那构造函数需要支持。
  * */
+/* 代码量很多，作者做的时候，是先梳理实现了绘制的功能，然后再梳理增加编辑的功能。按照我的思路去看代码把，不然太多容易乱 */
 import { booleanPointInPolygon, point } from '@turf/turf';
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
@@ -174,7 +175,7 @@ export default class LeafletEditPolygon extends SimpleBaseEditor {
         // 逻辑1： 绘制时的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
             if (!this.tempCoords.length) return;
-                        const lastMoveEndPoint: L.LatLngExpression = [e.latlng.lat, e.latlng.lng];
+            const lastMoveEndPoint: L.LatLngExpression = [e.latlng.lat, e.latlng.lng];
             // 1：一个点也没有时，我们移动事件，也什么也不做。
             // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。
             if (this.tempCoords.length === 1) {
@@ -274,7 +275,7 @@ export default class LeafletEditPolygon extends SimpleBaseEditor {
      * @return {*} 
      * @memberof LeafletEditPolygon
      */
-    public getLayer(){
+    public getLayer() {
         return this.polygonLayer;
     }
 
