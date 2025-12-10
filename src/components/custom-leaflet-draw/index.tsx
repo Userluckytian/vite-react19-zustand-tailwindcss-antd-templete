@@ -10,9 +10,9 @@ import LeafletCircle from './draw/circle';
 import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
-import LeafletEditPolygon from './edit/polygon';
+import LeafletEditPolygon from './simpleEdit/polygon';
 import { PolygonEditorState, type imageSkyEditorInstance } from './types';
-import LeafletEditRectangle from './edit/rectangle';
+import LeafletEditRectangle from './simpleEdit/rectangle';
 import { LeafletTopology } from './topo/topo';
 interface CustomLeafLetDrawProps {
     mapInstance: L.Map; // 传入的地图实例

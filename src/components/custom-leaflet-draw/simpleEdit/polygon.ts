@@ -8,10 +8,10 @@
 import { booleanPointInPolygon, point } from '@turf/turf';
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
-import { BaseEditor } from './BaseEditor';
+import { SimpleBaseEditor } from './SimpleBaseEditor';
 
 
-export default class LeafletEditPolygon extends BaseEditor {
+export default class LeafletEditPolygon extends SimpleBaseEditor {
 
     private polygonLayer: L.Polygon | null = null;
     // 图层初始化时

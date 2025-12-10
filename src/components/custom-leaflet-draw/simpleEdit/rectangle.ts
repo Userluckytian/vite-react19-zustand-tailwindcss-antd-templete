@@ -7,10 +7,10 @@
  * */
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
-import { BaseEditor } from './BaseEditor';
+import { SimpleBaseEditor } from './SimpleBaseEditor';
 import { booleanPointInPolygon, point } from '@turf/turf';
 
-export default class LeafletEditRectangle extends BaseEditor {
+export default class LeafletEditRectangle extends SimpleBaseEditor {
 
     private rectangleLayer: L.Rectangle | null = null;
     // 图层初始化时

@@ -6,10 +6,10 @@ import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
 
 // 抽象类里面的抽象函数，需要外部继承类自己实现
-export abstract class BaseEditor {
+export abstract class SimpleBaseEditor {
 
     // 静态属性 - 所有编辑器实例共享同一个激活状态
-    private static currentActiveEditor: BaseEditor | null = null;
+    private static currentActiveEditor: SimpleBaseEditor | null = null;
 
     protected map: L.Map; // 地图对象
     protected currentState: PolygonEditorState = PolygonEditorState.Idle; // 当前状态
@@ -36,7 +36,7 @@ export abstract class BaseEditor {
         // console.log('激活编辑器:', this.constructor.name);
 
         // 保存之前的激活编辑器
-        const previousActiveEditor = BaseEditor.currentActiveEditor;
+        const previousActiveEditor = SimpleBaseEditor.currentActiveEditor;
 
         // 停用之前激活的编辑器
         if (previousActiveEditor && previousActiveEditor !== this) {
@@ -46,7 +46,7 @@ export abstract class BaseEditor {
         }
 
         // 设置当前实例为激活状态
-        BaseEditor.currentActiveEditor = this;
+        SimpleBaseEditor.currentActiveEditor = this;
     }
 
     /**
@@ -55,8 +55,8 @@ export abstract class BaseEditor {
     protected deactivate(): void {
         // console.log('停用编辑器:', this.constructor.name);
 
-        if (BaseEditor.currentActiveEditor === this) {
-            BaseEditor.currentActiveEditor = null;
+        if (SimpleBaseEditor.currentActiveEditor === this) {
+            SimpleBaseEditor.currentActiveEditor = null;
         }
     }
 
@@ -64,7 +64,7 @@ export abstract class BaseEditor {
      * 检查当前实例是否激活
      */
     protected isActive(): boolean {
-        return BaseEditor.currentActiveEditor === this;
+        return SimpleBaseEditor.currentActiveEditor === this;
     }
 
     /**
@@ -72,8 +72,8 @@ export abstract class BaseEditor {
      */
     public static deactivateAllEditors(): void {
         // console.log('停用所有编辑器');
-        if (BaseEditor.currentActiveEditor) {
-            BaseEditor.currentActiveEditor.deactivate();
+        if (SimpleBaseEditor.currentActiveEditor) {
+            SimpleBaseEditor.currentActiveEditor.deactivate();
         }
     }
 
@@ -97,7 +97,7 @@ export abstract class BaseEditor {
      *
      *
      * @private
-     * @memberof BaseEditor
+     * @memberof SimpleBaseEditor
      */
     protected updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;
@@ -108,7 +108,7 @@ export abstract class BaseEditor {
      *
      *
      * @param {PolygonEditorState} status
-     * @memberof BaseEditor
+     * @memberof SimpleBaseEditor
      */
     public setCurrentState(status: PolygonEditorState): void {
         this.currentState = status;
@@ -118,7 +118,7 @@ export abstract class BaseEditor {
      *
      *
      * @param {(state: PolygonEditorState) => void} listener
-     * @memberof BaseEditor
+     * @memberof SimpleBaseEditor
      */
     public onStateChange(listener: (state: PolygonEditorState) => void): void {
         // 存储回调事件并立刻触发一次
@@ -130,7 +130,7 @@ export abstract class BaseEditor {
      *
      *
      * @param {(state: PolygonEditorState) => void} listener
-     * @memberof BaseEditor
+     * @memberof SimpleBaseEditor
      */
     public offStateChange(listener: (state: PolygonEditorState) => void): void {
         const index = this.stateListeners.indexOf(listener);
@@ -154,7 +154,7 @@ export abstract class BaseEditor {
      *
      *
      * @return {*}  {void}
-     * @memberof BaseEditor
+     * @memberof SimpleBaseEditor
      */
     public undoEdit(): void {
         if (this.historyStack.length < 2) return;
@@ -167,7 +167,7 @@ export abstract class BaseEditor {
      *
      *
      * @return {*}  {void}
-     * @memberof BaseEditor
+     * @memberof SimpleBaseEditor
      */
     public redoEdit(): void {
         if (!this.redoStack.length) return;
@@ -182,7 +182,7 @@ export abstract class BaseEditor {
      *
      *
      * @return {*}  {void}
-     * @memberof BaseEditor
+     * @memberof SimpleBaseEditor
      */
     public resetToInitial(): void {
         if (!this.historyStack.length) return;
@@ -198,7 +198,7 @@ export abstract class BaseEditor {
     /** 完成编辑行为
      *
      *
-     * @memberof BaseEditor
+     * @memberof SimpleBaseEditor
      */
     public commitEdit(): void {
         const current = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
@@ -232,7 +232,7 @@ export abstract class BaseEditor {
      * @protected
      * @abstract
      * @param {number[][]} latlngs
-     * @memberof BaseEditor
+     * @memberof SimpleBaseEditor
      */
     protected abstract reBuildMarkerAndRender(latlngs: number[][]): void;
 
@@ -240,7 +240,7 @@ export abstract class BaseEditor {
      *
      *
      * @abstract
-     * @memberof BaseEditor
+     * @memberof SimpleBaseEditor
      */
     public abstract exitEditMode(): void;
 

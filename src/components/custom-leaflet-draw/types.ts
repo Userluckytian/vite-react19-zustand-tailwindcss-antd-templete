@@ -3,8 +3,8 @@ import type MarkerPoint from "./draw/markerPoint";
 import type LeafletPolygon from "./draw/polygon";
 import type LeafletPolyline from "./draw/polyline";
 import type LeafletRectangle from "./draw/rectangle";
-import type LeafletEditPolygon from "./edit/polygon";
-import type LeafletEditRectangle from "./edit/rectangle";
+import type LeafletEditPolygon from "./simpleEdit/polygon";
+import type LeafletEditRectangle from "./simpleEdit/rectangle";
 import type LeafletArea from "./measure/area";
 import type LeafletDistance from "./measure/distance";
 
