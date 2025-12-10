@@ -86,21 +86,21 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             title: '可编辑矩形',
             icon: 'icon-juxinghuizhi1',
             type: 'edit_rectangle',
-            desp: '编辑面'
+            desp: '编辑矩形'
         },
         {
             id: 'polygon_editor',
-            title: '可编辑面1',
-            icon: 'icon-huizhiduobianxing1',
+            title: '可编辑复杂面',
+            icon: 'icon-huizhiduobianxing1-copy',
             type: 'polygon_editor',
-            desp: '编辑面1'
+            desp: '编辑复杂面'
         },
         {
             id: 'rectangle_editor',
-            title: '可编辑矩形1',
-            icon: 'icon-juxinghuizhi1',
+            title: '可编辑矩形',
+            icon: 'icon-juxinghuizhi1-copy',
             type: 'rectangle_editor',
-            desp: '编辑面1'
+            desp: '编辑矩形'
         },
         {
             id: 'add',
