@@ -14,6 +14,8 @@ import LeafletEditPolygon from './simpleEdit/polygon';
 import { PolygonEditorState, type imageSkyEditorInstance } from './types';
 import LeafletEditRectangle from './simpleEdit/rectangle';
 import { LeafletTopology } from './topo/topo';
+import LeafletRectangleEditor from './edit/rectangle';
+import LeafletPolygonEditor from './edit/polygon';
 interface CustomLeafLetDrawProps {
     mapInstance: L.Map; // 传入的地图实例
     drawGeoJsonResult?: (result: any) => void; // 绘制结果吐出
@@ -87,6 +89,20 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             desp: '编辑面'
         },
         {
+            id: 'polygon_editor',
+            title: '可编辑面1',
+            icon: 'icon-huizhiduobianxing1',
+            type: 'polygon_editor',
+            desp: '编辑面1'
+        },
+        {
+            id: 'rectangle_editor',
+            title: '可编辑矩形1',
+            icon: 'icon-juxinghuizhi1',
+            type: 'rectangle_editor',
+            desp: '编辑面1'
+        },
+        {
             id: 'add',
             title: '添加默认图层',
             type: 'add',
@@ -108,7 +124,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const [topologyInstance, setTopologyInstance] = useState<any>(null);
     // 工具按钮点击
     const handleToolClick = (toolId: string) => {
-
+        
         // 如果点击的是当前已选中的工具，则取消
         if (currSelTool === toolId) {
             handleCancelDraw();
@@ -155,7 +171,14 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             case 'edit_rectangle':
                 const editRectangleLayer = new LeafletEditRectangle(mapInstance);
                 saveEditorAndAddListener(editRectangleLayer);
-
+                break;
+            case 'polygon_editor':
+                const polygonLayerEditor = new LeafletPolygonEditor(mapInstance);
+                saveEditorAndAddListener(polygonLayerEditor);
+                break;
+            case 'rectangle_editor':
+                const rectangleLayerEditor = new LeafletRectangleEditor(mapInstance);
+                saveEditorAndAddListener(rectangleLayerEditor);
                 break;
             case 'add':
                 const geometry: any = {
