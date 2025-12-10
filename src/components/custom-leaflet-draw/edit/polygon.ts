@@ -467,7 +467,9 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             ];
         }
         // 记录初始快照
-
+        this.historyStack.push(coords);
+        // 清空重做栈
+        this.redoStack = [];
 
         // 渲染每个顶点为可拖动 marker
         this.reBuildMarker(coords)
