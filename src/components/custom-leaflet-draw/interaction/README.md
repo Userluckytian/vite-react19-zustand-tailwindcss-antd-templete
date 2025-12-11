@@ -1,3 +1,4 @@
+<!-- 不再需要！下面是废话 -->
 `InteractionModeManager.ts` 是状态源（负责存储和广播当前模式）
 `drawToolbarController.ts` 是行为触发器（负责设置模式并调用对应功能）
 

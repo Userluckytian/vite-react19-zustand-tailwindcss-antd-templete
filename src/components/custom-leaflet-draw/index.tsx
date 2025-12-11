@@ -11,7 +11,7 @@ import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import LeafletEditPolygon from './simpleEdit/polygon';
-import { PolygonEditorState, type imageSkyEditorInstance } from './types';
+import { PolygonEditorState, type leafletGeoEditorInstance } from './types';
 import LeafletEditRectangle from './simpleEdit/rectangle';
 import { LeafletTopology } from './topo/topo';
 import LeafletRectangleEditor from './edit/rectangle';
@@ -232,9 +232,9 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     /** 保存编辑器实例，并添加监听
      *
      *
-     * @param {imageSkyEditorInstance} editor
+     * @param {leafletGeoEditorInstance} editor
      */
-    const saveEditorAndAddListener = (editor: imageSkyEditorInstance) => {
+    const saveEditorAndAddListener = (editor: leafletGeoEditorInstance) => {
         setDrawLayers((pre: any[]) => [...pre, editor]);
         // 添加监听逻辑
         editor.onStateChange((status: PolygonEditorState) => {

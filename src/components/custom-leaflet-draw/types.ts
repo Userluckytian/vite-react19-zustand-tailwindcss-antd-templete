@@ -21,7 +21,7 @@ export enum PolygonEditorState {
 export type drawInstance = LeafletCircle | MarkerPoint | LeafletPolygon | LeafletPolyline | LeafletRectangle;
 export type measureInstance = LeafletArea | LeafletDistance;
 export type editorInstance = LeafletEditPolygon | LeafletEditRectangle | LeafletRectangleEditor | LeafletPolygonEditor;
-export type imageSkyEditorInstance = drawInstance | measureInstance | editorInstance;
+export type leafletGeoEditorInstance = drawInstance | measureInstance | editorInstance;
 
 /* 拓展leaflet-绘制面、线属性（用于存放用户自定义的属性内容）  */
 export interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
