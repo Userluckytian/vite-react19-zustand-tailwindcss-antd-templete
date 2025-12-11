@@ -7,7 +7,7 @@ custom-leaflet-draw               # 基于leaflet构建的图层绘制、编辑�
 │   ├──polygon.ts                 # 继承SimpleBaseEditor，支持多边形（单面）的编辑功能
 │   └──rectangle.ts               # 继承SimpleBaseEditor，支持矩形的编辑功能
 ├── edit                          # 支持传入或者绘制完毕的图形的编辑功能（单面、挖孔、多面等多边形结构）
-│   ├──BaseEditor.ts              # 编辑类基类
+│   ├──BaseEditor.ts              # 编辑类基类(增加图层显隐控制、监听事件是否立刻触发回调)
 │   ├──BasePolygonEditor.ts       # 继承BaseEditor，支持多边形（单面、挖孔、多面）的编辑功能
 │   ├──BaseRectangleEditor.ts     # 继承BaseEditor，支持矩形的编辑功能
 │   ├──polygon.ts                 # 继承BasePolygonEditor，支持多边形（单面）的编辑功能
