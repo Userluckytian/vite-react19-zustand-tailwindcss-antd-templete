@@ -616,16 +616,18 @@ export default class LeafletEditPolygon extends SimpleBaseEditor {
     }
 
     private canConsume(e: L.LeafletMouseEvent): boolean {
-        if (!this.isActive()) {
-            if (this.isClickOnMyLayer(e)) {
+        const clickIsSelf = this.isClickOnMyLayer(e);
+        // 已经激活的实例，确保点击在自己的图层上
+        if (this.isActive()) {
+            return clickIsSelf;
+        } else {
+            if (clickIsSelf) {
                 // console.log('重新激活编辑器');
                 this.activate();
                 return true;
-            } else {
-                return false;
             }
         }
-        return true;
+        return false;
     }
 
     private convertGeoJSONToLatLngs(geometry: GeoJSON.Geometry): L.LatLngExpression[] | L.LatLngExpression[][] | L.LatLngExpression[][][] {
