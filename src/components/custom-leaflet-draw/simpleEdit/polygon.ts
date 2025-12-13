@@ -616,6 +616,8 @@ export default class LeafletEditPolygon extends SimpleBaseEditor {
     }
 
     private canConsume(e: L.LeafletMouseEvent): boolean {
+        // 如果是绘制操作，则直接跳过判断，后面的逻辑是给编辑操作准备的
+        if (this.currentState === PolygonEditorState.Drawing) return true;
         const clickIsSelf = this.isClickOnMyLayer(e);
         // 已经激活的实例，确保点击在自己的图层上
         if (this.isActive()) {
