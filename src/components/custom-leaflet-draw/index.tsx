@@ -74,31 +74,31 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             type: 'measure_area',
             desp: '测面'
         },
-        {
-            id: 'edit_polygon',
-            title: '可编辑面',
-            icon: 'icon-huizhiduobianxing1',
-            type: 'edit_polygon',
-            desp: '编辑面'
-        },
-        {
-            id: 'edit_rectangle',
-            title: '可编辑矩形',
-            icon: 'icon-juxinghuizhi1',
-            type: 'edit_rectangle',
-            desp: '编辑矩形'
-        },
+        // {
+        //     id: 'edit_polygon',
+        //     title: '可编辑面',
+        //     icon: 'icon-huizhiduobianxing1-copy',
+        //     type: 'edit_polygon',
+        //     desp: '编辑面'
+        // },
+        // {
+        //     id: 'edit_rectangle',
+        //     title: '可编辑矩形',
+        //     icon: 'icon-juxinghuizhi1-copy',
+        //     type: 'edit_rectangle',
+        //     desp: '编辑矩形'
+        // },
         {
             id: 'polygon_editor',
             title: '可编辑复杂面',
-            icon: 'icon-huizhiduobianxing1-copy',
+            icon: 'icon-huizhiduobianxing1',
             type: 'polygon_editor',
             desp: '编辑复杂面'
         },
         {
             id: 'rectangle_editor',
             title: '可编辑矩形',
-            icon: 'icon-juxinghuizhi1-copy',
+            icon: 'icon-juxinghuizhi1',
             type: 'rectangle_editor',
             desp: '编辑矩形'
         },
@@ -212,7 +212,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                         ]
                     ]
                 };
-                const polygonEditor = new LeafletEditPolygon(mapInstance!, {}, geometry);
+                const polygonEditor = new LeafletPolygonEditor(mapInstance!, {}, geometry);
                 saveEditorAndAddListener(polygonEditor);
                 break;
             case 'delete':

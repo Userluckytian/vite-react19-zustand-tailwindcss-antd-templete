@@ -38,8 +38,8 @@ const FunctionPanel = () => {
                         <div className="instruction-section">
                             <h4>操作说明：</h4>
                             <ol className="instruction-list">
-                                <li><strong>点击：</strong> <CustomIcon type='icon-huizhiduobianxing1' />、<CustomIcon type='icon-juxinghuizhi1' />开始绘制可以被编辑的多边形（仅支持单面的多边形的编辑）</li>
-                                <li><strong>点击：</strong> <CustomIcon type='icon-huizhiduobianxing1-copy' />、<CustomIcon type='icon-juxinghuizhi1-copy' />开始绘制可以被编辑的多边形。（除了支持单多边形的编辑外，还支持外部传入多面、环形挖孔等复杂多边形的编辑）</li>
+                                {/* <li><strong>点击：</strong> <CustomIcon type='icon-huizhiduobianxing1-copy' />、<CustomIcon type='icon-juxinghuizhi1-copy' />开始绘制可以被编辑的多边形（仅支持单面的多边形的编辑）</li> */}
+                                <li><strong>点击：</strong> <CustomIcon type='icon-huizhiduobianxing1' />、<CustomIcon type='icon-juxinghuizhi1' />开始绘制可以被编辑的多边形。（除了支持单多边形的编辑外，还支持外部传入多面、环形挖孔等复杂多边形的编辑）</li>
                                 <li><strong>双击</strong>刚才绘制的多边形，激活编辑功能</li>
                             </ol>
                         </div>
