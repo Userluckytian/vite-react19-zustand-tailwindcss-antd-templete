@@ -2,7 +2,7 @@ import * as L from 'leaflet';
 import { queryLayerOnClick } from '../utils/commonUtils';
 import { union } from '@turf/turf';
 import LeafletPolyline from '../draw/polyline';
-import { PolygonEditorState } from '../types';
+import { PolygonEditorState, type TopoMergeResult } from '../types';
 import { clipSelectedLayersByLine, mergePolygon } from '../utils/topoUtils';
 
 export class LeafletTopology {
@@ -61,12 +61,17 @@ export class LeafletTopology {
   /** 
    * 执行合并操作 
    * */
-  public merge() {
+  public merge(): TopoMergeResult {
     if (this.selectedLayers.length < 2) {
       throw new Error('请至少选择两个图层进行合并');
     }
-    const mergedGeom = mergePolygon(this.selectedLayers);
-    console.log('合并--mergedGeom', mergedGeom);
+    try {
+      const mergedGeom = mergePolygon(this.selectedLayers);
+      // console.log('合并--mergedGeom', mergedGeom);
+      return { mergedGeom, mergedLayers: this.selectedLayers };
+    } catch (error) {
+      throw new Error('合并发生错误：' + error);
+    }
   }
 
   /** 

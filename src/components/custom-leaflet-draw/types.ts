@@ -29,3 +29,9 @@ export interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
     defaultStyle?: any; // 存放（用户自己想要设置的）图层的默认样式信息
     [key: string]: unknown
 }
+
+/* topo操作执行合并(union)后返回的结果 */ 
+export interface TopoMergeResult {
+    mergedLayers: L.GeoJSON[];
+    mergedGeom: GeoJSON.GeometryObject | null;
+}
