@@ -33,5 +33,5 @@ export interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
 /* topo操作执行合并(union)后返回的结果 */ 
 export interface TopoMergeResult {
     mergedLayers: L.GeoJSON[];
-    mergedGeom: GeoJSON.GeometryObject | null;
+    mergedGeom: GeoJSON.Feature | null;
 }
