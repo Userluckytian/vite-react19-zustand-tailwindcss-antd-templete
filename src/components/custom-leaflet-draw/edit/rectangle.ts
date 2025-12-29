@@ -6,7 +6,7 @@
  * 4: 用户希望传入默认的空间geometry数据，那构造函数需要支持。
  * */
 import * as L from 'leaflet';
-import { PolygonEditorState } from '../types';
+import { PolygonEditorState, type LeafletPolylineOptionsExpends } from '../types';
 import { booleanPointInPolygon, point } from '@turf/turf';
 import { BaseRectangleEditor } from './BaseRectangleEditor';
 
@@ -15,20 +15,22 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
     private rectangleLayer: L.Rectangle | null = null;
     // 图层初始化时
     private drawLayerStyle = {
+        weight: 2,
         color: 'red', // 设置边线颜色
         fillColor: "red", // 设置填充颜色
         fillOpacity: 0.3, // 设置填充透明度
+        fill: true, // no fill color means default fill color (gray for `dot` and `circle` markers, transparent for `plus` and `star`)
     };
     private tempCoords: L.LatLng[] = [];
 
     /** 创建一个矩形编辑类
      *
      * @param {L.Map} map 地图对象
-     * @param {L.PolylineOptions} [options={}] 要构建的多边形的样式属性
+     * @param {LeafletPolylineOptionsExpends} [options={}] 要构建的多边形的样式属性
      * @param {GeoJSON.Geometry} [defaultGeometry] 默认的空间信息
      * @memberof LeafletEditPolygon
      */
-    constructor(map: L.Map, options: L.PolylineOptions = {}, defaultGeometry?: GeoJSON.Geometry) {
+    constructor(map: L.Map, options: LeafletPolylineOptionsExpends = {}, defaultGeometry?: GeoJSON.Geometry) {
         super(map);
         console.log(this.map);
         if (this.map) {
@@ -49,10 +51,12 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
     }
 
     // 初始化图层
-    private initLayers(options: L.PolylineOptions, defaultGeometry?: GeoJSON.Geometry): void {
+    private initLayers(options: LeafletPolylineOptionsExpends, defaultGeometry?: GeoJSON.Geometry): void {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[[-90, -180], [-90, -180]]坐标，也就是页面的左下角
-        const polylineOptions: L.PolylineOptions = {
+        const polylineOptions: LeafletPolylineOptionsExpends = {
             pane: 'overlayPane',
+            layerVisible: true, // 增加了一个自定义属性，用于用户从图层层面获取图层的显隐状态
+            defaultStyle: this.drawLayerStyle,
             ...this.drawLayerStyle,
             ...options
         };
@@ -286,6 +290,64 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      */
     public getLayer() {
         return this.rectangleLayer;
+    }
+
+    /** 控制图层显示
+     *
+     *
+     * @memberof LeafletEditPolygon
+     */
+    private show() {
+        this.isVisible = true;
+        // 使用用户默认设置的样式，而不是我自定义的！
+        this.rectangleLayer?.setStyle({...(this.rectangleLayer.options as any).defaultStyle, layerVisible: true});
+    }
+    /** 控制图层隐藏
+     *
+    *
+    * @memberof LeafletEditPolygon
+    */
+    private hide() {
+        this.isVisible = false;
+        const hideStyle = {
+            color: 'red',
+            weight: 0,
+            fill: false, // no fill color means default fill color (gray for `dot` and `circle` markers, transparent for `plus` and `star`)
+            fillColor: 'red', // same color as the line
+            fillOpacity: 0,
+        };
+        this.rectangleLayer?.setStyle({...hideStyle, layerVisible: false} as any);
+        // ✅ 退出编辑状态（若存在）
+        if (this.currentState === PolygonEditorState.Editing) {
+            this.exitEditMode();
+            this.updateAndNotifyStateChange(PolygonEditorState.Idle);
+        }
+    }
+
+
+    /** 设置图层显隐
+     *
+     *
+     * @param {boolean} visible
+     * @memberof LeafletEditPolygon
+     */
+    public setVisible(visible: boolean) {
+        if (visible) {
+            this.show();
+        } else {
+            this.hide();
+        }
+    }
+
+
+    /** 获取图层显隐
+     *
+     *
+     * @param {boolean} visible
+     * @memberof LeafletEditPolygon
+     */
+    public getLayerVisible(): boolean {
+        return (this.rectangleLayer.options as any).layerVisible;
     }
 
 

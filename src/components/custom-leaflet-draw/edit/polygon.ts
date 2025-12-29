@@ -46,6 +46,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[[-90, -180], [-90, -180], [-90, -180], [-90, -180]]坐标，也就是页面的左下角
         const polygonOptions: LeafletPolylineOptionsExpends = {
             pane: 'overlayPane',
+            layerVisible: true, // 增加了一个自定义属性，用于用户从图层层面获取图层的显隐状态
             defaultStyle: this.drawLayerStyle,
             ...this.drawLayerStyle,
             ...options
@@ -304,7 +305,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
     private show() {
         this.isVisible = true;
         // 使用用户默认设置的样式，而不是我自定义的！
-        this.polygonLayer?.setStyle((this.polygonLayer.options as any).defaultStyle);
+        this.polygonLayer?.setStyle({...(this.polygonLayer.options as any).defaultStyle, layerVisible: true});
     }
     /** 控制图层隐藏
      *
@@ -320,7 +321,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             fillColor: 'red', // same color as the line
             fillOpacity: 0
         };
-        this.polygonLayer?.setStyle(hideStyle);
+        this.polygonLayer?.setStyle({...hideStyle, layerVisible: false} as any);
         // ✅ 退出编辑状态（若存在）
         if (this.currentState === PolygonEditorState.Editing) {
             this.exitEditMode();
@@ -343,6 +344,15 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         }
     }
 
+    /** 获取图层显隐
+     *
+     *
+     * @param {boolean} visible
+     * @memberof LeafletEditPolygon
+     */
+    public getLayerVisible(): boolean {
+        return (this.polygonLayer.options as any).layerVisible;
+    }
 
 
     /** 销毁图层，从地图中移除图层
