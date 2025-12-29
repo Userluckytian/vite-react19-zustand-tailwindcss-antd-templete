@@ -35,3 +35,8 @@ export interface TopoMergeResult {
     mergedLayers: L.GeoJSON[];
     mergedGeom: GeoJSON.Feature | null;
 }
+// topo操作执行裁剪（clip）后返回的结果
+export interface TopoClipResult {
+    doClipLayers: L.Layer[]; // 参与裁剪的图层数组
+    clipedGeoms: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[];  // 裁剪完毕获取的全部单面
+}

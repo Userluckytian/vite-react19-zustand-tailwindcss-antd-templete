@@ -2,7 +2,7 @@ import * as L from 'leaflet';
 import { queryLayerOnClick } from '../utils/commonUtils';
 import { union } from '@turf/turf';
 import LeafletPolyline from '../draw/polyline';
-import { PolygonEditorState, type TopoMergeResult } from '../types';
+import { PolygonEditorState, type TopoClipResult, type TopoMergeResult } from '../types';
 import { clipSelectedLayersByLine, mergePolygon } from '../utils/topoUtils';
 
 export class LeafletTopology {
@@ -68,14 +68,19 @@ export class LeafletTopology {
   /** 
    * 执行合并操作 
    * */
-  public merge(): TopoMergeResult {
+  public merge(callback: (result: TopoMergeResult) => void) {
     if (this.selectedLayers.length < 2) {
       throw new Error('请至少选择两个图层进行合并');
     }
     try {
       const mergedGeom = mergePolygon(this.selectedLayers);
       // console.log('合并--mergedGeom', mergedGeom);
-      return { mergedGeom, mergedLayers: this.selectedLayers };
+      // return { mergedGeom, mergedLayers: this.selectedLayers };
+       // console.log('合并--mergedGeom', mergedGeom);
+      callback && callback({ mergedGeom, mergedLayers: this.selectedLayers })
+      setTimeout(() => {
+        this.cleanAll();
+      }, 0);
     } catch (error) {
       throw new Error('合并发生错误：' + error);
     }
@@ -84,10 +89,11 @@ export class LeafletTopology {
   /** 
    * 执行线裁剪操作 
    * */
-  public clipByLine() {
+  public clipByLine(callback: (result: TopoClipResult) => void) {
     if (this.selectedLayers.length === 0) {
       throw new Error('请先选择要裁剪的图层');
     }
+
     // 第一步： 关闭选择高亮的交互事件
     if (this.clickHandler) {
       this.map.off('click', this.clickHandler);
@@ -100,29 +106,30 @@ export class LeafletTopology {
       if (status === PolygonEditorState.Idle) {
         const geoJson = this.drawLineLayer!.geojson();
         console.log('绘制的线图层的空间信息：', geoJson, this.selectedLayers);
-        const { clipsPolygons, waitingDelLayer } = clipSelectedLayersByLine(geoJson, this.selectedLayers);
-        console.log('clipsPolygons', clipsPolygons, 'waitingDelLayer', waitingDelLayer);
-        clipsPolygons.forEach(element => {
-          const layer = L.geoJSON(element, {
-            style: {
-              fillColor: 'rgba(0, 0, 0, 0.2)',
-              color: '#0f0',
-              dashArray: '10, 8', // 虚线模式
-              // dashOffset: '8', // 虚线偏移量
-              fillOpacity: 1,
-              fill: true,
-              // 边框大小
-              weight: 3,
-            }
-          });
-          console.log('layer', layer);
-
-          this.map.addLayer(layer);
-        });
+        const { doClipLayers, clipedGeoms } = clipSelectedLayersByLine(geoJson, this.selectedLayers);
+        console.log('clipsPolygons', clipedGeoms, 'waitingDelLayer', doClipLayers);
         setTimeout(() => {
           this.drawLineLayer!.destroy();
           this.cleanAll();
-        }, 2000);
+        }, 0);
+        callback && callback({ clipedGeoms, doClipLayers });
+
+        // clipsPolygons.forEach(element => {
+        //   const layer = L.geoJSON(element, {
+        //     style: {
+        //       fillColor: 'rgba(0, 0, 0, 0.2)',
+        //       color: '#0f0',
+        //       dashArray: '10, 8', // 虚线模式
+        //       // dashOffset: '8', // 虚线偏移量
+        //       fillOpacity: 1,
+        //       fill: true,
+        //       // 边框大小
+        //       weight: 3,
+        //     }
+        //   });
+        //   console.log('layer', layer);
+        //   this.map.addLayer(layer);
+        // });
       }
     }
     this.drawLineLayer.onStateChange(this.drawLineListener)

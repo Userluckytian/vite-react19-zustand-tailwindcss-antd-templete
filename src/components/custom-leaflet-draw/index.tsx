@@ -11,7 +11,7 @@ import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import LeafletEditPolygon from './simpleEdit/polygon';
-import { PolygonEditorState, type leafletGeoEditorInstance } from './types';
+import { PolygonEditorState, type leafletGeoEditorInstance, type TopoClipResult, type TopoMergeResult } from './types';
 import LeafletEditRectangle from './simpleEdit/rectangle';
 import { LeafletTopology } from './topo/topo';
 import LeafletRectangleEditor from './edit/rectangle';
@@ -299,25 +299,40 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     }
     // 裁切
     const cut = () => {
-        topologyInstance && topologyInstance.clipByLine();
+        topologyInstance && topologyInstance.clipByLine(({ doClipLayers, clipedGeoms }: TopoClipResult) => {
+            console.log('裁剪--clipedGeoms', clipedGeoms, doClipLayers);
+            // 第一步：删除之前的旧图层
+            doClipLayers.forEach((layer: any) => {
+                console.log('layer11', layer);
+                const record = layer.options.origin;
+                // deleteRecode(record, false);
+            });
+            // 第二步：添加新的图层
+            clipedGeoms.forEach((Feature: GeoJSON.Feature, idx: number) => {
+                // console.log('Feature', Feature);
+                // addRecode(Feature, idx === clipedGeoms.length - 1 ? true : false);
+            });
+        });
+
     }
     // 合并图层
     const union = () => {
-        // try {
-        const { mergedGeom, mergedLayers } = topologyInstance && topologyInstance.merge();
-        console.log('合并--mergedGeom', mergedGeom, mergedLayers);
-        // // 第一步：删除之前的旧图层
-        mergedLayers.forEach((layer: any) => {
-            const record = layer.options.origin;
-            // deleteRecode(record, false);
-        });
-        // // 第二步：添加合并后的新图层
-        // addRecode(mergedGeom);
-        // } catch (error) {
-        //     console.log('error', error);
+        topologyInstance && topologyInstance.merge(({ mergedGeom, mergedLayers }: TopoMergeResult) => {
+            // try {
+            // console.log('合并--mergedGeom', mergedGeom, doMergeLayers);
+            // 第一步：删除之前的旧图层
+            mergedLayers.forEach((layer: any) => {
+                const record = layer.options.origin;
+                // deleteRecode(record, false);
+            });
+            // 第二步：添加合并后的新图层
+            // addRecode(mergedGeom);
+            // } catch (error) {
+            //     console.log('error', error);
 
-        //     // message.error(error as any);
-        // }
+            //     // message.error(error as any);
+            // }
+        });
     }
     // 清除拓扑
     const clearTopo = () => {
