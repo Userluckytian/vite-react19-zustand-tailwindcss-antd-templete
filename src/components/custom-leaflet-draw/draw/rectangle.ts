@@ -55,7 +55,7 @@ export default class LeafletRectangle {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletRectangle
      */
     private initMapEvent(map: L.Map) {
         map.on('click', this.mapClickEvent);
@@ -68,7 +68,7 @@ export default class LeafletRectangle {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletRectangle
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
         if (this.tempCoords.length === 0) {
@@ -84,7 +84,7 @@ export default class LeafletRectangle {
      *
      *
      * @private
-     * @memberof LeafletDistance
+     * @memberof LeafletRectangle
      */
     private reset() {
         // 清空坐标把，因为没什么用了
@@ -104,7 +104,7 @@ export default class LeafletRectangle {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletRectangle
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
         // 1：一个点也没有时，我们移动事件，也什么也不做。
@@ -118,39 +118,39 @@ export default class LeafletRectangle {
         this.renderLayer(this.tempCoords);
     }
 
-    /** 渲染线图层
+    /** 渲染图层
      *
      *
      * @private
      * @param { [][]} coords
-     * @memberof LeafletPolyLine
+     * @memberof LeafletRectangle
      */
     private renderLayer(coords: L.LatLng[]) {
         if (this.rectangleLayer) {
             const bounds = L.latLngBounds(coords);
             this.rectangleLayer.setBounds(bounds);
         } else {
-            throw new Error('线图层不存在，无法渲染');
+            throw new Error('图层不存在，无法渲染');
         }
     }
 
     /** 返回图层的空间信息 
      * 
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
-     * @memberof markerPoint
+     * @memberof LeafletRectangle
      */
     public geojson() {
         if (this.rectangleLayer) {
             return this.rectangleLayer.toGeoJSON();
         } else {
-            throw new Error("未捕获到marker图层，无法获取到geojson数据");
+            throw new Error("未捕获到图层，无法获取到geojson数据");
         }
     }
 
     /** 销毁图层，从地图中移除图层
      *
      *
-     * @memberof markerPoint
+     * @memberof LeafletRectangle
      */
     public destroy() {
         if (this.rectangleLayer) {
@@ -165,7 +165,7 @@ export default class LeafletRectangle {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletRectangle
      */
     private offMapEvent(map: L.Map) {
         map.off('click', this.mapClickEvent);
@@ -180,7 +180,7 @@ export default class LeafletRectangle {
      *
      *
      * @param {(state: PolygonEditorState) => void} listener
-     * @memberof LeafletEditPolygon
+     * @memberof LeafletRectangle
      */
     public onStateChange(listener: (state: PolygonEditorState) => void): void {
         // 存储回调事件并立刻触发一次
@@ -210,7 +210,7 @@ export default class LeafletRectangle {
      *
      *
      * @private
-     * @memberof LeafletEditPolygon
+     * @memberof LeafletRectangle
      */
     private updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;

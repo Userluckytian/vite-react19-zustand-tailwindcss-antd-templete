@@ -4,14 +4,18 @@ import { App, Divider } from 'antd';
 import * as L from 'leaflet';
 import './index.scss';
 import MarkerPoint from './draw/markerPoint';
-import LeafletLine from './draw/polyline';
+import LeafletPolyline from './draw/polyline';
 import LeafletPolygon from './draw/polygon';
 import LeafletCircle from './draw/circle';
 import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
-import LeafletEditPolygon from './edit/polygon';
-import { PolygonEditorState } from './types';
+import LeafletEditPolygon from './simpleEdit/polygon';
+import { PolygonEditorState, type leafletGeoEditorInstance } from './types';
+import LeafletEditRectangle from './simpleEdit/rectangle';
+import { LeafletTopology } from './topo/topo';
+import LeafletRectangleEditor from './edit/rectangle';
+import LeafletPolygonEditor from './edit/polygon';
 interface CustomLeafLetDrawProps {
     mapInstance: L.Map; // 传入的地图实例
     drawGeoJsonResult?: (result: any) => void; // 绘制结果吐出
@@ -20,9 +24,6 @@ interface CustomLeafLetDrawProps {
 export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const { message } = App.useApp();
     const { mapInstance } = props;
-    const [currSelTool, setCurrSelTool] = useState<string | null>(null);
-    const [drawLayers, setDrawLayers] = useState<any[]>([]);
-    const [currEditLayer, setCurrEditLayer] = useState<any>(null);
     const [toolbarList, setToolBarList] = useState<any>([
         {
             id: 'point',
@@ -73,12 +74,40 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             type: 'measure_area',
             desp: '测面'
         },
+        // {
+        //     id: 'edit_polygon',
+        //     title: '可编辑面',
+        //     icon: 'icon-huizhiduobianxing1-copy',
+        //     type: 'edit_polygon',
+        //     desp: '编辑面'
+        // },
+        // {
+        //     id: 'edit_rectangle',
+        //     title: '可编辑矩形',
+        //     icon: 'icon-juxinghuizhi1-copy',
+        //     type: 'edit_rectangle',
+        //     desp: '编辑矩形'
+        // },
         {
-            id: 'edit_polygon',
-            title: '编辑面：双击打开编辑右键删除点',
+            id: 'polygon_editor',
+            title: '可编辑复杂面',
             icon: 'icon-huizhiduobianxing1',
-            type: 'edit_polygon',
-            desp: '编辑面'
+            type: 'polygon_editor',
+            desp: '编辑复杂面'
+        },
+        {
+            id: 'rectangle_editor',
+            title: '可编辑矩形',
+            icon: 'icon-juxinghuizhi1',
+            type: 'rectangle_editor',
+            desp: '编辑矩形'
+        },
+        {
+            id: 'add',
+            title: '添加默认图层',
+            type: 'add',
+            icon: 'icon-shujudaoru',
+            desp: '添加默认图层'
         },
         {
             id: 'delete',
@@ -88,8 +117,11 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             desp: '清空绘制和查询内容'
         }
     ]
-    )
-
+    ) // 工具栏列表
+    const [currSelTool, setCurrSelTool] = useState<string | null>(null); // 当前使用的【绘制条上的绘制工具】
+    const [drawLayers, setDrawLayers] = useState<any[]>([]); // 存放绘制的图层
+    const [currEditLayer, setCurrEditLayer] = useState<any>(null); // 当前编辑的图层【我们设置的是一次仅可编辑一个图层】
+    const [topologyInstance, setTopologyInstance] = useState<any>(null);
     // 工具按钮点击
     const handleToolClick = (toolId: string) => {
 
@@ -102,100 +134,86 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         // clearCurrentDraw();
 
         setCurrSelTool(toolId);
-        // clearAllIfExist();
+        // clearAllIfExist(); // 根据需求来，有的时候，我们绘制新内容时，会期望移除上次绘制的结果
         switch (toolId) {
             case 'point':
                 const markerPoint = new MarkerPoint(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, markerPoint]);
-                // 添加监听逻辑
-                markerPoint.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
-                    }
-                })
+                saveEditorAndAddListener(markerPoint);
                 break;
             case 'line':
-                const lineLayer = new LeafletLine(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, lineLayer]);
-                // 添加监听逻辑
-                lineLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
-                    }
-                })
+                const lineLayer = new LeafletPolyline(mapInstance);
+                saveEditorAndAddListener(lineLayer);
                 break;
             case 'polygon':
                 const polygonLayer = new LeafletPolygon(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, polygonLayer]);
-                // 添加监听逻辑
-                polygonLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
-                    }
-                })
+                saveEditorAndAddListener(polygonLayer);
                 break;
             case 'circle':
                 const circleLayer = new LeafletCircle(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, circleLayer]);
-                // 添加监听逻辑
-                circleLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
-                    }
-                })
+                saveEditorAndAddListener(circleLayer);
                 break;
             case 'rectangle':
                 const rectangleLayer = new LeafletRectangle(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, rectangleLayer]);
-                // 添加监听逻辑
-                rectangleLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
-                    }
-                })
+                saveEditorAndAddListener(rectangleLayer);
                 break;
             case 'measure_distance':
                 const distanceLayer = new LeafletDistance(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, distanceLayer]);
-                // 添加监听逻辑
-                distanceLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
-                    }
-                })
+                saveEditorAndAddListener(distanceLayer);
                 break;
             case 'measure_area':
                 const areaLayer = new LeafletArea(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, areaLayer]);
-                // 添加监听逻辑
-                areaLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Idle) {
-                        setCurrSelTool('');
-                    }
-                })
+                saveEditorAndAddListener(areaLayer);
                 break;
             case 'edit_polygon':
                 const editPolygonLayer = new LeafletEditPolygon(mapInstance);
-                setDrawLayers((pre: any[]) => [...pre, editPolygonLayer]);
-                // 添加监听逻辑
-                editPolygonLayer.onStateChange((status: PolygonEditorState) => {
-                    console.log('status', status);
-                    if (status === PolygonEditorState.Editing) {
-                        setCurrEditLayer(editPolygonLayer);
-                    } else {
-                        if (status === PolygonEditorState.Idle) {
-                            setCurrSelTool('');
-                        }
-                        setCurrEditLayer(null);
-                    }
-                })
+                saveEditorAndAddListener(editPolygonLayer);
+                break;
+            case 'edit_rectangle':
+                const editRectangleLayer = new LeafletEditRectangle(mapInstance);
+                saveEditorAndAddListener(editRectangleLayer);
+                break;
+            case 'polygon_editor':
+                const polygonLayerEditor = new LeafletPolygonEditor(mapInstance);
+                saveEditorAndAddListener(polygonLayerEditor);
+                break;
+            case 'rectangle_editor':
+                const rectangleLayerEditor = new LeafletRectangleEditor(mapInstance);
+                saveEditorAndAddListener(rectangleLayerEditor);
+                break;
+            case 'add':
+                const geometry: any = {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [
+                                129.726563,
+                                42.032974
+                            ],
+                            [
+                                154.335938,
+                                41.574361
+                            ],
+                            [
+                                151.347656,
+                                31.503629
+                            ],
+                            [
+                                136.40625,
+                                30.600094
+                            ],
+                            [
+                                129.814453,
+                                35.675147
+                            ],
+                            [
+                                129.726563,
+                                42.032974
+                            ]
+                        ]
+                    ]
+                };
+                const polygonEditor = new LeafletPolygonEditor(mapInstance!, {}, geometry);
+                saveEditorAndAddListener(polygonEditor);
                 break;
             case 'delete':
                 // 销毁图层
@@ -210,6 +228,27 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 break;
         }
     };
+
+    /** 保存编辑器实例，并添加监听
+     *
+     *
+     * @param {leafletGeoEditorInstance} editor
+     */
+    const saveEditorAndAddListener = (editor: leafletGeoEditorInstance) => {
+        setDrawLayers((pre: any[]) => [...pre, editor]);
+        // 添加监听逻辑
+        editor.onStateChange((status: PolygonEditorState) => {
+            console.log('status', status);
+            if (status === PolygonEditorState.Editing) {
+                setCurrEditLayer(editor);
+            } else {
+                if (status === PolygonEditorState.Idle) {
+                    setCurrSelTool('');
+                }
+                setCurrEditLayer(null);
+            }
+        })
+    }
 
     // #region 绘制工具条事件
     // 清理当前绘制（保留之前的）
@@ -253,6 +292,39 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     }
     // #endregion
 
+    // #region 拓扑工具条事件
+    // 选择图层
+    const pickLayer = () => {
+        topologyInstance && topologyInstance.select();
+    }
+    // 裁切
+    const cut = () => {
+        topologyInstance && topologyInstance.clipByLine();
+    }
+    // 合并图层
+    const union = () => {
+        // try {
+        const { mergedGeom, mergedLayers } = topologyInstance && topologyInstance.merge();
+        console.log('合并--mergedGeom', mergedGeom, mergedLayers);
+        // // 第一步：删除之前的旧图层
+        mergedLayers.forEach((layer: any) => {
+            const record = layer.options.origin;
+            // deleteRecode(record, false);
+        });
+        // // 第二步：添加合并后的新图层
+        // addRecode(mergedGeom);
+        // } catch (error) {
+        //     console.log('error', error);
+
+        //     // message.error(error as any);
+        // }
+    }
+    // 清除拓扑
+    const clearTopo = () => {
+        topologyInstance && topologyInstance.cleanAll();
+    }
+    // #endregion
+
     // #region 键盘快捷键
     const handleKeyDown = (e: KeyboardEvent) => {
         // 复杂的键盘操作放前面，比如：担心Ctrl + Z先执行
@@ -279,12 +351,26 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     }
     // #endregion
 
+    // #region 地图点击、双击事件（事件中的变量需要通过ref读取，不然可能拿不到最新的值）
+    const mapClickFun = (e: any) => { };
+    const mapDblClickFun = (e: any) => { };
+    // #endregion 
+
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         }
     }, [currEditLayer])
+    useEffect(() => {
+        if (mapInstance) {
+            const topology = LeafletTopology.getInstance(mapInstance);
+            setTopologyInstance(topology);
+        }
+        return () => {
+
+        }
+    }, [mapInstance])
 
 
     return (
@@ -307,34 +393,32 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                             <Divider type="horizontal" style={{ margin: '0px' }} />
                         </Activity>
                         {/* 绘制状态时的取消按钮 */}
-                        {currSelTool === tool.id && currSelTool !== 'delete' && <div className='cancel-btn' onClick={handleCancelDraw}>取消</div>}
-
+                        {currSelTool === tool.id && !['delete', 'add'].includes(currSelTool) && <div className='cancel-btn' onClick={handleCancelDraw}>取消</div>}
                     </div>
                 ))}
             </div>
             {/* 编辑工具条 */}
             {currEditLayer
                 &&
-                <div className="leaflet-edit-toolbar">
-                    <div className='edit-tool-item' onClick={() => undoEdit()}>↩️ 后退(Ctrl + Z)</div>
-                    <div className='edit-tool-item' onClick={() => redoEdit()}>↩️ 向前(Ctrl + Shift + Z)</div>
-                    <div className='edit-tool-item' onClick={() => resetToInitial()}>🔄 撤销全部(Ctrl + Alt + Z)()</div>
-                    <div className='edit-tool-item' onClick={() => saveEdit()}>✅ 完成编辑(Ctrl + S)</div>
+                <div className="leaflet-edit-toolbar leaflet-bar">
+                    <div>编辑工具条：</div>
+                    <div className='edit-tool-item item-bar' onClick={() => undoEdit()}>↩️ 后退(Ctrl + Z)</div>
+                    <div className='edit-tool-item item-bar' onClick={() => redoEdit()}>↩️ 向前(Ctrl + Shift + Z)</div>
+                    <div className='edit-tool-item item-bar' onClick={() => resetToInitial()}>🔄 撤销全部(Ctrl + Alt + Z)()</div>
+                    <div className='edit-tool-item item-bar' onClick={() => saveEdit()}>✅ 完成编辑(Ctrl + S)</div>
                 </div>
             }
-            <div className="leaflet-edit-pane">
-                <h3 className='text-2xl font-bold'>说明：</h3>
-                <div className='tip-item'>1：点击：<CustomIcon type='icon-huizhiduobianxing1' /> 开始绘制可以被编辑的多边形</div>
-                <div className='tip-item'>2：双击刚才绘制的多边形，激活编辑功能</div>
-                <div className='tip-item'>3：目前已实现的编辑功能有：</div>
-                <div className='tip-item'>✔ 【编辑点】拖动顶点，以及右键实现顶点移除</div>
-                <div className='tip-item'>✔ 【中点插入】点击线中间的点，实现添加新的点</div>
-                <div className='tip-item'>✔ 【拖动面】可以拖动整个面移动</div>
-                <div className='tip-item'>✔ 【快捷键】关联键盘事件</div>
-                <div className='tip-item'>✔ 【撤销】撤销刚才的操作</div>
-                <div className='tip-item'>✔ 【重做】恢复刚才的操作</div>
-            </div>
-
+            {/* 拓扑工具条(俩条件：1：地图上存在图层 2：不是编辑模式时。才展示拓扑工具条) */}
+            {!currEditLayer
+                &&
+                <div className="leaflet-topology-toolbar leaflet-bar">
+                    <div>拓扑工具条：</div>
+                    <div className='topology-tool-item item-bar' onClick={() => pickLayer()}>↩️ 选择</div>
+                    <div className='topology-tool-item item-bar' onClick={() => cut()}>↩️ 裁切</div>
+                    <div className='topology-tool-item item-bar' onClick={() => union()}>🔄 合并</div>
+                    <div className='topology-tool-item item-bar' onClick={() => clearTopo()}>🔄 清除</div>
+                </div>
+            }
         </>
     );
 }
