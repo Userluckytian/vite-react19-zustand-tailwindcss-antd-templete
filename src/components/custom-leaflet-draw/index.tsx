@@ -124,7 +124,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const [topologyInstance, setTopologyInstance] = useState<any>(null);
     // 工具按钮点击
     const handleToolClick = (toolId: string) => {
-        
+
         // 如果点击的是当前已选中的工具，则取消
         if (currSelTool === toolId) {
             handleCancelDraw();
@@ -303,7 +303,21 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     }
     // 合并图层
     const union = () => {
-        topologyInstance && topologyInstance.merge();
+        // try {
+        const { mergedGeom, mergedLayers } = topologyInstance && topologyInstance.merge();
+        // console.log('合并--mergedGeom', mergedGeom, mergedLayers);
+        // // 第一步：删除之前的旧图层
+        mergedLayers.forEach((layer: any) => {
+            const record = layer.options.origin;
+            // deleteRecode(record, false);
+        });
+        // // 第二步：添加合并后的新图层
+        // addRecode(mergedGeom);
+        // } catch (error) {
+        //     console.log('error', error);
+
+        //     // message.error(error as any);
+        // }
     }
     // 清除拓扑
     const clearTopo = () => {

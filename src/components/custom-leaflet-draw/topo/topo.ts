@@ -36,9 +36,16 @@ export class LeafletTopology {
 
     this.clickHandler = (e: L.LeafletMouseEvent) => {
       const hits = queryLayerOnClick(this.map, e);
-      console.log('这里返回的是全部被选择的图层，其中我们高亮的图层携带有属性： options.linkLayerId，所以我们可以判断出，这是一个高亮图层，从而跳过处理', hits);
-      const realPickedLayer = hits.filter(layer => !(layer.options && layer.options.linkLayerId));
-      console.log('realPickedLayer', realPickedLayer);
+      // console.log('这里返回的是全部被选择的图层，其中我们高亮的图层携带有属性： options.linkLayerId，所以我们可以判断出，这是一个高亮图层，从而跳过处理', hits);
+      /* 过滤条件1： layer的options属性中若包含linkLayerId属性，说明是topo的高亮图层，需要过滤掉
+         过滤条件2： layer的options属性中layerVisible属性的值是false，说明是隐藏的图层，需要过滤掉
+        */
+      const realPickedLayer = hits.filter(layer => {
+        const isHighLightLayer = layer.options && layer.options?.linkLayerId;
+        const isShowLayer = layer.options?.layerVisible ?? true;
+        return !(isHighLightLayer || !isShowLayer);
+      });
+      // console.log('realPickedLayer', realPickedLayer);
       realPickedLayer.forEach(layer => {
         const pickerLayerId = layer._leaflet_id;
         // console.log('this.selectedLayers', this.selectedLayers);
@@ -81,16 +88,40 @@ export class LeafletTopology {
     if (this.selectedLayers.length === 0) {
       throw new Error('请先选择要裁剪的图层');
     }
+    // 第一步： 关闭选择高亮的交互事件
+    if (this.clickHandler) {
+      this.map.off('click', this.clickHandler);
+      this.clickHandler = null;
+    }
+    // 第二步： 执行绘制操作，并添加监听事件
     this.drawLineLayer = new LeafletPolyline(this.map);
     // 添加绘制完毕后，重新调整状态为topo状态
     this.drawLineListener = (status: PolygonEditorState) => {
       if (status === PolygonEditorState.Idle) {
-        const geoJson = this.drawLineLayer.geojson();
-        // console.log('绘制的线图层的空间信息：', geoJson);
+        const geoJson = this.drawLineLayer!.geojson();
+        console.log('绘制的线图层的空间信息：', geoJson, this.selectedLayers);
         const { clipsPolygons, waitingDelLayer } = clipSelectedLayersByLine(geoJson, this.selectedLayers);
+        console.log('clipsPolygons', clipsPolygons, 'waitingDelLayer', waitingDelLayer);
+        clipsPolygons.forEach(element => {
+          const layer = L.geoJSON(element, {
+            style: {
+              fillColor: 'rgba(0, 0, 0, 0.2)',
+              color: '#0f0',
+              dashArray: '10, 8', // 虚线模式
+              // dashOffset: '8', // 虚线偏移量
+              fillOpacity: 1,
+              fill: true,
+              // 边框大小
+              weight: 3,
+            }
+          });
+          console.log('layer', layer);
+
+          this.map.addLayer(layer);
+        });
         setTimeout(() => {
-          console.log('clipsPolygons', clipsPolygons, 'waitingDelLayer', waitingDelLayer);
-          this.drawLineLayer.destroy();
+          this.drawLineLayer!.destroy();
+          this.cleanAll();
         }, 2000);
       }
     }
