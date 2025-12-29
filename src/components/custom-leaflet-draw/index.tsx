@@ -305,7 +305,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const union = () => {
         // try {
         const { mergedGeom, mergedLayers } = topologyInstance && topologyInstance.merge();
-        // console.log('合并--mergedGeom', mergedGeom, mergedLayers);
+        console.log('合并--mergedGeom', mergedGeom, mergedLayers);
         // // 第一步：删除之前的旧图层
         mergedLayers.forEach((layer: any) => {
             const record = layer.options.origin;
