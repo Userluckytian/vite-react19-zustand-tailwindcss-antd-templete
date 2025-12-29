@@ -74,7 +74,7 @@ export default class MarkerPoint {
      *
      *
      * @private
-     * @memberof LeafletDistance
+     * @memberof MarkerPoint
      */
     private reset() {
         // 设置完毕就关闭地图事件监听
@@ -93,7 +93,7 @@ export default class MarkerPoint {
         if (this.markerLayer) {
             return this.markerLayer.toGeoJSON();
         } else {
-            throw new Error("未捕获到marker图层，无法获取到geojson数据");
+            throw new Error("未捕获到图层，无法获取到geojson数据");
         }
     }
 
@@ -118,7 +118,7 @@ export default class MarkerPoint {
      *
      *
      * @param {(state: PolygonEditorState) => void} listener
-     * @memberof LeafletEditPolygon
+     * @memberof MarkerPoint
      */
     public onStateChange(listener: (state: PolygonEditorState) => void): void {
         // 存储回调事件并立刻触发一次
@@ -148,7 +148,7 @@ export default class MarkerPoint {
      *
      *
      * @private
-     * @memberof LeafletEditPolygon
+     * @memberof MarkerPoint
      */
     private updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;

@@ -39,10 +39,29 @@
         color: #ffffff;
         font-size: 12px;
       }
+      .layerOption {
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        padding: 0px 2px;
+        letter-spacing: 1px;
+        background-color: rgba(0, 0, 0, 0.54);
+        color: #ffffff;
+        display: flex;
+
+        font-size: 10px;
+        opacity: 0; // 默认隐藏
+        visibility: hidden; // 默认隐藏
+        transition: all 0.3s ease; // 过渡效果
+      }
       &:hover {
         border: solid 1px #1275ff;
         .layerName {
           background-color: rgb(22, 121, 219);
+        }
+        .layerOption {
+          opacity: 1; // 单个 item 悬浮时显示
+          visibility: visible; // 单个 item 悬浮时显示
         }
       }
     }

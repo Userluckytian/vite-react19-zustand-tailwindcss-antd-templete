@@ -41,31 +41,26 @@ $tip-pane-width: 340px;
     }
   }
 }
-.leaflet-edit-toolbar {
+.leaflet-bar {
+  background-color: #ffffff90;
+  padding: 5px;
+  border-radius: 8px;
+  box-shadow: 1px 1px 5px 0px #9fa8b9;
   position: absolute;
   width: max-content;
-  right: 50px + $iconWidth;
-  width: 700px;
   display: flex;
+  align-items: center;
+  right: 50px + $iconWidth;
   gap: 3px;
   top: 0px;
-  .edit-tool-item {
+  .item-bar {
     padding: 3px;
     background: linear-gradient(41deg, #40d9ff5c 50%, #40d9ffa3 50%);
   }
 }
-.leaflet-edit-pane{
-  position: absolute;
-  left: -#{$tip-pane-width + 1450px};
-  top: 0px;
-  width: $tip-pane-width;
-  min-height: 120px;
-  background-color: #ffa81cf5;
-  border-radius: 10px;
-  box-shadow: 0px 0px 15px 0px #00000038;
-  text-align: left;
-  padding: 10px;
-  .tip-item{
-    font-size: 1rem;
-  }
+.leaflet-edit-toolbar {
+  width: 700px;
+}
+.leaflet-topology-toolbar {
+  width: 380px;
 }

@@ -68,7 +68,9 @@ function fitBoundsbyMultiGeojsonPoint(mapView: L.Map, data: any[]) {
         message.error('存在异常经纬度信息，无法计算地图范围。' + error);
     }
 }
-/** 绑定编辑事件 https://copilot.microsoft.com/shares/xC26zKbUDXmJFnxJ6mLoQ
+/** 绑定编辑事件 
+ * https://copilot.microsoft.com/conversations/join/izLtxiCovQfrmFEZb1gtV // 邀请地址
+ * https://copilot.microsoft.com/shares/zP18SvEB4FQ9w8knJR2Cq // 副本地址
  * 1：顶点可以拖动：L.marker({ draggable: true })
  * 2：实时更新面：turf.polygon() + layer.setLatLngs()
  * 3: 校验几何合法性：turf.booleanValid() 或 turf.kinks()
