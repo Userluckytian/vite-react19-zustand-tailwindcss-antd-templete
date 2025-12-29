@@ -1,5 +1,6 @@
 import { featureCollection, flattenEach, union } from "@turf/turf";
 import splitPolygon from "../topo/turf-polygon-split";
+import type { TopoClipResult } from "../types";
 
 /** 保存裁剪后的图层
  *
@@ -10,7 +11,7 @@ import splitPolygon from "../topo/turf-polygon-split";
 export function clipSelectedLayersByLine(
     lineFeature: GeoJSON.Feature<any>,
     selLayers: L.GeoJSON[]
-): { clipsPolygons: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[], waitingDelLayer: L.Layer[] } {
+): TopoClipResult {
 
     const waitingDelLayer: L.Layer[] = [];
     const clipsPolygons: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[] = [];
@@ -51,7 +52,7 @@ export function clipSelectedLayersByLine(
         }
     });
 
-    return { clipsPolygons, waitingDelLayer };
+    return { clipedGeoms: clipsPolygons, doClipLayers: waitingDelLayer };
 }
 
 /** 合并多边形
