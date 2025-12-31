@@ -305,7 +305,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
     private show() {
         this.isVisible = true;
         // 使用用户默认设置的样式，而不是我自定义的！
-        this.polygonLayer?.setStyle({...(this.polygonLayer.options as any).defaultStyle, layerVisible: true});
+        this.polygonLayer?.setStyle({ ...(this.polygonLayer.options as any).defaultStyle, layerVisible: true });
     }
     /** 控制图层隐藏
      *
@@ -321,7 +321,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             fillColor: 'red', // same color as the line
             fillOpacity: 0
         };
-        this.polygonLayer?.setStyle({...hideStyle, layerVisible: false} as any);
+        this.polygonLayer?.setStyle({ ...hideStyle, layerVisible: false } as any);
         // ✅ 退出编辑状态（若存在）
         if (this.currentState === PolygonEditorState.Editing) {
             this.exitEditMode();
@@ -528,10 +528,10 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         this.midpointMarkers = [];
 
         this.vertexMarkers.forEach((polygon, polygonIndex) => {
-            const polygonMidpoints: L.CircleMarker[][] = [];
+            const polygonMidpoints: L.Marker[][] = [];
 
             polygon.forEach((ring, ringIndex) => {
-                const ringMidpoints: L.CircleMarker[] = [];
+                const ringMidpoints: L.Marker[] = [];
 
                 for (let i = 0; i < ring.length; i++) {
                     const nextIndex = (i + 1) % ring.length;
@@ -543,25 +543,55 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
                         (p1.lng + p2.lng) / 2
                     );
 
-                    const marker = L.circleMarker(midpoint, {
-                        radius: 6,
-                        color: '#ff0000',
-                        fillColor: '#ffffff',
-                        opacity: 0.8,
-                        fillOpacity: 0.8,
-                        weight: 1
+                    const marker = L.marker(midpoint, {
+                        draggable: true,
+                        icon: this.buildMarkerIcon(
+                            "border-radius: 50%; background: #ffffff80; border: solid 1px #f00;",
+                            [14, 14]
+                        )
                     }).addTo(this.map);
 
-                    marker.on('click', () => {
-                        const newMarker = L.marker(midpoint, {
+                    // 中点被拖动时，图形同步更新
+                    marker.on('drag', () => {
+                        const latlng = marker.getLatLng();
+
+                        // 1. 拷贝当前顶点坐标
+                        const coords = this.vertexMarkers.map(polygon =>
+                            polygon.map(ring =>
+                                ring.map(m => [m.getLatLng().lat, m.getLatLng().lng])
+                            )
+                        );
+
+                        // 2. 插入中点坐标到对应位置（不修改原 marker 数组）
+                        const ring = coords[polygonIndex][ringIndex];
+                        const newRing = [...ring];
+                        newRing.splice(nextIndex, 0, [latlng.lat, latlng.lng]);
+
+                        // 3. 构造新的坐标结构
+                        const newCoords = [...coords];
+                        newCoords[polygonIndex] = [...coords[polygonIndex]];
+                        newCoords[polygonIndex][ringIndex] = newRing;
+
+                        // 4. 实时渲染
+                        this.renderLayer(newCoords);
+                    });
+                    // 中点拖动结束后，移除此处中点，执行添加新的顶点
+                    marker.on('dragend', () => {
+                        const latlng = marker.getLatLng();
+
+                        // 1. 从地图中移除中点 marker
+                        this.map.removeLayer(marker);
+
+                        // 2. 创建新的顶点 marker
+                        const newMarker = L.marker(latlng, {
                             draggable: true,
                             icon: this.buildMarkerIcon()
                         }).addTo(this.map);
 
-                        // 插入新 marker
+                        // 3. 插入到顶点数组
                         this.vertexMarkers[polygonIndex][ringIndex].splice(nextIndex, 0, newMarker);
 
-                        // 绑定事件
+                        // 4. 绑定事件
                         newMarker.on('drag', () => {
                             this.renderLayerFromMarkers();
                             this.updateMidpoints();
@@ -588,6 +618,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
                             }
                         });
 
+                        // 5. 刷新图层和中点
                         this.renderLayerFromMarkers();
                         this.pushHistoryFromMarkers();
                         this.updateMidpoints();
