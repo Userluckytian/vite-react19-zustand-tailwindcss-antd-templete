@@ -55,8 +55,8 @@ const FunctionPanel = () => {
                     <h3 className='text-xl font-bold mb-2'>功能模块3：图形拓扑功能</h3>
                     <div className="function-section">
                         <ul className="function-list">
-                            <li className="completed">✔ 【裁剪-clip】选择一个或者多个图层，绘制一条穿过它们的折线，拆分图层</li>
-                            <li className="completed">✔ 【合并-union】选择多个图层，点击合并按钮，实现图层的合并操作</li>
+                            <li className="completed">✔ 【裁剪-clip】选择一个或者多个图层，绘制一条穿过它们的折线，拆分图层（结果仅在控制台输出）</li>
+                            <li className="completed">✔ 【合并-union】选择多个图层，点击合并按钮，实现图层的合并操作（结果仅在控制台输出）</li>
                             <li className="pending">【整形要素工具： Reshape Feature】</li>
                         </ul>
                     </div>
