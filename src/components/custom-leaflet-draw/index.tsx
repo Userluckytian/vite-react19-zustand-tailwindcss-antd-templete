@@ -11,7 +11,7 @@ import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import LeafletEditPolygon from './simpleEdit/polygon';
-import { PolygonEditorState, type leafletGeoEditorInstance, type TopoClipResult, type TopoMergeResult } from './types';
+import { PolygonEditorState, type leafletGeoEditorInstance, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
 import LeafletEditRectangle from './simpleEdit/rectangle';
 import { LeafletTopology } from './topo/topo';
 import LeafletRectangleEditor from './edit/rectangle';
@@ -108,6 +108,27 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             type: 'add',
             icon: 'icon-shujudaoru',
             desp: '添加默认图层'
+        },
+        {
+            id: 'add_hole',
+            title: '添加挖孔图层',
+            type: 'add_hole',
+            icon: 'icon-shujudaoru',
+            desp: '添加挖孔图层'
+        },
+        {
+            id: 'add_hole_multi',
+            title: '添加挖孔多面图层',
+            type: 'add_hole_multi',
+            icon: 'icon-shujudaoru',
+            desp: '添加挖孔多面图层'
+        },
+        {
+            id: 'magic',
+            title: 'magic-bar',
+            type: 'magic',
+            icon: 'icon-magic-copy',
+            desp: '魔术棒工具'
         },
         {
             id: 'delete',
@@ -212,8 +233,338 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                         ]
                     ]
                 };
-                const polygonEditor = new LeafletPolygonEditor(mapInstance!, {}, geometry);
+                const polygonGeom: any = {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [
+                                148.359375,
+                                28.304381
+                            ],
+                            [
+                                148.359375,
+                                34.71432511521565
+                            ],
+                            [
+                                151.347656,
+                                33.870416
+                            ],
+                            [
+                                138.955078,
+                                37.370157
+                            ],
+                            [
+                                143.964844,
+                                44.590467
+                            ],
+                            [
+                                159.257813,
+                                46.498392
+                            ],
+                            [
+                                169.189453,
+                                44.150681
+                            ],
+                            [
+                                176.308594,
+                                34.016242
+                            ],
+                            [
+                                160.664063,
+                                33.72434
+                            ],
+                            [
+                                148.359375,
+                                34.71432511521565
+                            ],
+                            [
+                                148.359375,
+                                37.857507
+                            ],
+                            [
+                                166.025391,
+                                37.857507
+                            ],
+                            [
+                                166.025391,
+                                33.82437383072691
+                            ],
+                            [
+                                166.025391,
+                                33.82437383072691
+                            ],
+                            [
+                                166.025391,
+                                28.304381
+                            ],
+                            [
+                                148.359375,
+                                28.304381
+                            ]
+                        ]
+                    ]
+                };
+                const polyGeom: any = {
+                    "type": "MultiPolygon",
+                    "coordinates": [
+                        [
+                            [
+                                [
+                                    103.051758,
+                                    14.081927
+                                ],
+                                [
+                                    117.993164,
+                                    14.985462
+                                ],
+                                [
+                                    117.324258,
+                                    18.949618
+                                ],
+                                [
+                                    118.476563,
+                                    19.103648
+                                ],
+                                [
+                                    118.40388034681555,
+                                    20.194539446101615
+                                ],
+                                [
+                                    111.20361300000145,
+                                    19.331877999991118
+                                ],
+                                [
+                                    111.20361300000029,
+                                    19.331877999991022
+                                ],
+                                [
+                                    104.63378900000428,
+                                    19.02057699999127
+                                ],
+                                [
+                                    103.72696259274902,
+                                    18.126965362890054
+                                ],
+                                [
+                                    103.939991,
+                                    18.12198
+                                ],
+                                [
+                                    103.051758,
+                                    14.081927
+                                ]
+                            ],
+                            [
+                                [
+                                    108.369141,
+                                    16.40447
+                                ],
+                                [
+                                    108.614692,
+                                    18.012581
+                                ],
+                                [
+                                    110.061035,
+                                    17.978733
+                                ],
+                                [
+                                    112.079764,
+                                    18.248579
+                                ],
+                                [
+                                    113.664551,
+                                    16.69934
+                                ],
+                                [
+                                    108.369141,
+                                    16.40447
+                                ]
+                            ]
+                        ],
+                        [
+                            [
+                                [
+                                    94.658203,
+                                    13.154376
+                                ],
+                                [
+                                    101.074219,
+                                    13.154376
+                                ],
+                                [
+                                    101.074219,
+                                    15.61924579742138
+                                ],
+                                [
+                                    94.658203,
+                                    15.457340119850556
+                                ],
+                                [
+                                    94.658203,
+                                    13.154376
+                                ]
+                            ]
+                        ]
+                    ]
+                };
+                const polygonEditor = new LeafletPolygonEditor(mapInstance!, {}, polyGeom);
                 saveEditorAndAddListener(polygonEditor);
+                break;
+            case 'add_hole':
+                const hole_geometry: any = {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [
+                                100.876465,
+                                28.516969
+                            ],
+                            [
+                                105.58259123950764,
+                                28.251648224837997
+                            ],
+                            [
+                                106.20481214475944,
+                                31.298223358319337
+                            ],
+                            [
+                                101.271973,
+                                31.503629
+                            ],
+                            [
+                                100.876465,
+                                28.516969
+                            ]
+                        ],
+                        [
+                            [
+                                103.293457,
+                                29.42046
+                            ],
+                            [
+                                103.293457,
+                                30.315988
+                            ],
+                            [
+                                105.095215,
+                                30.486551
+                            ],
+                            [
+                                105.380859,
+                                29.343875
+                            ],
+                            [
+                                103.293457,
+                                29.42046
+                            ]
+                        ]
+                    ]
+                };
+                const holePolygonEditor = new LeafletPolygonEditor(mapInstance!, {}, hole_geometry);
+                saveEditorAndAddListener(holePolygonEditor);
+                break;
+            case 'add_hole_multi':
+                const hole_multi_geometry: any = {
+                    "type": "MultiPolygon",
+                    "coordinates": [
+                        [
+                            [
+                                [
+                                    102.590332,
+                                    18.937464
+                                ],
+                                [
+                                    102.919922,
+                                    18.145852
+                                ],
+                                [
+                                    103.93999069271662,
+                                    18.121979970547713
+                                ],
+                                [
+                                    103.051758,
+                                    14.081927
+                                ],
+                                [
+                                    117.993164,
+                                    14.985462
+                                ],
+                                [
+                                    117.32425772889664,
+                                    18.949617797255353
+                                ],
+                                [
+                                    118.476563,
+                                    19.103648
+                                ],
+                                [
+                                    118.322754,
+                                    21.412162
+                                ],
+                                [
+                                    103.205566,
+                                    20.014645
+                                ],
+                                [
+                                    102.590332,
+                                    18.937464
+                                ]
+                            ],
+                            [
+                                [
+                                    108.369141,
+                                    16.40447
+                                ],
+                                [
+                                    108.6146917528086,
+                                    18.012580866169795
+                                ],
+                                [
+                                    110.061035,
+                                    17.978733
+                                ],
+                                [
+                                    112.07976438163757,
+                                    18.24857928443335
+                                ],
+                                [
+                                    113.664551,
+                                    16.69934
+                                ],
+                                [
+                                    108.369141,
+                                    16.40447
+                                ]
+                            ]
+                        ],
+                        [
+                            [
+                                [
+                                    94.658203,
+                                    13.154376
+                                ],
+                                [
+                                    101.074219,
+                                    13.154376
+                                ],
+                                [
+                                    101.074219,
+                                    17.895114
+                                ],
+                                [
+                                    94.658203,
+                                    17.895114
+                                ],
+                                [
+                                    94.658203,
+                                    13.154376
+                                ]
+                            ]
+                        ]
+                    ]
+                };
+                const holeMultiPolygonEditor = new LeafletPolygonEditor(mapInstance!, {}, hole_multi_geometry);
+                saveEditorAndAddListener(holeMultiPolygonEditor);
                 break;
             case 'delete':
                 // 销毁图层
@@ -319,9 +670,28 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const union = () => {
         topologyInstance && topologyInstance.merge(({ mergedGeom, mergedLayers }: TopoMergeResult) => {
             // try {
-            // console.log('合并--mergedGeom', mergedGeom, doMergeLayers);
+            console.log('合并--mergedGeom', mergedGeom, mergedLayers);
             // 第一步：删除之前的旧图层
             mergedLayers.forEach((layer: any) => {
+                const record = layer.options.origin;
+                // deleteRecode(record, false);
+            });
+            // 第二步：添加合并后的新图层
+            // addRecode(mergedGeom);
+            // } catch (error) {
+            //     console.log('error', error);
+
+            //     // message.error(error as any);
+            // }
+        });
+    }
+    // 整形要素
+    const reshapeFeature = () => {
+        topologyInstance && topologyInstance.reshapeFeature(({ doReshapeLayers, reshapedGeoms }: TopoReshapeFeatureResult) => {
+            // try {
+            // console.log('合并--mergedGeom', mergedGeom, doMergeLayers);
+            // 第一步：删除之前的旧图层
+            reshapedGeoms.forEach((layer: any) => {
                 const record = layer.options.origin;
                 // deleteRecode(record, false);
             });
@@ -431,6 +801,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     <div className='topology-tool-item item-bar' onClick={() => pickLayer()}>↩️ 选择</div>
                     <div className='topology-tool-item item-bar' onClick={() => cut()}>↩️ 裁切</div>
                     <div className='topology-tool-item item-bar' onClick={() => union()}>🔄 合并</div>
+                    <div className='topology-tool-item item-bar' onClick={() => reshapeFeature()}>🔄 整形要素工具</div>
                     <div className='topology-tool-item item-bar' onClick={() => clearTopo()}>🔄 清除</div>
                 </div>
             }

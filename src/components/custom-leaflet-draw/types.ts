@@ -40,3 +40,8 @@ export interface TopoClipResult {
     doClipLayers: L.Layer[]; // 参与裁剪的图层数组
     clipedGeoms: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[];  // 裁剪完毕获取的全部单面
 }
+// topo操作执行整形要素工具（reshape Feature）后返回的结果
+export interface TopoReshapeFeatureResult {
+    doReshapeLayers: L.Layer[]; // 参与整形的图层数组
+    reshapedGeoms: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[];  // 整形完毕获取的全部单面
+}
