@@ -689,14 +689,14 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const reshapeFeature = () => {
         topologyInstance && topologyInstance.reshapeFeature(({ doReshapeLayers, reshapedGeoms }: TopoReshapeFeatureResult) => {
             // try {
-            // console.log('合并--mergedGeom', mergedGeom, doMergeLayers);
+            // console.log('整形--reshapedGeoms', reshapedGeoms, doReshapeLayers);
             // 第一步：删除之前的旧图层
-            reshapedGeoms.forEach((layer: any) => {
+            doReshapeLayers.forEach((layer: any) => {
                 const record = layer.options.origin;
                 // deleteRecode(record, false);
             });
-            // 第二步：添加合并后的新图层
-            // addRecode(mergedGeom);
+            // 第二步：添加整形后的新图层
+            // addRecode(reshapedGeoms);
             // } catch (error) {
             //     console.log('error', error);
 
