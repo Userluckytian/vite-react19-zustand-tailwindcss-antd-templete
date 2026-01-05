@@ -1,5 +1,7 @@
-import { featureCollection, flattenEach, union } from "@turf/turf";
+import { featureCollection, flattenEach, union, polygon } from "@turf/turf";
 import splitPolygon from "../topo/turf-polygon-split";
+import type { TopoClipResult, TopoReshapeFeatureResult } from "../types";
+import { reshapeMultiPolygonByLine, reshapePolygonByLine } from "../topo/turf-reshape-feature";
 
 /** 保存裁剪后的图层
  *
@@ -10,7 +12,7 @@ import splitPolygon from "../topo/turf-polygon-split";
 export function clipSelectedLayersByLine(
     lineFeature: GeoJSON.Feature<any>,
     selLayers: L.GeoJSON[]
-): { clipsPolygons: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[], waitingDelLayer: L.Layer[] } {
+): TopoClipResult {
 
     const waitingDelLayer: L.Layer[] = [];
     const clipsPolygons: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[] = [];
@@ -51,7 +53,7 @@ export function clipSelectedLayersByLine(
         }
     });
 
-    return { clipsPolygons, waitingDelLayer };
+    return { clipedGeoms: clipsPolygons, doClipLayers: waitingDelLayer };
 }
 
 /** 合并多边形
@@ -80,8 +82,51 @@ export function mergePolygon(selLayers: any): GeoJSON.Feature | null {
     return unionGeom;
 }
 
-/**
- * 归一化 GeoJSON 数据中的所有坐标，保留指定小数位
+/** 返回整形要素工具处理后的结果和参与裁剪的要素数组
+ * 
+ *
+ * @export
+ * @param {GeoJSON.Feature<any>} lineFeature
+ * @param {L.GeoJSON[]} selLayers
+ * @return {*}  {TopoReshapeFeatureResult}
+ */
+export function reshapeSelectedLayersByLine(
+    sketchLine: GeoJSON.Feature<any>,
+    selLayers: L.GeoJSON[],
+    map: L.Map
+): TopoReshapeFeatureResult {
+    const waitingDelLayer: L.Layer[] = [];
+    const results: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[] = [];
+    selLayers.forEach((layer: L.GeoJSON) => {
+
+        const geojsonFeatureCollection = layer.toGeoJSON() as GeoJSON.FeatureCollection<any>;
+        const geojson = geojsonFeatureCollection.features[0];
+        const type = geojson.geometry.type;
+        switch (type) {
+            case 'Polygon':
+                const polyResult = reshapePolygonByLine(geojson as GeoJSON.Feature<GeoJSON.Polygon>, sketchLine, map);
+                console.log('polyResult', polyResult);
+
+                if (polyResult)
+                    results.push(...polyResult);
+                break;
+            case 'MultiPolygon':
+                const MultiPolyResult = reshapeMultiPolygonByLine(geojson as GeoJSON.Feature<GeoJSON.MultiPolygon>, sketchLine, map);
+                if (MultiPolyResult)
+                    results.push(...MultiPolyResult);
+                break;
+            default:
+                console.warn(`不支持的图层类型: ${type}`);
+                break;
+        }
+
+    });
+    console.log('results', results);
+    
+    return { doReshapeLayers: waitingDelLayer, reshapedGeoms: results };
+}
+
+/** （topo行为合并时，将距离过近，但不挨着的点视为误差，直接认定为同一个点）归一化 GeoJSON 数据中的所有坐标，保留指定小数位
  * 支持 FeatureCollection、Feature、Geometry 对象
  */
 function normalizeGeoJSONCoordinates(geojson: any, precision = 6): any {

@@ -1,11 +1,8 @@
 import {
-  booleanCrosses,
   buffer,
   difference,   // 新旧版本API不一致，若不报错，但是执行异常，请检查turf的API是否使用正确！
   intersect,   // 新旧版本API不一致，若不报错，但是执行异常，请检查turf的API是否使用正确！
-  lineOffset,
   area,
-  flattenEach,
   featureCollection,
 } from "@turf/turf";
 

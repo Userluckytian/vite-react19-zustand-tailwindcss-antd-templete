@@ -135,7 +135,7 @@ export abstract class BaseEditor {
     /** 清空所有状态监听器 
      * 
      */
-    public clearAllStateListeners(): void {
+    protected clearAllStateListeners(): void {
         this.stateListeners = [];
     }
 

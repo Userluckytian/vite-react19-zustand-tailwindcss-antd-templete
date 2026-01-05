@@ -4,7 +4,7 @@ import { BaseEditor } from "./BaseEditor";
 // BasePolygonEditor.ts - 多边形基类
 export abstract class BasePolygonEditor extends BaseEditor {
     protected vertexMarkers: L.Marker[][][] = []; // 存储顶点标记的数组
-    protected midpointMarkers: L.CircleMarker[][][] = []; // 存储【线中点】标记的数组
+    protected midpointMarkers: L.Marker[][][] = []; // 存储【线中点】标记的数组
     protected historyStack: number[][][][][] = []; // 历史记录，存储快照
     protected redoStack: number[][][][][] = []; // 重做记录，存储快照
 

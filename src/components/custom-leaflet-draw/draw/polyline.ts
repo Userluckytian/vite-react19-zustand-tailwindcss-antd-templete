@@ -247,7 +247,7 @@ export default class LeafletPolyline {
     /** 清空所有状态监听器 
      * 
      */
-    public clearAllStateListeners(): void {
+    private clearAllStateListeners(): void {
         this.stateListeners = [];
     }
 
