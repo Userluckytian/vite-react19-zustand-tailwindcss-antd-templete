@@ -13,7 +13,10 @@ import { formatNumber, throttle } from "@/utils/utils";
 import { App } from "antd";
 import CustomLeafLetDraw from "@/components/custom-leaflet-draw";
 // 类型定义
-import FunctionPanel from './opt-description';
+import FunctionPanel from "./opt-description";
+import MapFunctionPanel from "./opt-description/mapIndex";
+// 确保正确导入Leaflet CSS
+import "leaflet/dist/leaflet.css";
 interface MapPreviewProps {
   outputMapView?: (map: L.Map) => void;
 }
@@ -34,6 +37,14 @@ interface ShowVerorLayers {
 interface CurrentBaseLayers {
   type: string | null;
   layers: L.TileLayer[];
+}
+
+interface DrawLayer {
+  id: string;
+  name: string;
+  layer: any;
+  visible: boolean;
+  type: string;
 }
 // 常量配置
 const TDT_KEY = "e6372a5333c4bac9b9ef6097453c3cd6";
@@ -105,19 +116,100 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     mapThree: true,
   });
 
+  // 绘制图层管理
+  const [drawLayers, setDrawLayers] = useState<DrawLayer[]>([]);
+  const layerIdCounter = useRef(1);
+
+  // 处理绘制结果
+  const handleDrawResult = (result: any) => {
+    if (result && result.layer) {
+      // 使用回调函数方式确保获取最新的 drawLayers 长度
+      setDrawLayers(prev => {
+        const newLayer: DrawLayer = {
+          id: `layer_${layerIdCounter.current}`,
+          name: `图形${layerIdCounter.current}`,
+          layer: result.layer,
+          visible: true,
+          type: result.type || 'unknown'
+        };
+        layerIdCounter.current++;
+        return [...prev, newLayer];
+      });
+    }
+  };
+
+  // 切换图层显示/隐藏
+  const handleToggleLayer = (id: string) => {
+    setDrawLayers(prev => prev.map(layer => {
+      if (layer.id === id) {
+        const newVisible = !layer.visible;
+        if (newVisible) {
+          mapView?.addLayer(layer.layer);
+        } else {
+          mapView?.removeLayer(layer.layer);
+        }
+        return { ...layer, visible: newVisible };
+      }
+      return layer;
+    }));
+  };
+
+  // 移除图层
+  const handleRemoveLayer = (id: string) => {
+    setDrawLayers(prev => {
+      const layerToRemove = prev.find(layer => layer.id === id);
+      if (layerToRemove) {
+        mapView?.removeLayer(layerToRemove.layer);
+      }
+      return prev.filter(layer => layer.id !== id);
+    });
+  };
+
+  // 鼠标悬浮图层
+  const handleHoverLayer = (id: string) => {
+    const layer = drawLayers.find(layer => layer.id === id);
+    if (layer && layer.layer) {
+      // 高亮逻辑：保存原始样式并应用高亮样式
+      if (layer.layer.options) {
+        (layer.layer as any)._originalStyle = (layer.layer as any)._originalStyle || { ...layer.layer.options };
+        layer.layer.setStyle({
+          fillColor: '#ffff00',
+          color: '#ffff00',
+          weight: 3,
+          opacity: 1,
+          fillOpacity: 0.3
+        });
+      }
+    }
+  };
+
+  // 鼠标离开图层
+  const handleLeaveLayer = () => {
+    // 移除所有图层的高亮样式，恢复到默认的红色样式
+    drawLayers.forEach(layer => {
+      if (layer.layer && (layer.layer as any)._originalStyle) {
+        layer.layer.setStyle((layer.layer as any)._originalStyle);
+        delete (layer.layer as any)._originalStyle;
+      }
+    });
+  };
+
   /*
       google地图，很清晰，但需要翻墙才能看
   */
   const addGoogleMap = () => {
-    const satelliteMap = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-    });
+    const satelliteMap = L.tileLayer(
+      "http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+      {
+        subdomains: ["mt0", "mt1", "mt2", "mt3"],
+      }
+    );
     const baseLayers = {
-      "谷歌影像": satelliteMap,
-    }
+      谷歌影像: satelliteMap,
+    };
     var layerControl = new L.Control.Layers(baseLayers, null);
     layerControl.addTo(mapView);
-  }
+  };
   // 鼠标移动事件处理
   const handleMouseMove = throttle((e: L.LeafletMouseEvent) => {
     setLngLat(e.latlng);
@@ -220,24 +312,43 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
   useEffect(() => {
     if (!mapView) return;
     let mapScaleControl: L.Control | null = null;
-    let mapZoomControl: L.Control | null = null;
+    // let mapZoomControl: L.Control | null = null;
     // 设置默认底图
     changeBaseMap("地图", BASE_LAYERS[0]);
     // 添加控件
     // 事件2： 添加地图比例尺工具条
     mapScaleControl = addScaleControl(mapView);
+    // 正确的实现应该类似这样
+    const zoomControl = L.control
+      .zoom({
+        zoomInText: "+",
+        zoomInTitle: "放大",
+        zoomOutText: "-",
+        zoomOutTitle: "缩小",
+      })
+      .addTo(mapView);
+    const zoomContainer = document.querySelector(".leaflet-control-zoom");
+    if (zoomContainer) {
+      (zoomContainer as HTMLElement).style.top = "10px";
+      (zoomContainer as HTMLElement).style.left = "10px";
+    }
+    //获取控件位置
+    // console.log('位置:', zoomControl1.getBoundingClientRect());//使用topleft会导致其
     // 事件3： 添加地图Zoom工具条
-    mapZoomControl = addZoomControl(mapView, {
-      zoomInTitle: "放大",
-      zoomOutTitle: "缩小",
-    });
-    // todo: 事件4：添加zoomout和zoomin事件--设置和显示地图缩放范围
-
+    // mapZoomControl = addZoomControl(mapView, {
+    //   zoomInTitle: "放大",
+    //   zoomOutTitle: "缩小",
+    // });
+    //直接添加zoom控件
+    // // todo: 事件4：添加zoomout和zoomin事件--设置和显示地图缩放范围
+    // 添加zoom控件
     // 添加事件监听
     mapView.on("mousemove", handleMouseMove);
     return () => {
       mapScaleControl?.remove();
-      mapZoomControl?.remove();
+      // 移除zoom控件
+      zoomControl.remove();
+      // mapZoomControl?.remove();
       mapView.off("mousemove", handleMouseMove);
     };
   }, [mapView]);
@@ -278,11 +389,12 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
 
       {/* 绘制工具 */}
       <div className="draw-tools">
-        <CustomLeafLetDraw mapInstance={mapView} />
+        <CustomLeafLetDraw mapInstance={mapView} drawGeoJsonResult={handleDrawResult} />
       </div>
 
       {/* 经纬度信息 */}
       <div className="lnglat">
+        <span>层级：{mapView?.getZoom() || 0}</span>
         <span>经度：</span>
         <span className="text-blue-600 font-bold">
           {lnglat ? formatNumber(lnglat.lng, 3) : 0}
@@ -293,10 +405,32 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
         </span>
         <span> 中科天启</span>
       </div>
-      {/* 说明信息 */}
-      <div className="leaflet-edit-pane">
-        <FunctionPanel />
-      </div>
+        <div
+          style={{
+            position: "absolute",
+            left: "40%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 1000,
+          }}
+        >
+          <MapFunctionPanel 
+            drawLayers={drawLayers}
+            onToggleLayer={handleToggleLayer}
+            onRemoveLayer={handleRemoveLayer}
+            onHoverLayer={handleHoverLayer}
+            onLeaveLayer={handleLeaveLayer}
+          />
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            right: "680px",
+            transform: "translateY(-50%)",
+            zIndex: 1000,
+          }}
+        >
+          <FunctionPanel />
+        </div>
     </div>
   );
 }
