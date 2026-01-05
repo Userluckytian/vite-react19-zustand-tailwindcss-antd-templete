@@ -140,9 +140,16 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     ]
     ) // 工具栏列表
     const [currSelTool, setCurrSelTool] = useState<string | null>(null); // 当前使用的【绘制条上的绘制工具】
+    const currSelToolRef = useRef<string | null>(null); // 使用 ref 存储最新的工具类型
     const [drawLayers, setDrawLayers] = useState<any[]>([]); // 存放绘制的图层
     const [currEditLayer, setCurrEditLayer] = useState<any>(null); // 当前编辑的图层【我们设置的是一次仅可编辑一个图层】
     const [topologyInstance, setTopologyInstance] = useState<any>(null);
+    
+    // 同步 currSelTool 到 ref
+    useEffect(() => {
+        currSelToolRef.current = currSelTool;
+    }, [currSelTool]);
+    
     // 工具按钮点击
     const handleToolClick = (toolId: string) => {
 
@@ -589,12 +596,41 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         setDrawLayers((pre: any[]) => [...pre, editor]);
         // 添加监听逻辑
         editor.onStateChange((status: PolygonEditorState) => {
-            console.log('status', status);
+            const currentTool = currSelToolRef.current;
             if (status === PolygonEditorState.Editing) {
                 setCurrEditLayer(editor);
             } else {
-                if (status === PolygonEditorState.Idle) {
-                    setCurrSelTool('');
+                if (status === PolygonEditorState.Idle && currentTool) {
+                    // 绘制完成，尝试获取绘制的图层数据
+                    try {
+                        // 获取绘制工具类型
+                        const toolType = currentTool;
+                        if (toolType && ['point', 'line', 'polygon', 'circle', 'rectangle', 'measure_distance', 'measure_area', 'polygon_editor', 'rectangle_editor'].includes(toolType)) {
+                            // 获取 Leaflet 图层实例
+                            const layerInstance = (editor as any).polygonLayer || (editor as any).markerLayer || 
+                                                (editor as any).lineLayer || (editor as any).circleLayer || 
+                                                (editor as any).rectangleLayer;
+                            
+                            if (layerInstance && props.drawGeoJsonResult) {
+                                // 获取绘制的 GeoJSON 数据（容错处理）
+                                let geoJsonData = null;
+                                try {
+                                    geoJsonData = (editor as any).geojson ? (editor as any).geojson() : null;
+                                } catch (e) {
+                                    console.error('获取 GeoJSON 数据失败:', e);
+                                }
+                                // 传递绘制结果给父组件
+                                props.drawGeoJsonResult({
+                                    layer: layerInstance,
+                                    type: toolType,
+                                    geojson: geoJsonData
+                                });
+                            }
+                        }
+                        setCurrSelTool('');
+                    } catch (error) {
+                        console.error('获取绘制结果失败:', error);
+                    }
                 }
                 setCurrEditLayer(null);
             }
@@ -648,13 +684,20 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const pickLayer = () => {
         topologyInstance && topologyInstance.select();
     }
+    const deleteRecord = (record: any, isDelete: boolean) => {
+        if (isDelete) {
+            // deleteRecode(record, false);
+        } else {
+            // addRecode(record, false);
+        }
+    }
     // 裁切
     const cut = () => {
         topologyInstance && topologyInstance.clipByLine(({ doClipLayers, clipedGeoms }: TopoClipResult) => {
             console.log('裁剪--clipedGeoms', clipedGeoms, doClipLayers);
             // 第一步：删除之前的旧图层
             doClipLayers.forEach((layer: any) => {
-                console.log('layer11', layer);
+                // console.log('layer11', layer);
                 const record = layer.options.origin;
                 // deleteRecode(record, false);
             });
