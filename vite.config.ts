@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
 import webConfig from './public/config.json'
-import cesium from 'vite-plugin-cesium'
 /**
  * JS模块分包
  * @param id - 标识符
@@ -57,7 +56,6 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    cesium()
   ],
   css: {
     preprocessorOptions: {
