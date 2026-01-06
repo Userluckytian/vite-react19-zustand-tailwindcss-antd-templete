@@ -36,6 +36,7 @@ import L from "leaflet";
 import splitPolygon from "./turf-polygon-split";
 import type { ReshapeOptions } from "../types";
 
+// #region 面、多面整形工具
 
 /** reshape 多面：逐个 polygon 判断是否相交并 reshape 
  */
@@ -166,6 +167,233 @@ function pickLargestPerimeterPolygon(
   }
   return best;
 }
+
+// #endregion 
+
+// #region 线整形内容
+/**
+ * （针对线）根据草图线自动判断并执行 reshape（裁剪或扩张）
+ */
+function reshapeLineByLine(
+  target: GeoJSON.Feature<GeoJSON.LineString>,
+  sketch: GeoJSON.Feature<GeoJSON.LineString>,
+  map: L.Map,
+  options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
+): GeoJSON.Feature<GeoJSON.LineString>[] | null {
+  const intersections = lineIntersect(target, sketch).features;
+  if (intersections.length === 0) return null;
+
+  const targetCoords = getCoords(target);
+  const sketchCoords = getCoords(sketch);
+
+  // 多交点：取最外两个交点，替换中间段
+  if (intersections.length >= 2) {
+    const i1 = intersections[0];
+    const i2 = intersections[intersections.length - 1];
+    const reshaped = replaceSegmentBetween(targetCoords, i1, i2, sketch);
+    return reshaped ? [lineString(reshaped, target.properties)] : null;
+  }
+
+  // 单交点：构造两个候选结果
+  if (intersections.length === 1) {
+    const i = intersections[0];
+    const [before, after] = splitLineAtPoint(targetCoords, i.geometry.coordinates);
+    const result1 = [...before, ...sketchCoords.slice(1)];
+    const result2 = [...sketchCoords.slice(0, -1), ...after];
+
+    if (options.chooseStrategy === 'manual') {
+      return [lineString(result1, target.properties), lineString(result2, target.properties)];
+    } else {
+      const len1 = length(lineString(result1));
+      const len2 = length(lineString(result2));
+      return [lineString(len1 > len2 ? result1 : result2, target.properties)];
+    }
+  }
+
+  return null;
+}
+
+
+/**
+ *
+ *
+ * @param {number[][]} targetCoords
+ * @param {GeoJSON.Feature<GeoJSON.Point>} i1
+ * @param {GeoJSON.Feature<GeoJSON.Point>} i2
+ * @param {number[][]} sketchCoords
+ * @return {*}  {(number[][] | null)}
+ */
+function replaceSegmentBetween(
+  targetCoords: number[][],
+  i1: GeoJSON.Feature<GeoJSON.Point>,
+  i2: GeoJSON.Feature<GeoJSON.Point>,
+  sketch: GeoJSON.Feature<GeoJSON.LineString>
+): number[][] | null {
+  const p1 = roundCoord(i1.geometry.coordinates);
+  const p2 = roundCoord(i2.geometry.coordinates);
+
+  const [before, rest] = splitLineAtPoint(targetCoords, p1); // 获取前半段
+
+  const [_, after] = splitLineAtPoint(rest, p2); // 获取后半段
+
+  if (!before || !after) return null;
+
+  const sketchSegment = extractSketchBetweenWithInsertion(sketch, p1, p2); // 获取中间段（中间段由草线图构成）
+
+  if (!sketchSegment) return null;
+
+  // console.log('前半段', before);
+  // console.log('中间段（中间段由草线图构成）', sketchSegment);
+  // console.log('后半段', after);
+  return dedupeCoords([...before, ...sketchSegment, ...after]);
+
+}
+
+
+/** 坐标数组去重
+ *
+ *
+ * @param {number[][]} coords
+ * @return {*}  {number[][]}
+ */
+function dedupeCoords(coords: number[][]): number[][] {
+  const seen = new Set<string>();
+  return coords.filter(coord => {
+    const key = coord.join(',');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+
+/**
+ * 从草图线上提取两个交点之间的线段（自动插入交点）
+ * @param sketchLine 草图线（LineString）
+ * @param p1 第一个交点坐标 [x, y]
+ * @param p2 第二个交点坐标 [x, y]
+ * @returns 提取出的中间段坐标数组（含 p1 和 p2）
+ */
+function extractSketchBetweenWithInsertion(
+  sketchLine: GeoJSON.Feature<GeoJSON.LineString>,
+  p1: number[],
+  p2: number[]
+): number[][] | null {
+  const pt1 = point(p1);
+  const pt2 = point(p2);
+
+  // 第一次切割：在 p1 处分割草图线
+  const split1 = lineSplit(sketchLine, pt1);
+  const segments1 = split1.features;
+
+  // 找到以 p1 为起点的段索引
+  const i1 = segments1.findIndex(seg => {
+    const coords = seg.geometry.coordinates;
+    return coords.length > 0 &&
+      coords[0][0] === p1[0] &&
+      coords[0][1] === p1[1];
+  });
+  if (i1 === -1) return null;
+
+  // 从 p1 开始的后续线段
+  const tailLine = lineString(mergeSegments(segments1.slice(i1)));
+
+  // 第二次切割：在 p2 处分割
+  const split2 = lineSplit(tailLine, pt2);
+  const segments2 = split2.features;
+
+  // 找出包含 p2 的段索引
+  const i2 = segments2.findIndex(seg => booleanPointOnLine(pt2, seg));
+  if (i2 === -1) return null;
+
+  // 提取从 p1 到 p2 的段
+  const selected = segments2.slice(0, i2 + 1);
+  return mergeSegments(selected);
+}
+
+
+/** 
+ * 将坐标数组四舍五入到指定位数
+ *
+ *
+ * @param {number[]} coord
+ * @param {number} [precision=6]
+ * @return {*}  {number[]}
+ */
+function roundCoord(coord: number[], precision = 6): number[] {
+  return coord.map(n => Number(n.toFixed(precision)));
+}
+
+/**
+ * 合并多个 LineString 段为一个连续坐标数组
+ */
+function mergeSegments(
+  segments: GeoJSON.Feature<GeoJSON.LineString>[]
+): number[][] {
+  const coords: number[][] = [];
+  segments.forEach((seg, i) => {
+    const c = seg.geometry.coordinates;
+    if (i === 0) {
+      coords.push(...c);
+    } else {
+      coords.push(...c.slice(1)); // 避免重复点
+    }
+  });
+  return coords;
+}
+
+/** （假设一条线段包含5个坐标点，则说明其是4个折线段。然后这个函数就是找到与给定点相交的折线段，并返回这个折线段的两个端点）
+ *
+ *
+ * @param {number[][]} coords
+ * @param {number[]} intersection
+ * @return {*}  {[number[][], number[][]]}
+ */
+function splitLineAtPoint(
+  coords: number[][],
+  intersection: number[]
+): [number[][], number[][]] {
+  let minDist = Infinity;
+  let insertIndex = -1;
+
+  // 假设每2个坐标点构建一个线段。下面的代码就是遍历线段，寻找交点落在哪一段上
+  for (let i = 0; i < coords.length - 1; i++) {
+    // 找到坐标中的某一个小段
+    const [x1, y1] = coords[i];
+    const [x2, y2] = coords[i + 1];
+
+    // 构建区间信息
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    // 这是向量投影的标准公式，可以参考维基百科
+    // t 表示交点在当前线段上的相对位置（0 ≤ t ≤ 1 表示在线段内部）
+    const t = ((intersection[0] - x1) * dx + (intersection[1] - y1) * dy) / lenSq;
+
+    // 计算投影点与交点的距离，找出最近的线段（如果交点在线段内部（t ∈ [0,1]），计算它到线段的投影点，记录最小距离和插入位置）
+    if (t >= 0 && t <= 1) {
+      const px = x1 + t * dx;
+      const py = y1 + t * dy;
+      const dist = Math.hypot(px - intersection[0], py - intersection[1]);
+      if (dist < minDist) {
+        minDist = dist;
+        insertIndex = i + 1;
+      }
+    }
+  }
+  // 步骤 5：如果找不到合适的插入点，返回原始线
+  if (insertIndex === -1) return [coords, []];
+  // 步骤 6：构造前段和后段，并插入交点
+  const before = coords.slice(0, insertIndex);
+  const after = coords.slice(insertIndex); // ✅ 从 insertIndex 开始截取，避免重复前一个点
+
+  before.push(intersection);
+  after.unshift(intersection);
+
+  // 最终返回前段和后段
+  return [before, after];
+}
+// #endregion
 
 
 export { reshapePolygonByLine, reshapeMultiPolygonByLine, reshapeLineByLine };
