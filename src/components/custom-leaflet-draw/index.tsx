@@ -431,6 +431,80 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 };
                 const polygonEditor = new LeafletPolygonEditor(mapInstance!, {}, polyGeom);
                 saveEditorAndAddListener(polygonEditor, 'add');
+                const polyGeomline: any = {
+                    "type": "LineString",
+                    "coordinates": [
+                        [
+                            137.988281,
+                            49.781264
+                        ],
+                        [
+                            157.495365,
+                            51.765056
+                        ],
+                        [
+                            157.495365,
+                            51.765056
+                        ],
+                        [
+                            156.884766,
+                            49.095452
+                        ],
+                        [
+                            159.345703,
+                            50.317408
+                        ],
+                        [
+                            160.400391,
+                            53.409532
+                        ],
+                        [
+                            161.938477,
+                            55.776573
+                        ],
+                        [
+                            163.168945,
+                            51.234407
+                        ],
+                        [
+                            165.541992,
+                            49.410973
+                        ],
+                        [
+                            167.036133,
+                            53.383328
+                        ],
+                        [
+                            169.672852,
+                            55.875311
+                        ],
+                        [
+                            169.055714,
+                            52.940697
+                        ],
+                        [
+                            169.055714,
+                            52.940697
+                        ],
+                        [
+                            173.408203,
+                            53.383328
+                        ],
+                        [
+                            186.855469,
+                            54.572062
+                        ]
+                    ]
+                };
+                const lineLayer111 = L.geoJSON(polyGeomline, {
+                    style: {
+                        color: 'red', // 设置边线颜色
+                        weight: 2,
+                        fillColor: "red", // 设置填充颜色
+                        fillOpacity: 0.3, // 设置填充透明度
+                    }
+                });
+                lineLayer111.addTo(mapInstance);
                 break;
             case 'add_hole':
                 const hole_geometry: any = {

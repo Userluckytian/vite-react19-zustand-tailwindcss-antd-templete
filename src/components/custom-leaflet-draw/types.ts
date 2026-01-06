@@ -43,7 +43,7 @@ export interface TopoClipResult {
 // topo操作执行整形要素工具（reshape Feature）后返回的结果
 export interface TopoReshapeFeatureResult {
     doReshapeLayers: L.Layer[]; // 参与整形的图层数组
-    reshapedGeoms: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[];  // 整形完毕获取的全部单面
+    reshapedGeoms: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon | GeoJSON.LineString>[];  // 整形完毕获取的全部单面
 }
 // topo操作执行整形要素工具的配置项
 export interface ReshapeOptions {

@@ -1,7 +1,7 @@
 import { featureCollection, flattenEach, union, polygon } from "@turf/turf";
 import splitPolygon from "../topo/turf-polygon-split";
 import type { ReshapeOptions, TopoClipResult, TopoReshapeFeatureResult } from "../types";
-import { reshapeMultiPolygonByLine, reshapePolygonByLine } from "../topo/turf-reshape-feature";
+import { reshapeLineByLine, reshapeMultiPolygonByLine, reshapePolygonByLine } from "../topo/turf-reshape-feature";
 
 /** 保存裁剪后的图层
  *
@@ -94,16 +94,23 @@ export function reshapeSelectedLayersByLine(
     sketchLine: GeoJSON.Feature<any>,
     selLayers: L.GeoJSON[],
     map: L.Map,
-    options: ReshapeOptions={ chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
+    options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
 ): TopoReshapeFeatureResult {
     const waitingDelLayer: L.Layer[] = [];
-    const results: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[] = [];
+    const results: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon | GeoJSON.LineString>[] = [];
     selLayers.forEach((layer: L.GeoJSON) => {
 
         const geojsonFeatureCollection = layer.toGeoJSON() as GeoJSON.FeatureCollection<any>;
         const geojson = geojsonFeatureCollection.features[0];
         const type = geojson.geometry.type;
         switch (type) {
+            case 'LineString':
+                const lineResult = reshapeLineByLine(geojson as GeoJSON.Feature<GeoJSON.LineString>, sketchLine, map, options);
+                console.log('lineResult', lineResult);
+
+                if (lineResult)
+                    results.push(...lineResult);
+                break;
             case 'Polygon':
                 const polyResult = reshapePolygonByLine(geojson as GeoJSON.Feature<GeoJSON.Polygon>, sketchLine, map, options);
                 console.log('polyResult', polyResult);
@@ -123,7 +130,7 @@ export function reshapeSelectedLayersByLine(
 
     });
     console.log('results', results);
-    
+
     return { doReshapeLayers: waitingDelLayer, reshapedGeoms: results };
 }
 
