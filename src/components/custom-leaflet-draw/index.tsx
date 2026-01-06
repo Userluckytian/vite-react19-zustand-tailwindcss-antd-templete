@@ -415,7 +415,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     ]
                 };
                 const polygonEditor = new LeafletPolygonEditor(mapInstance!, {}, polyGeom);
-                saveEditorAndAddListener(polygonEditor);
+                saveEditorAndAddListener(polygonEditor, 'add');
                 break;
             case 'add_hole':
                 const hole_geometry: any = {
@@ -468,7 +468,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     ]
                 };
                 const holePolygonEditor = new LeafletPolygonEditor(mapInstance!, {}, hole_geometry);
-                saveEditorAndAddListener(holePolygonEditor);
+                saveEditorAndAddListener(holePolygonEditor, 'add_hole');
                 break;
             case 'add_hole_multi':
                 const hole_multi_geometry: any = {
@@ -571,7 +571,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     ]
                 };
                 const holeMultiPolygonEditor = new LeafletPolygonEditor(mapInstance!, {}, hole_multi_geometry);
-                saveEditorAndAddListener(holeMultiPolygonEditor);
+                saveEditorAndAddListener(holeMultiPolygonEditor, 'add_hole_multi');
                 break;
             case 'delete':
                 // 销毁图层
@@ -592,20 +592,44 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
      *
      * @param {leafletGeoEditorInstance} editor
      */
-    const saveEditorAndAddListener = (editor: leafletGeoEditorInstance) => {
+    const saveEditorAndAddListener = (editor: leafletGeoEditorInstance, toolId?: string) => {
         setDrawLayers((pre: any[]) => [...pre, editor]);
+        // 对于有默认 geometry 的工具，立即触发绘制结果回调
+        if (props.drawGeoJsonResult && toolId && ['add', 'add_hole', 'add_hole_multi'].includes(toolId)) {
+            try {
+                const layerInstance = (editor as any).polygonLayer || (editor as any).markerLayer || 
+                                    (editor as any).lineLayer || (editor as any).circleLayer || 
+                                    (editor as any).rectangleLayer;
+                
+                if (layerInstance) {
+                    let geoJsonData = null;
+                    try {
+                        geoJsonData = (editor as any).geojson ? (editor as any).geojson() : null;
+                    } catch (e) {
+                        console.error('获取 GeoJSON 数据失败:', e);
+                    }
+                    props.drawGeoJsonResult({
+                        layer: layerInstance,
+                        type: toolId,
+                        geojson: geoJsonData
+                    });
+                }
+            } catch (error) {
+                console.error('获取绘制结果失败:', error);
+            }
+        }
         // 添加监听逻辑
         editor.onStateChange((status: PolygonEditorState) => {
             const currentTool = currSelToolRef.current;
             if (status === PolygonEditorState.Editing) {
                 setCurrEditLayer(editor);
             } else {
-                if (status === PolygonEditorState.Idle && currentTool) {
+                if (status === PolygonEditorState.Idle && currentTool && !['add', 'add_hole', 'add_hole_multi'].includes(currentTool)) {
                     // 绘制完成，尝试获取绘制的图层数据
                     try {
                         // 获取绘制工具类型
                         const toolType = currentTool;
-                        if (toolType && ['point', 'line', 'polygon', 'circle', 'rectangle', 'measure_distance', 'measure_area', 'polygon_editor', 'rectangle_editor'].includes(toolType)) {
+                        if (toolType && ['point', 'line', 'polygon', 'circle', 'rectangle', 'measure_distance', 'measure_area', 'polygon_editor', 'rectangle_editor','magic'].includes(toolType)) {
                             // 获取 Leaflet 图层实例
                             const layerInstance = (editor as any).polygonLayer || (editor as any).markerLayer || 
                                                 (editor as any).lineLayer || (editor as any).circleLayer || 
