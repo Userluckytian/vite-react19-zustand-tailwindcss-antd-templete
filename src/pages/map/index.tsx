@@ -167,10 +167,11 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
 
   // 鼠标悬浮图层
   const handleHoverLayer = (id: string) => {
+    console.log("鼠标悬浮图层", id);
     const layer = drawLayers.find(layer => layer.id === id);
     if (layer && layer.layer) {
       // 高亮逻辑：保存原始样式并应用高亮样式
-      if (layer.layer.options) {
+      if (layer.layer.options && typeof layer.layer.setStyle === 'function') {
         (layer.layer as any)._originalStyle = (layer.layer as any)._originalStyle || { ...layer.layer.options };
         layer.layer.setStyle({
           fillColor: '#ffff00',
@@ -185,12 +186,17 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
 
   // 鼠标离开图层
   const handleLeaveLayer = () => {
-    // 移除所有图层的高亮样式，恢复到默认的红色样式
-    drawLayers.forEach(layer => {
-      if (layer.layer && (layer.layer as any)._originalStyle) {
-        layer.layer.setStyle((layer.layer as any)._originalStyle);
-        delete (layer.layer as any)._originalStyle;
-      }
+    // 使用回调函数确保获取最新的drawLayers状态
+    setDrawLayers(prevDrawLayers => {
+      // 移除所有图层的高亮样式，恢复到默认的红色样式
+      prevDrawLayers.forEach(layer => {
+        if (layer.layer && (layer.layer as any)._originalStyle && typeof layer.layer.setStyle === 'function') {
+          layer.layer.setStyle((layer.layer as any)._originalStyle);
+          delete (layer.layer as any)._originalStyle;
+        }
+      });
+      // 返回原始数组，不改变状态内容
+      return prevDrawLayers;
     });
   };
 
@@ -327,28 +333,11 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
         zoomOutTitle: "缩小",
       })
       .addTo(mapView);
-    const zoomContainer = document.querySelector(".leaflet-control-zoom");
-    if (zoomContainer) {
-      (zoomContainer as HTMLElement).style.top = "10px";
-      (zoomContainer as HTMLElement).style.left = "10px";
-    }
-    //获取控件位置
-    // console.log('位置:', zoomControl1.getBoundingClientRect());//使用topleft会导致其
-    // 事件3： 添加地图Zoom工具条
-    // mapZoomControl = addZoomControl(mapView, {
-    //   zoomInTitle: "放大",
-    //   zoomOutTitle: "缩小",
-    // });
-    //直接添加zoom控件
-    // // todo: 事件4：添加zoomout和zoomin事件--设置和显示地图缩放范围
-    // 添加zoom控件
-    // 添加事件监听
     mapView.on("mousemove", handleMouseMove);
     return () => {
       mapScaleControl?.remove();
       // 移除zoom控件
       zoomControl.remove();
-      // mapZoomControl?.remove();
       mapView.off("mousemove", handleMouseMove);
     };
   }, [mapView]);
@@ -394,7 +383,10 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
 
       {/* 经纬度信息 */}
       <div className="lnglat">
-        <span>层级：{mapView?.getZoom() || 0}</span>
+        <span>层级：</span>
+        <span className="text-blue-600 font-bold">{
+          mapView?.getZoom() || 0}
+        </span>
         <span>经度：</span>
         <span className="text-blue-600 font-bold">
           {lnglat ? formatNumber(lnglat.lng, 3) : 0}
