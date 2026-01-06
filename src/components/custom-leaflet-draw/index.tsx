@@ -11,7 +11,7 @@ import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import LeafletEditPolygon from './simpleEdit/polygon';
-import { PolygonEditorState, type leafletGeoEditorInstance, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
+import { PolygonEditorState, type leafletGeoEditorInstance, type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
 import LeafletEditRectangle from './simpleEdit/rectangle';
 import { LeafletTopology } from './topo/topo';
 import LeafletRectangleEditor from './edit/rectangle';
@@ -139,8 +139,8 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         }
     ]
     ) // 工具栏列表
-    const [currSelTool, setCurrSelTool] = useState<string | null>(null); // 当前使用的【绘制条上的绘制工具】
     const currSelToolRef = useRef<string | null>(null); // 使用 ref 存储最新的工具类型
+    const [currSelTool, setCurrSelTool] = useState<string | null>(null); // 当前使用的【绘制条上的绘制工具】
     const [drawLayers, setDrawLayers] = useState<any[]>([]); // 存放绘制的图层
     const [currEditLayer, setCurrEditLayer] = useState<any>(null); // 当前编辑的图层【我们设置的是一次仅可编辑一个图层】
     const [topologyInstance, setTopologyInstance] = useState<any>(null);
@@ -179,12 +179,12 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
 
     }
 
-    
+
     // 同步 currSelTool 到 ref
     useEffect(() => {
         currSelToolRef.current = currSelTool;
     }, [currSelTool]);
-    
+
     // 工具按钮点击
     const handleToolClick = (toolId: string) => {
 
@@ -612,10 +612,10 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         // 对于有默认 geometry 的工具，立即触发绘制结果回调
         if (props.drawGeoJsonResult && toolId && ['add', 'add_hole', 'add_hole_multi'].includes(toolId)) {
             try {
-                const layerInstance = (editor as any).polygonLayer || (editor as any).markerLayer || 
-                                    (editor as any).lineLayer || (editor as any).circleLayer || 
-                                    (editor as any).rectangleLayer;
-                
+                const layerInstance = (editor as any).polygonLayer || (editor as any).markerLayer ||
+                    (editor as any).lineLayer || (editor as any).circleLayer ||
+                    (editor as any).rectangleLayer;
+
                 if (layerInstance) {
                     let geoJsonData = null;
                     try {
@@ -644,12 +644,12 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     try {
                         // 获取绘制工具类型
                         const toolType = currentTool;
-                        if (toolType && ['point', 'line', 'polygon', 'circle', 'rectangle', 'measure_distance', 'measure_area', 'polygon_editor', 'rectangle_editor','magic'].includes(toolType)) {
+                        if (toolType && ['point', 'line', 'polygon', 'circle', 'rectangle', 'measure_distance', 'measure_area', 'polygon_editor', 'rectangle_editor', 'magic'].includes(toolType)) {
                             // 获取 Leaflet 图层实例
-                            const layerInstance = (editor as any).polygonLayer || (editor as any).markerLayer || 
-                                                (editor as any).lineLayer || (editor as any).circleLayer || 
-                                                (editor as any).rectangleLayer;
-                            
+                            const layerInstance = (editor as any).polygonLayer || (editor as any).markerLayer ||
+                                (editor as any).lineLayer || (editor as any).circleLayer ||
+                                (editor as any).rectangleLayer;
+
                             if (layerInstance && props.drawGeoJsonResult) {
                                 // 获取绘制的 GeoJSON 数据（容错处理）
                                 let geoJsonData = null;
@@ -769,7 +769,11 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     }
     // 整形要素
     const reshapeFeature = () => {
-        topologyInstance && topologyInstance.reshapeFeature({ chooseStrategy: 'manual' }, ({ doReshapeLayers, reshapedGeoms }: TopoReshapeFeatureResult) => {
+        const options: ReshapeOptions = {
+            AllowReshapingWithoutSelection: reshapeBar[0].visible ? true : false,
+            chooseStrategy: reshapeBar[1].visible ? 'manual' : 'auto',
+        };
+        topologyInstance && topologyInstance.reshapeFeature(options, ({ doReshapeLayers, reshapedGeoms }: TopoReshapeFeatureResult) => {
             // try {
             // console.log('整形--reshapedGeoms', reshapedGeoms, doReshapeLayers);
             // 第一步：删除之前的旧图层

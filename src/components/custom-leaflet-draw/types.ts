@@ -30,7 +30,7 @@ export interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
     [key: string]: unknown
 }
 
-/* topo操作执行合并(union)后返回的结果 */ 
+/* topo操作执行合并(union)后返回的结果 */
 export interface TopoMergeResult {
     mergedLayers: L.GeoJSON[];
     mergedGeom: GeoJSON.Feature | null;
@@ -47,10 +47,15 @@ export interface TopoReshapeFeatureResult {
 }
 // topo操作执行整形要素工具的配置项
 export interface ReshapeOptions {
-  /**
-   * auto: 自动保留 reshape 后周长最大的结果
-   * manual: 返回所有候选结果，由调用方决定保留哪一个
-   */
-  chooseStrategy?: 'auto' | 'manual';
+    /**
+     * auto: 自动保留 reshape 后周长最大的结果
+     * manual: 返回所有候选结果，由调用方决定保留哪一个
+     */
+    chooseStrategy?: 'auto' | 'manual';
+    /**
+     * 允许在未选择任何图层的情况下进行整形操作
+     * 默认为 false
+     */
+    AllowReshapingWithoutSelection?: Boolean;
 }
 

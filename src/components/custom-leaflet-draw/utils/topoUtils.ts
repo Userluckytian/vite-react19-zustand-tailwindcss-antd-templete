@@ -94,7 +94,7 @@ export function reshapeSelectedLayersByLine(
     sketchLine: GeoJSON.Feature<any>,
     selLayers: L.GeoJSON[],
     map: L.Map,
-    options: ReshapeOptions={ chooseStrategy: 'auto' }
+    options: ReshapeOptions={ chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
 ): TopoReshapeFeatureResult {
     const waitingDelLayer: L.Layer[] = [];
     const results: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[] = [];

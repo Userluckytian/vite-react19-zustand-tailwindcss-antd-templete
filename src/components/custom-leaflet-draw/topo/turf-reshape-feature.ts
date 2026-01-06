@@ -37,7 +37,7 @@ function reshapeMultiPolygonByLine(
   multi: GeoJSON.Feature<GeoJSON.MultiPolygon>,
   sketchLine: GeoJSON.Feature<GeoJSON.LineString>,
   map: L.Map,
-  options: ReshapeOptions = { chooseStrategy: 'auto' }
+  options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
 ): GeoJSON.Feature<GeoJSON.MultiPolygon>[] {
   const parts = getCoords(multi).map(rings => turfPolygon(rings));
   const reshaped: GeoJSON.Feature<GeoJSON.Polygon>[] = [];
@@ -70,7 +70,7 @@ function reshapePolygonByLine(
   polygon: GeoJSON.Feature<GeoJSON.Polygon>,
   sketchLine: GeoJSON.Feature<GeoJSON.LineString>,
   map: L.Map,
-  options: ReshapeOptions = { chooseStrategy: 'auto' }
+  options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
 ): GeoJSON.Feature<GeoJSON.Polygon>[] | null {
   const sketchCoords = getCoords(sketchLine);
   const start = point(sketchCoords[0]);
@@ -130,7 +130,7 @@ function reshapeByExpansion(
 function reshapeByCut(
   polygon: GeoJSON.Feature<GeoJSON.Polygon>,
   sketchLine: GeoJSON.Feature<GeoJSON.LineString>,
-  options: ReshapeOptions = { chooseStrategy: 'auto' }
+  options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
 ): GeoJSON.Feature<GeoJSON.Polygon>[] | null {
   const results = splitPolygon(polygon, sketchLine);
   if (!results || results.length === 0) return null;
