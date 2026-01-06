@@ -2,7 +2,7 @@ import * as L from 'leaflet';
 import { queryLayerOnClick } from '../utils/commonUtils';
 import { union } from '@turf/turf';
 import LeafletPolyline from '../draw/polyline';
-import { PolygonEditorState, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from '../types';
+import { PolygonEditorState, type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from '../types';
 import { clipSelectedLayersByLine, mergePolygon, reshapeSelectedLayersByLine } from '../utils/topoUtils';
 
 export class LeafletTopology {
@@ -76,7 +76,7 @@ export class LeafletTopology {
       const mergedGeom = mergePolygon(this.selectedLayers);
       // console.log('合并--mergedGeom', mergedGeom);
       // return { mergedGeom, mergedLayers: this.selectedLayers };
-       // console.log('合并--mergedGeom', mergedGeom);
+      // console.log('合并--mergedGeom', mergedGeom);
       callback && callback({ mergedGeom, mergedLayers: this.selectedLayers })
       setTimeout(() => {
         this.cleanAll();
@@ -88,8 +88,8 @@ export class LeafletTopology {
   /** 
    * 执行整形要素工具操作 
    * */
-  public reshapeFeature(callback: (result: TopoReshapeFeatureResult) => void) {
-       if (this.selectedLayers.length === 0) {
+  public reshapeFeature(options: ReshapeOptions, callback: (result: TopoReshapeFeatureResult) => void) {
+    if (this.selectedLayers.length === 0) {
       throw new Error('请先选择要执行整形操作的图层');
     }
 
@@ -105,7 +105,7 @@ export class LeafletTopology {
       if (status === PolygonEditorState.Idle) {
         const geoJson = this.drawLineLayer!.geojson();
         console.log('绘制的线图层的空间信息：', geoJson, this.selectedLayers, this.map);
-        const { doReshapeLayers, reshapedGeoms } = reshapeSelectedLayersByLine(geoJson, this.selectedLayers, this.map);
+        const { doReshapeLayers, reshapedGeoms } = reshapeSelectedLayersByLine(geoJson, this.selectedLayers, this.map, options);
         // 行为1：正常输出
         // console.log('clipsPolygons', clipedGeoms, 'waitingDelLayer', doClipLayers);
         // setTimeout(() => {

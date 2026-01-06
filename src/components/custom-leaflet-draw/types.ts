@@ -45,3 +45,12 @@ export interface TopoReshapeFeatureResult {
     doReshapeLayers: L.Layer[]; // 参与整形的图层数组
     reshapedGeoms: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[];  // 整形完毕获取的全部单面
 }
+// topo操作执行整形要素工具的配置项
+export interface ReshapeOptions {
+  /**
+   * auto: 自动保留 reshape 后周长最大的结果
+   * manual: 返回所有候选结果，由调用方决定保留哪一个
+   */
+  chooseStrategy?: 'auto' | 'manual';
+}
+

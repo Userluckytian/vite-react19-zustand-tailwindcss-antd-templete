@@ -1,6 +1,6 @@
 import { featureCollection, flattenEach, union, polygon } from "@turf/turf";
 import splitPolygon from "../topo/turf-polygon-split";
-import type { TopoClipResult, TopoReshapeFeatureResult } from "../types";
+import type { ReshapeOptions, TopoClipResult, TopoReshapeFeatureResult } from "../types";
 import { reshapeMultiPolygonByLine, reshapePolygonByLine } from "../topo/turf-reshape-feature";
 
 /** 保存裁剪后的图层
@@ -93,7 +93,8 @@ export function mergePolygon(selLayers: any): GeoJSON.Feature | null {
 export function reshapeSelectedLayersByLine(
     sketchLine: GeoJSON.Feature<any>,
     selLayers: L.GeoJSON[],
-    map: L.Map
+    map: L.Map,
+    options: ReshapeOptions={ chooseStrategy: 'auto' }
 ): TopoReshapeFeatureResult {
     const waitingDelLayer: L.Layer[] = [];
     const results: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[] = [];
@@ -104,14 +105,14 @@ export function reshapeSelectedLayersByLine(
         const type = geojson.geometry.type;
         switch (type) {
             case 'Polygon':
-                const polyResult = reshapePolygonByLine(geojson as GeoJSON.Feature<GeoJSON.Polygon>, sketchLine, map);
+                const polyResult = reshapePolygonByLine(geojson as GeoJSON.Feature<GeoJSON.Polygon>, sketchLine, map, options);
                 console.log('polyResult', polyResult);
 
                 if (polyResult)
                     results.push(...polyResult);
                 break;
             case 'MultiPolygon':
-                const MultiPolyResult = reshapeMultiPolygonByLine(geojson as GeoJSON.Feature<GeoJSON.MultiPolygon>, sketchLine, map);
+                const MultiPolyResult = reshapeMultiPolygonByLine(geojson as GeoJSON.Feature<GeoJSON.MultiPolygon>, sketchLine, map, options);
                 if (MultiPolyResult)
                     results.push(...MultiPolyResult);
                 break;

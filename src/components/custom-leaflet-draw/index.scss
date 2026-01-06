@@ -58,9 +58,29 @@ $tip-pane-width: 340px;
     background: linear-gradient(41deg, #40d9ff5c 50%, #40d9ffa3 50%);
   }
 }
+// 编辑工具条
 .leaflet-edit-toolbar {
   width: 700px;
 }
+// 拓扑工具条
 .leaflet-topology-toolbar {
-  width: 480px;
+  width: 340px;
+}
+// 整形工具条
+.leaflet-reshape-toolbar {
+  width: 340px;
+  top: 40px;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 10px;
+  .top {
+    display: flex;
+  }
+  .bottom {
+    .reshape-item {
+      display: flex;
+      gap: 0px 20px;
+      margin-bottom: 5px;
+    }
+  }
 }

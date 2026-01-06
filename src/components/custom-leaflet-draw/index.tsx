@@ -1,6 +1,6 @@
 import React, { Activity, Fragment, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import CustomIcon from '../custom-icon';
-import { App, Divider } from 'antd';
+import { App, Divider, Switch } from 'antd';
 import * as L from 'leaflet';
 import './index.scss';
 import MarkerPoint from './draw/markerPoint';
@@ -143,6 +143,41 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const [drawLayers, setDrawLayers] = useState<any[]>([]); // 存放绘制的图层
     const [currEditLayer, setCurrEditLayer] = useState<any>(null); // 当前编辑的图层【我们设置的是一次仅可编辑一个图层】
     const [topologyInstance, setTopologyInstance] = useState<any>(null);
+
+    const [reshapeBar, setReshapeBar] = useState<any[]>([
+        {
+            id: 'allowNoChoise',
+            label: '允许无选择重塑',
+            visible: false
+        },
+        {
+            id: 'manual',
+            label: '完成后，由用户来选择要保留的部分',
+            visible: false
+        }
+    ]);
+
+    // 改变reshapeBar的选项
+    const changeReshapeBarOptions = (item: any, checked: boolean) => {
+        item.visible = !item.visible;
+        setReshapeBar((pre: any) => {
+            const tempData = JSON.parse(JSON.stringify(pre));
+            const itemIdx = reshapeBar.findIndex((it: any) => it.id === item.id);
+            itemIdx > -1 && (tempData[itemIdx] = item);
+            return tempData;
+        })
+        switch (item.id) {
+            case 'allowNoChoise':
+                break;
+            case 'manual':
+                break;
+
+            default:
+                break;
+        }
+
+    }
+
     // 工具按钮点击
     const handleToolClick = (toolId: string) => {
 
@@ -307,101 +342,81 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 const polyGeom: any = {
                     "type": "MultiPolygon",
                     "coordinates": [
-                        [
+                        [[
                             [
-                                [
-                                    103.051758,
-                                    14.081927
-                                ],
-                                [
-                                    117.993164,
-                                    14.985462
-                                ],
-                                [
-                                    117.324258,
-                                    18.949618
-                                ],
-                                [
-                                    118.476563,
-                                    19.103648
-                                ],
-                                [
-                                    118.40388034681555,
-                                    20.194539446101615
-                                ],
-                                [
-                                    111.20361300000145,
-                                    19.331877999991118
-                                ],
-                                [
-                                    111.20361300000029,
-                                    19.331877999991022
-                                ],
-                                [
-                                    104.63378900000428,
-                                    19.02057699999127
-                                ],
-                                [
-                                    103.72696259274902,
-                                    18.126965362890054
-                                ],
-                                [
-                                    103.939991,
-                                    18.12198
-                                ],
-                                [
-                                    103.051758,
-                                    14.081927
-                                ]
+                                100.876465,
+                                28.516969
                             ],
                             [
-                                [
-                                    108.369141,
-                                    16.40447
-                                ],
-                                [
-                                    108.614692,
-                                    18.012581
-                                ],
-                                [
-                                    110.061035,
-                                    17.978733
-                                ],
-                                [
-                                    112.079764,
-                                    18.248579
-                                ],
-                                [
-                                    113.664551,
-                                    16.69934
-                                ],
-                                [
-                                    108.369141,
-                                    16.40447
-                                ]
+                                104.44187266279273,
+                                28.315959182902066
+                            ],
+                            [
+                                104.64302764304152,
+                                29.370945403531596
+                            ],
+                            [
+                                103.293457,
+                                29.42046
+                            ],
+                            [
+                                103.293457,
+                                30.315988
+                            ],
+                            [
+                                104.81389760918567,
+                                30.459920154942303
+                            ],
+                            [
+                                104.97632547223351,
+                                31.34937782255196
+                            ],
+                            [
+                                101.271973,
+                                31.503629
+                            ],
+                            [
+                                100.876465,
+                                28.516969
                             ]
-                        ],
+                        ]],
                         [
                             [
                                 [
-                                    94.658203,
-                                    13.154376
+                                    104.44187266281325,
+                                    28.315959182900908
                                 ],
                                 [
-                                    101.074219,
-                                    13.154376
+                                    105.582591,
+                                    28.251648
                                 ],
                                 [
-                                    101.074219,
-                                    15.61924579742138
+                                    106.204812,
+                                    31.298223
                                 ],
                                 [
-                                    94.658203,
-                                    15.457340119850556
+                                    104.97632547225471,
+                                    31.34937782255108
                                 ],
                                 [
-                                    94.658203,
-                                    13.154376
+                                    104.81389760920719,
+                                    30.459920154944342
+                                ],
+                                [
+                                    105.095215,
+                                    30.486551
+                                ],
+                                [
+                                    105.380859,
+                                    29.343875
+                                ],
+                                [
+                                    104.64302764306231,
+                                    29.370945403530836
+                                ],
+                                [
+                                    104.44187266281325,
+                                    28.315959182900908
                                 ]
                             ]
                         ]
@@ -687,7 +702,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     }
     // 整形要素
     const reshapeFeature = () => {
-        topologyInstance && topologyInstance.reshapeFeature(({ doReshapeLayers, reshapedGeoms }: TopoReshapeFeatureResult) => {
+        topologyInstance && topologyInstance.reshapeFeature({ chooseStrategy: 'manual' }, ({ doReshapeLayers, reshapedGeoms }: TopoReshapeFeatureResult) => {
             // try {
             // console.log('整形--reshapedGeoms', reshapedGeoms, doReshapeLayers);
             // 第一步：删除之前的旧图层
@@ -801,8 +816,33 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     <div className='topology-tool-item item-bar' onClick={() => pickLayer()}>↩️ 选择</div>
                     <div className='topology-tool-item item-bar' onClick={() => cut()}>↩️ 裁切</div>
                     <div className='topology-tool-item item-bar' onClick={() => union()}>🔄 合并</div>
-                    <div className='topology-tool-item item-bar' onClick={() => reshapeFeature()}>🔄 整形要素工具</div>
                     <div className='topology-tool-item item-bar' onClick={() => clearTopo()}>🔄 清除</div>
+                </div>
+            }
+            {/* 整形要素工具条：（开关在topo工具条上，） */}
+            {!currEditLayer
+                &&
+                <div className="leaflet-reshape-toolbar leaflet-bar">
+                    <div className='top'>
+                        <div>整形工具条：</div>
+                        {!reshapeBar[0].visible && <div className='topology-tool-item item-bar' onClick={() => pickLayer()}>↩️ 选择</div>}
+                        <div className='topology-tool-item item-bar' onClick={() => reshapeFeature()}>🔄 整形要素工具</div>
+                        <div className='topology-tool-item item-bar' onClick={() => clearTopo()}>🔄 清除</div>
+                    </div>
+                    <div className='bottom'>
+                        {
+                            reshapeBar.map((ite: any, index: number) => {
+                                return (
+                                    <div className='reshape-item' key={'SCEML-' + index}>
+                                        <div className='switch-btn'>
+                                            <Switch checkedChildren="开" unCheckedChildren="关" value={ite.visible} onChange={(e) => { changeReshapeBarOptions(ite, e) }} />
+                                        </div>
+                                        <div className='label'>{ite.label}</div>
+                                    </div>
+                                )
+                            })
+                        }
+                    </div>
                 </div>
             }
         </>

@@ -1,8 +1,15 @@
-/** 
- * 1: （外部逻辑）勾选或取消勾选“允许无选择重塑”复选框。
- * 2: 只有当新形状在两个或更多地方穿过或接触特征时，才会重塑线条特征。
- * 3: (暂时不处理)如果重塑线将单个多边形分割成两个或多个特征，选择要保留的多边形特征。将鼠标悬停在你想保留的多边形上，当虚线高亮其周边时点击它。
- * 4: 如果重塑线将多边形特征分割成两个或多个特征，自动保留周长最大的特征。
+/**  整形要素工具： Reshape Feature：
+ * ArcMap-修整线： https://desktop.arcgis.com/zh-cn/arcmap/latest/manage-data/editing-existing-features/reshaping-lines.htm
+ * ArcMap-修整面： https://desktop.arcgis.com/zh-cn/arcmap/latest/manage-data/editing-existing-features/reshaping-polygons.htm
+ * ArcGIS Pro： https://pro.arcgis.com/en/pro-app/latest/help/editing/reshape-a-feature.htm?utm_source=copilot.com
+ * 1: 支持线、面的重塑处理。（目前：仅支持面）
+ * 2: 【Allow reshaping without a selection】允许无选择重塑。（目前：仅支持先选择再重塑）
+ * 3: 【Show Preview】实时预览reshape效果，便于判断结果是否符合预期。（目前：不支持）
+ * 4: 【Reshape with single intersection】仅限线要素，允许单一交叉点重塑。（目前：我们暂时只做了支持面）
+ * 5: 【Choose result on finish】完成后，由用户来选择要保留的部分。（目前：自动保留周长最大的特征，用户想要自己选择保留的部分）
+ * 挖孔面的特殊情况（暂时还没搞懂这块的行为）：
+ * 1：我构建了一个挖孔的面，假设，面的外部定义为区域A，面定义为区域B，面的内环部分定义为区域C，我在区域A绘制一个起点P1，然后这条线经过A，经过B，经过C，再回到区域A，和面共有4个交点，其中外环2个，内环2个。我认为这是一分为2的行为，但通过重塑后，却得到了2部分：外环从分割线切分保留了一部分，内环区域被填充了一部分。（感觉对于arcgis来说，执行的是先只考虑外环面部分，再只考虑内环面部分，这样解释就合理了）
+ * 2：还用上面的区域ABC举例，假设我的起点在区域C内，然后依次穿过区域B，区域A，再从区域A穿过区域B，再回到区域C。第一次执行（绘制一小块区域）的结果是扩充，第二次执行的结果（这次把线画的很大，在绕过环的情况下去包裹尽可能多的面）却是整个B删掉了，然后区域A和区域B围起来的部分是保留的，区域C变成了填充的。
  */
 import {
   lineIntersect,
@@ -21,6 +28,7 @@ import {
 } from "@turf/turf";
 import L from "leaflet";
 import splitPolygon from "./turf-polygon-split";
+import type { ReshapeOptions } from "../types";
 
 
 /** reshape 多面：逐个 polygon 判断是否相交并 reshape 
@@ -28,7 +36,8 @@ import splitPolygon from "./turf-polygon-split";
 function reshapeMultiPolygonByLine(
   multi: GeoJSON.Feature<GeoJSON.MultiPolygon>,
   sketchLine: GeoJSON.Feature<GeoJSON.LineString>,
-  map: L.Map
+  map: L.Map,
+  options: ReshapeOptions = { chooseStrategy: 'auto' }
 ): GeoJSON.Feature<GeoJSON.MultiPolygon>[] {
   const parts = getCoords(multi).map(rings => turfPolygon(rings));
   const reshaped: GeoJSON.Feature<GeoJSON.Polygon>[] = [];
@@ -36,12 +45,12 @@ function reshapeMultiPolygonByLine(
     if (booleanDisjoint(part, sketchLine)) {
       reshaped.push(part); // 不相交，保留原样 
     } else {
-      const result = reshapePolygonByLine(part, sketchLine, map);
+      const result = reshapePolygonByLine(part, sketchLine, map, options);
       if (result) reshaped.push(...result);
     }
   }
   // console.log('只看最后一个reshaped', reshaped);
-  
+
   // 提取每个 polygon 
   const multiCoords = reshaped.map(f => getCoords(f));
   return [{
@@ -60,7 +69,8 @@ function reshapeMultiPolygonByLine(
 function reshapePolygonByLine(
   polygon: GeoJSON.Feature<GeoJSON.Polygon>,
   sketchLine: GeoJSON.Feature<GeoJSON.LineString>,
-  map: L.Map
+  map: L.Map,
+  options: ReshapeOptions = { chooseStrategy: 'auto' }
 ): GeoJSON.Feature<GeoJSON.Polygon>[] | null {
   const sketchCoords = getCoords(sketchLine);
   const start = point(sketchCoords[0]);
@@ -78,7 +88,7 @@ function reshapePolygonByLine(
 
   // 情况 2：裁剪（草图线穿过 polygon，形成两个交点）
   if (intersections.features.length >= 2) {
-    return reshapeByCut(polygon, sketchLine);
+    return reshapeByCut(polygon, sketchLine, options);
   }
 
   return null;
@@ -119,14 +129,18 @@ function reshapeByExpansion(
  */
 function reshapeByCut(
   polygon: GeoJSON.Feature<GeoJSON.Polygon>,
-  sketchLine: GeoJSON.Feature<GeoJSON.LineString>
+  sketchLine: GeoJSON.Feature<GeoJSON.LineString>,
+  options: ReshapeOptions = { chooseStrategy: 'auto' }
 ): GeoJSON.Feature<GeoJSON.Polygon>[] | null {
   const results = splitPolygon(polygon, sketchLine);
   if (!results || results.length === 0) return null;
-  // 特征2：保留周长最大的 polygon 
-  const best = pickLargestPerimeterPolygon(results as GeoJSON.Feature<GeoJSON.Polygon>[]);
-  console.log('起点和终点都在外部时：', best);
-  return best ? [best] : null;
+  if (options.chooseStrategy === 'manual') {
+    return results as GeoJSON.Feature<GeoJSON.Polygon>[];
+  } else {
+    // 特征2：保留周长最大的 polygon 
+    const best = pickLargestPerimeterPolygon(results as GeoJSON.Feature<GeoJSON.Polygon>[]);
+    return best ? [best] : null;
+  }
 }
 
 /** 选出周长最大的 polygon 
