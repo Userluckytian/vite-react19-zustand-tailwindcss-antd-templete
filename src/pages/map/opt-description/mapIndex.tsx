@@ -30,9 +30,6 @@ const MapFunctionPanel = ({
   const togglePanel = () => {
     setIsExpanded(!isExpanded);
   };
-  useEffect(() => {
-    console.log(isExpanded);
-  }, [isExpanded]);
   return (
     <div className={`function-panel ${isExpanded ? "expanded" : "collapsed"}`}>
       <div className="panel-header" onClick={togglePanel}>

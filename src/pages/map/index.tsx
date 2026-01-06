@@ -188,7 +188,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
           layer.layer.setStyle({
             fillColor: '#ffff00',
             color: '#ffff00',
-            weight: 1,
+            weight: 2,
             opacity: 1,
             fillOpacity: 0.3
           });
