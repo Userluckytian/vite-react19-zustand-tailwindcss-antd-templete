@@ -178,7 +178,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
           // 创建高亮图标
           const highlightIcon = L.divIcon({
             className: 'draw-marker-icon',
-            html: '<div style="width: 20px;height: 20px;border: 3px solid #ffff00;border-radius: 50%;background-color: rgba(255, 255, 0, 0.3);box-sizing: border-box;"></div>'                        
+            html: '<div style="width: 20px;height: 20px;border: 3px solid #ffff00;border-radius: 50%;background-color: rgba(255, 255, 0, 0.3);box-sizing: border-box;"></div>'
           });
           layer.layer.setIcon(highlightIcon);
         }
@@ -425,32 +425,34 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
         </span>
         <span> 中科天启</span>
       </div>
-        <div
-          style={{
-            position: "absolute",
-            left: "40%",
-            transform: "translate(-50%, -50%)",
-            zIndex: 1000,
-          }}
-        >
-          <MapFunctionPanel 
-            drawLayers={drawLayers}
-            onToggleLayer={handleToggleLayer}
-            onRemoveLayer={handleRemoveLayer}
-            onHoverLayer={handleHoverLayer}
-            onLeaveLayer={handleLeaveLayer}
-          />
-        </div>
-        <div
-          style={{
-            position: "absolute",
-            right: "680px",
-            transform: "translateY(-50%)",
-            zIndex: 1000,
-          }}
-        >
-          <FunctionPanel />
-        </div>
+      {/* 收集绘制的图形面板 */}
+      <div
+        style={{
+          position: "absolute",
+          left: "40%",
+          transform: "translate(-50%, -50%)",
+          zIndex: 1000,
+        }}
+      >
+        <MapFunctionPanel
+          drawLayers={drawLayers}
+          onToggleLayer={handleToggleLayer}
+          onRemoveLayer={handleRemoveLayer}
+          onHoverLayer={handleHoverLayer}
+          onLeaveLayer={handleLeaveLayer}
+        />
+      </div>
+      {/* 功能说明组件 */}
+      <div
+        style={{
+          position: "absolute",
+          right: "680px",
+          transform: "translateY(-50%)",
+          zIndex: 1000,
+        }}
+      >
+        <FunctionPanel />
+      </div>
     </div>
   );
 }
