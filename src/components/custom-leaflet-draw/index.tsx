@@ -155,6 +155,11 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             id: 'manual',
             label: '完成后，由用户来选择要保留的部分',
             visible: false
+        },
+        {
+            id: 'adsorption',
+            label: '吸附（应该是一个默认功能，而不单独为谁服务）',
+            visible: false
         }
     ]);
 
