@@ -11,12 +11,17 @@
  * 1：我构建了一个挖孔的面，假设，面的外部定义为区域A，面定义为区域B，面的内环部分定义为区域C，我在区域A绘制一个起点P1，然后这条线经过A，经过B，经过C，再回到区域A，和面共有4个交点，其中外环2个，内环2个。我认为这是一分为2的行为，但通过重塑后，却得到了2部分：外环从分割线切分保留了一部分，内环区域被填充了一部分。（感觉对于arcgis来说，执行的是先只考虑外环面部分，再只考虑内环面部分，这样解释就合理了）
  * 2：还用上面的区域ABC举例，假设我的起点在区域C内，然后依次穿过区域B，区域A，再从区域A穿过区域B，再回到区域C。第一次执行（绘制一小块区域）的结果是扩充，第二次执行的结果（这次把线画的很大，在绕过环的情况下去包裹尽可能多的面）却是整个B删掉了，然后区域A和区域B围起来的部分是保留的，区域C变成了填充的。
  */
+
+/**  线整形的逻辑：
+ * 草图线与目标线有两个交点 → 用草图线中间段替换原线中对应部分
+ * 草图线与目标线有一个交点 → 返回两个候选结果（前段替换 vs 后段替换）
+ * 草图线无交点 → 不处理
+ */
 import {
   lineIntersect,
   polygonToLine,
   lineSplit,
   getCoords,
-  distance,
   point,
   length,
   lineString,
@@ -24,7 +29,8 @@ import {
   booleanPointInPolygon,
   union,
   featureCollection,
-  booleanDisjoint
+  booleanDisjoint,
+  booleanPointOnLine
 } from "@turf/turf";
 import L from "leaflet";
 import splitPolygon from "./turf-polygon-split";
@@ -64,7 +70,7 @@ function reshapeMultiPolygonByLine(
 }
 
 /**
- * 根据草图线自动判断并执行 reshape（裁剪或扩张）
+ * （针对面）根据草图线自动判断并执行 reshape（裁剪或扩张）
  */
 function reshapePolygonByLine(
   polygon: GeoJSON.Feature<GeoJSON.Polygon>,
@@ -162,68 +168,4 @@ function pickLargestPerimeterPolygon(
 }
 
 
-
-/** 找到与指定点最近的线段
- * 
- */
-function findNearestSegment(
-  segments: GeoJSON.Feature<GeoJSON.LineString>[],
-  pt: number[]
-): GeoJSON.Feature<GeoJSON.LineString> | null {
-  let minDist = Infinity;
-  let nearest: GeoJSON.Feature<GeoJSON.LineString> | null = null;
-
-  for (const seg of segments) {
-    for (const coord of getCoords(seg)) {
-      const d = Math.hypot(coord[0] - pt[0], coord[1] - pt[1]);
-      if (d < minDist) {
-        minDist = d; nearest = seg;
-      }
-    }
-  }
-  return nearest;
-}
-
-
-
-
-function buildNewRing(
-  segments: GeoJSON.Feature<GeoJSON.LineString>[],
-  startSeg: GeoJSON.Feature<GeoJSON.LineString>,
-  endSeg: GeoJSON.Feature<GeoJSON.LineString>,
-  sketchCoords: number[][]
-): number[][] | null {
-  const ring: number[][] = [];
-
-  const startIndex = segments.findIndex(s => s === startSeg);
-  const endIndex = segments.findIndex(s => s === endSeg);
-  if (startIndex === -1 || endIndex === -1) return null;
-
-  // 顺时针拼接边界段
-  let i = endIndex;
-  while (true) {
-    i = (i + 1) % segments.length;
-    if (i === startIndex) break;
-    ring.push(...getCoords(segments[i]));
-  }
-
-  // 拼接：startSeg → sketch → endSeg → 其他段
-  ring.unshift(...getCoords(startSeg));
-  ring.push(...sketchCoords);
-  ring.push(...getCoords(endSeg));
-
-  // 闭合
-  if (
-    ring.length > 0 &&
-    (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1])
-  ) {
-    ring.push(ring[0]);
-  }
-
-  return ring;
-}
-
-
-
-
-export { reshapePolygonByLine, reshapeMultiPolygonByLine };
+export { reshapePolygonByLine, reshapeMultiPolygonByLine, reshapeLineByLine };
