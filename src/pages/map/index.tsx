@@ -170,16 +170,31 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     console.log("鼠标悬浮图层", id);
     const layer = drawLayers.find(layer => layer.id === id);
     if (layer && layer.layer) {
-      // 高亮逻辑：保存原始样式并应用高亮样式
-      if (layer.layer.options && typeof layer.layer.setStyle === 'function') {
-        (layer.layer as any)._originalStyle = (layer.layer as any)._originalStyle || { ...layer.layer.options };
-        layer.layer.setStyle({
-          fillColor: '#ffff00',
-          color: '#ffff00',
-          weight: 3,
-          opacity: 1,
-          fillOpacity: 0.3
-        });
+      try {
+        // 检查是否是点图层（Marker）
+        if (typeof layer.layer.setIcon === 'function') {
+          // 保存原始图标
+          (layer.layer as any)._originalIcon = (layer.layer as any)._originalIcon || layer.layer.getIcon();
+          // 创建高亮图标
+          const highlightIcon = L.divIcon({
+            className: 'draw-marker-icon',
+            html: '<div style="width: 20px;height: 20px;border: 3px solid #ffff00;border-radius: 50%;background-color: rgba(255, 255, 0, 0.3);box-sizing: border-box;"></div>'                        
+          });
+          layer.layer.setIcon(highlightIcon);
+        }
+        else if (layer.layer.options && typeof layer.layer.setStyle === 'function') {
+          // 高亮逻辑：保存原始样式并应用高亮样式
+          (layer.layer as any)._originalStyle = (layer.layer as any)._originalStyle || { ...layer.layer.options };
+          layer.layer.setStyle({
+            fillColor: '#ffff00',
+            color: '#ffff00',
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.3
+          });
+        }
+      } catch (error) {
+        console.error('设置图层高亮样式失败:', error, layer.layer);
       }
     }
   };
@@ -190,9 +205,22 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     setDrawLayers(prevDrawLayers => {
       // 移除所有图层的高亮样式，恢复到默认的红色样式
       prevDrawLayers.forEach(layer => {
-        if (layer.layer && (layer.layer as any)._originalStyle && typeof layer.layer.setStyle === 'function') {
-          layer.layer.setStyle((layer.layer as any)._originalStyle);
-          delete (layer.layer as any)._originalStyle;
+        if (layer.layer) {
+          try {
+            // 检查是否是点图层（Marker）
+            if ((layer.layer as any)._originalIcon && typeof layer.layer.setIcon === 'function') {
+              // 恢复原始图标
+              layer.layer.setIcon((layer.layer as any)._originalIcon);
+              delete (layer.layer as any)._originalIcon;
+            }
+            else if ((layer.layer as any)._originalStyle && typeof layer.layer.setStyle === 'function') {
+              // 恢复原始样式
+              layer.layer.setStyle((layer.layer as any)._originalStyle);
+              delete (layer.layer as any)._originalStyle;
+            }
+          } catch (error) {
+            console.error('恢复图层原始样式失败:', error, layer.layer);
+          }
         }
       });
       // 返回原始数组，不改变状态内容
