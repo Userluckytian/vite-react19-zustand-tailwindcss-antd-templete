@@ -16,7 +16,7 @@
     bottom: 40px;
     height: 80px;
     padding: 10px;
-    z-index: 400;
+    z-index: 600;
     background-color: #ffffff80;
     display: flex;
     gap: 10px;
@@ -91,5 +91,21 @@
     right: 10px;
     top: 10px;
     z-index: 400;
+  }
+  .leaflet-control-zoom {
+    display: flex !important;
+    flex-direction: column !important;
+    border: none !important;
+    gap: 0 !important;
+    background-color: transparent !important;
+    top: 10px;
+    left: 10px;
+    .leaflet-control-zoom-in, .leaflet-control-zoom-out {
+      width: 36px !important;
+      height: 36px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
   }
 }

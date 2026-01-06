@@ -3,7 +3,7 @@ import './index.scss';
 import CustomIcon from '@/components/custom-icon';
 
 const FunctionPanel = () => {
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const togglePanel = () => {
         setIsExpanded(!isExpanded);

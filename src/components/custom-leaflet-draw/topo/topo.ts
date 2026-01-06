@@ -159,7 +159,9 @@ export class LeafletTopology {
         const { doClipLayers, clipedGeoms } = clipSelectedLayersByLine(geoJson, this.selectedLayers);
         console.log('clipsPolygons', clipedGeoms, 'waitingDelLayer', doClipLayers);
         setTimeout(() => {
-          this.drawLineLayer!.destroy();
+          if (this.drawLineLayer) {
+            this.drawLineLayer.destroy();
+          }
           this.cleanAll();
         }, 0);
         callback && callback({ clipedGeoms, doClipLayers });
@@ -210,8 +212,9 @@ export class LeafletTopology {
     };
     const highlightLayer = L.geoJSON(layerGeom, {
       style: highlightStyle,
-      ['linkLayerId' as any]: layer._leaflet_id, // 添加自定义属性
+      // ['linkLayerId' as any]: layer._leaflet_id, // 添加自定义属性
     });
+    (highlightLayer as any).options.linkLayerId = layer._leaflet_id;
     this.selectedLayers.push(highlightLayer);
     this.map.addLayer(highlightLayer);
   }
