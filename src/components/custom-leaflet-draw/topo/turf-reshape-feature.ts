@@ -3,7 +3,7 @@
  * ArcMap-修整面： https://desktop.arcgis.com/zh-cn/arcmap/latest/manage-data/editing-existing-features/reshaping-polygons.htm
  * ArcGIS Pro： https://pro.arcgis.com/en/pro-app/latest/help/editing/reshape-a-feature.htm?utm_source=copilot.com
  * 1: 支持线、面的重塑处理。（✔）
- * 2: 【Allow reshaping without a selection】允许无选择重塑。（目前：仅支持先选择再重塑）
+ * 2: 【Allow reshaping without a selection】允许无选择重塑。（✔）
  * 3: 【Show Preview】实时预览reshape效果，便于判断结果是否符合预期。（目前：不支持）
  * 4: 【Reshape with single intersection】仅限线要素，允许单一交叉点重塑。（✔）
  * 5: 【Choose result on finish】完成后，由用户来选择要保留的部分。（目前：自动保留周长最大的特征，用户想要自己选择保留的部分）
@@ -43,7 +43,6 @@ import type { ReshapeOptions } from "../types";
 function reshapeMultiPolygonByLine(
   multi: GeoJSON.Feature<GeoJSON.MultiPolygon>,
   sketchLine: GeoJSON.Feature<GeoJSON.LineString>,
-  map: L.Map,
   options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
 ): GeoJSON.Feature<GeoJSON.MultiPolygon>[] {
   const parts = getCoords(multi).map(rings => turfPolygon(rings));
@@ -52,7 +51,7 @@ function reshapeMultiPolygonByLine(
     if (booleanDisjoint(part, sketchLine)) {
       reshaped.push(part); // 不相交，保留原样 
     } else {
-      const result = reshapePolygonByLine(part, sketchLine, map, options);
+      const result = reshapePolygonByLine(part, sketchLine, options);
       if (result) reshaped.push(...result);
     }
   }
@@ -76,7 +75,6 @@ function reshapeMultiPolygonByLine(
 function reshapePolygonByLine(
   polygon: GeoJSON.Feature<GeoJSON.Polygon>,
   sketchLine: GeoJSON.Feature<GeoJSON.LineString>,
-  map: L.Map,
   options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
 ): GeoJSON.Feature<GeoJSON.Polygon>[] | null {
   const sketchCoords = getCoords(sketchLine);
@@ -122,7 +120,7 @@ function reshapeByExpansion(
   }
   const sketchPolygon = turfPolygon([ring]);
   const merged: any = union(featureCollection([polygon, sketchPolygon]));
-  console.log('起点和终点都在内部时：', merged);
+  // console.log('起点和终点都在内部时：', merged);
 
   return merged ? [merged] : null;
 }
@@ -177,7 +175,6 @@ function pickLargestPerimeterPolygon(
 function reshapeLineByLine(
   target: GeoJSON.Feature<GeoJSON.LineString>,
   sketch: GeoJSON.Feature<GeoJSON.LineString>,
-  map: L.Map,
   options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
 ): GeoJSON.Feature<GeoJSON.LineString>[] | null {
   const intersections = lineIntersect(target, sketch).features;

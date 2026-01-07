@@ -93,33 +93,43 @@ export function mergePolygon(selLayers: any): GeoJSON.Feature | null {
 export function reshapeSelectedLayersByLine(
     sketchLine: GeoJSON.Feature<any>,
     selLayers: L.GeoJSON[],
-    map: L.Map,
     options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
 ): TopoReshapeFeatureResult {
     const waitingDelLayer: L.Layer[] = [];
     const results: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon | GeoJSON.LineString>[] = [];
     selLayers.forEach((layer: L.GeoJSON) => {
 
-        const geojsonFeatureCollection = layer.toGeoJSON() as GeoJSON.FeatureCollection<any>;
-        const geojson = geojsonFeatureCollection.features[0];
+        const geojsonFeatureInfo = layer.toGeoJSON() as GeoJSON.FeatureCollection<any> | GeoJSON.Feature<any>;
+        /*  排查了一下：
+            若是先选择再进行重塑时，选择的图层高亮黄色，其geojsonFeatureInfo.type为'FeatureCollection'
+            若是无选择重塑，geojsonFeatureInfo.type为'Feature'
+            另外，我每次都是处理一个面，所以FeatureCollection的Feature的数量一定是1个。
+         */
+        let geojson = null;
+        if (geojsonFeatureInfo.type === 'FeatureCollection') {
+            geojson = geojsonFeatureInfo.features[0];
+        } else {
+            geojson = geojsonFeatureInfo;
+        }
+
         const type = geojson.geometry.type;
         switch (type) {
             case 'LineString':
-                const lineResult = reshapeLineByLine(geojson as GeoJSON.Feature<GeoJSON.LineString>, sketchLine, map, options);
-                console.log('lineResult', lineResult);
+                const lineResult = reshapeLineByLine(geojson as GeoJSON.Feature<GeoJSON.LineString>, sketchLine, options);
+                // console.log('lineResult', lineResult);
 
                 if (lineResult)
                     results.push(...lineResult);
                 break;
             case 'Polygon':
-                const polyResult = reshapePolygonByLine(geojson as GeoJSON.Feature<GeoJSON.Polygon>, sketchLine, map, options);
-                console.log('polyResult', polyResult);
+                const polyResult = reshapePolygonByLine(geojson as GeoJSON.Feature<GeoJSON.Polygon>, sketchLine, options);
+                // console.log('polyResult', polyResult);
 
                 if (polyResult)
                     results.push(...polyResult);
                 break;
             case 'MultiPolygon':
-                const MultiPolyResult = reshapeMultiPolygonByLine(geojson as GeoJSON.Feature<GeoJSON.MultiPolygon>, sketchLine, map, options);
+                const MultiPolyResult = reshapeMultiPolygonByLine(geojson as GeoJSON.Feature<GeoJSON.MultiPolygon>, sketchLine, options);
                 if (MultiPolyResult)
                     results.push(...MultiPolyResult);
                 break;
@@ -129,7 +139,7 @@ export function reshapeSelectedLayersByLine(
         }
 
     });
-    console.log('results', results);
+    // console.log('results', results);
 
     return { doReshapeLayers: waitingDelLayer, reshapedGeoms: results };
 }

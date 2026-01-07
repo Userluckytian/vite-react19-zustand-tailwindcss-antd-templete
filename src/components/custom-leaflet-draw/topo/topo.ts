@@ -1,5 +1,5 @@
 import * as L from 'leaflet';
-import { queryLayerOnClick } from '../utils/commonUtils';
+import { queryLayerOnClick, queryLayersIntersectingGeometry } from '../utils/commonUtils';
 import { union } from '@turf/turf';
 import LeafletPolyline from '../draw/polyline';
 import { PolygonEditorState, type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from '../types';
@@ -89,9 +89,11 @@ export class LeafletTopology {
    * 执行整形要素工具操作 
    * */
   public reshapeFeature(options: ReshapeOptions, callback: (result: TopoReshapeFeatureResult) => void) {
-    if (this.selectedLayers.length === 0) {
+    // todo: 不允许无选择时，若选择的图层数量为0个，则拒绝后续执行。
+    if (!options.AllowReshapingWithoutSelection && this.selectedLayers.length === 0) {
       throw new Error('请先选择要执行整形操作的图层');
     }
+    // 就要获取全部的layer，然后逐个遍历是否和绘制的线相交，再执行后续操作 
 
     // 第一步： 关闭选择高亮的交互事件
     if (this.clickHandler) {
@@ -99,20 +101,29 @@ export class LeafletTopology {
       this.clickHandler = null;
     }
     // 第二步： 执行绘制操作，并添加监听事件
-    this.drawLineLayer = new LeafletPolyline(this.map);
+    const drawReshapeLineFlag = 'reshapeLine';
+    this.drawLineLayer = new LeafletPolyline(this.map, { drawFlag: drawReshapeLineFlag });
     // 添加绘制完毕后，重新调整状态为topo状态
     this.drawLineListener = (status: PolygonEditorState) => {
       if (status === PolygonEditorState.Idle) {
         const geoJson = this.drawLineLayer!.geojson();
-        console.log('绘制的线图层的空间信息：', geoJson, this.selectedLayers, this.map);
-        const { doReshapeLayers, reshapedGeoms } = reshapeSelectedLayersByLine(geoJson, this.selectedLayers, this.map, options);
+        // console.log('绘制的线图层的空间信息：', this.drawLineLayer, geoJson);
+        // console.log('用户选择的图层：', this.selectedLayers);
+        // console.log('地图对象', this.map);
+        if (options.AllowReshapingWithoutSelection) {
+          const tempIntersectLayer = queryLayersIntersectingGeometry(this.map, geoJson);
+          this.selectedLayers = tempIntersectLayer.filter((it: L.Layer) => (it.options as any).drawFlag !== drawReshapeLineFlag);
+        }
+        // console.log('final-this.selectedLayers', this.selectedLayers);
+        
+        const { doReshapeLayers, reshapedGeoms } = reshapeSelectedLayersByLine(geoJson, this.selectedLayers, options);
         // 行为1：正常输出
-        // console.log('clipsPolygons', clipedGeoms, 'waitingDelLayer', doClipLayers);
-        // setTimeout(() => {
-        //   this.drawLineLayer!.destroy();
-        //   this.cleanAll();
-        // }, 0);
-        // callback && callback({ clipedGeoms, doClipLayers });
+        // console.log('reshapedGeoms', reshapedGeoms, 'doReshapeLayers', doReshapeLayers);
+        setTimeout(() => {
+          this.drawLineLayer!.destroy();
+          this.cleanAll();
+        }, 0);
+        callback && callback({ doReshapeLayers, reshapedGeoms });
 
         // 行为2：上图渲染，但不输出，主要用于测试
         // clipsPolygons.forEach(element => {
@@ -155,9 +166,9 @@ export class LeafletTopology {
     this.drawLineListener = (status: PolygonEditorState) => {
       if (status === PolygonEditorState.Idle) {
         const geoJson = this.drawLineLayer!.geojson();
-        console.log('绘制的线图层的空间信息：', geoJson, this.selectedLayers);
+        // console.log('绘制的线图层的空间信息：', geoJson, this.selectedLayers);
         const { doClipLayers, clipedGeoms } = clipSelectedLayersByLine(geoJson, this.selectedLayers);
-        console.log('clipsPolygons', clipedGeoms, 'waitingDelLayer', doClipLayers);
+        // console.log('clipsPolygons', clipedGeoms, 'waitingDelLayer', doClipLayers);
         setTimeout(() => {
           if (this.drawLineLayer) {
             this.drawLineLayer.destroy();
