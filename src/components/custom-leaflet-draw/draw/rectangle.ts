@@ -6,7 +6,7 @@
  * 综上：本组件不会吐出rectangleLayer对象，只提供上面说的2的功能：吐出坐标信息，以及3里的监听事件回调机制。
  * */
 import * as L from 'leaflet';
-import { PolygonEditorState } from '../types';
+import { PolygonEditorState, type LeafletPolylineOptionsExpends } from '../types';
 export default class LeafletRectangle {
 
     private map: L.Map;
@@ -24,7 +24,7 @@ export default class LeafletRectangle {
     // 2：我们需要一个数组，存储全部的监听事件，然后在状态改变时，触发所有这些事件的监听回调！
     private stateListeners: ((state: PolygonEditorState) => void)[] = [];
 
-    constructor(map: L.Map, options: L.PolylineOptions = {}) {
+    constructor(map: L.Map, options: LeafletPolylineOptionsExpends = {}) {
         this.map = map;
         if (this.map) {
             // 初始化时，设置绘制状态为true，且发出状态通知
@@ -39,9 +39,9 @@ export default class LeafletRectangle {
     }
 
     // 初始化图层
-    private initLayers(options: L.PolylineOptions) {
+    private initLayers(options: LeafletPolylineOptionsExpends) {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[[-90, -180], [-90, -180]]坐标，也就是页面的左下角
-        const polylineOptions: L.PolylineOptions = {
+        const polylineOptions: LeafletPolylineOptionsExpends = {
             pane: 'overlayPane',
             ...this.drawLayerStyle,
             ...options
@@ -55,7 +55,7 @@ export default class LeafletRectangle {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletRectangle
      */
     private initMapEvent(map: L.Map) {
         map.on('click', this.mapClickEvent);
@@ -68,7 +68,7 @@ export default class LeafletRectangle {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletRectangle
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
         if (this.tempCoords.length === 0) {
@@ -84,7 +84,7 @@ export default class LeafletRectangle {
      *
      *
      * @private
-     * @memberof LeafletDistance
+     * @memberof LeafletRectangle
      */
     private reset() {
         // 清空坐标把，因为没什么用了
@@ -104,7 +104,7 @@ export default class LeafletRectangle {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletRectangle
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
         // 1：一个点也没有时，我们移动事件，也什么也不做。
@@ -118,39 +118,39 @@ export default class LeafletRectangle {
         this.renderLayer(this.tempCoords);
     }
 
-    /** 渲染线图层
+    /** 渲染图层
      *
      *
      * @private
      * @param { [][]} coords
-     * @memberof LeafletPolyLine
+     * @memberof LeafletRectangle
      */
     private renderLayer(coords: L.LatLng[]) {
         if (this.rectangleLayer) {
             const bounds = L.latLngBounds(coords);
             this.rectangleLayer.setBounds(bounds);
         } else {
-            throw new Error('线图层不存在，无法渲染');
+            throw new Error('图层不存在，无法渲染');
         }
     }
 
     /** 返回图层的空间信息 
      * 
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
-     * @memberof markerPoint
+     * @memberof LeafletRectangle
      */
     public geojson() {
         if (this.rectangleLayer) {
             return this.rectangleLayer.toGeoJSON();
         } else {
-            throw new Error("未捕获到marker图层，无法获取到geojson数据");
+            throw new Error("未捕获到图层，无法获取到geojson数据");
         }
     }
 
     /** 销毁图层，从地图中移除图层
      *
      *
-     * @memberof markerPoint
+     * @memberof LeafletRectangle
      */
     public destroy() {
         if (this.rectangleLayer) {
@@ -165,7 +165,7 @@ export default class LeafletRectangle {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletRectangle
      */
     private offMapEvent(map: L.Map) {
         map.off('click', this.mapClickEvent);
@@ -180,7 +180,7 @@ export default class LeafletRectangle {
      *
      *
      * @param {(state: PolygonEditorState) => void} listener
-     * @memberof LeafletEditPolygon
+     * @memberof LeafletRectangle
      */
     public onStateChange(listener: (state: PolygonEditorState) => void): void {
         // 存储回调事件并立刻触发一次
@@ -202,7 +202,7 @@ export default class LeafletRectangle {
     /** 清空所有状态监听器 
      * 
      */
-    public clearAllStateListeners(): void {
+    private clearAllStateListeners(): void {
         this.stateListeners = [];
     }
 
@@ -210,7 +210,7 @@ export default class LeafletRectangle {
      *
      *
      * @private
-     * @memberof LeafletEditPolygon
+     * @memberof LeafletRectangle
      */
     private updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;

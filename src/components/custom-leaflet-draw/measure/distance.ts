@@ -72,7 +72,7 @@ export default class LeafletDistance {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletDistance
      */
     private initMapEvent(map: L.Map) {
         map.on('click', this.mapClickEvent);
@@ -86,7 +86,7 @@ export default class LeafletDistance {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletDistance
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
         this.tempCoords.push([e.latlng.lat, e.latlng.lng])
@@ -98,7 +98,7 @@ export default class LeafletDistance {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletDistance
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
         if (this.lineLayer) {
@@ -132,7 +132,7 @@ export default class LeafletDistance {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletDistance
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
         if (!this.tempCoords.length) return;
@@ -149,38 +149,38 @@ export default class LeafletDistance {
         this.renderLayer(this.tempCoords);
     }
 
-    /** 渲染线图层
+    /** 渲染图层
      *
      *
      * @private
      * @param { [][]} coords
-     * @memberof LeafletPolyLine
+     * @memberof LeafletDistance
      */
     private renderLayer(coords: number[][]) {
         if (this.lineLayer) {
             this.lineLayer.setLatLngs(coords as any);
         } else {
-            throw new Error('线图层不存在，无法渲染');
+            throw new Error('图层不存在，无法渲染');
         }
     }
 
     /** 返回图层的空间信息 
      * 
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
-     * @memberof markerPoint
+     * @memberof LeafletDistance
      */
     public geojson() {
         if (this.lineLayer) {
             return this.lineLayer.toGeoJSON();
         } else {
-            throw new Error("未捕获到marker图层，无法获取到geojson数据");
+            throw new Error("未捕获到图层，无法获取到geojson数据");
         }
     }
 
     /** 销毁图层，从地图中移除图层
      *
      *
-     * @memberof markerPoint
+     * @memberof LeafletDistance
      */
     public destroy() {
         if (this.lineLayer) {
@@ -201,7 +201,7 @@ export default class LeafletDistance {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletDistance
      */
     private offMapEvent(map: L.Map) {
         map.off('click', this.mapClickEvent);
@@ -491,7 +491,7 @@ export default class LeafletDistance {
      *
      *
      * @param {(state: PolygonEditorState) => void} listener
-     * @memberof LeafletEditPolygon
+     * @memberof LeafletDistance
      */
     public onStateChange(listener: (state: PolygonEditorState) => void): void {
         // 存储回调事件并立刻触发一次
@@ -513,7 +513,7 @@ export default class LeafletDistance {
     /** 清空所有状态监听器 
      * 
      */
-    public clearAllStateListeners(): void {
+    private clearAllStateListeners(): void {
         this.stateListeners = [];
     }
 
@@ -521,7 +521,7 @@ export default class LeafletDistance {
      *
      *
      * @private
-     * @memberof LeafletEditPolygon
+     * @memberof LeafletDistance
      */
     private updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;

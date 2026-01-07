@@ -6,7 +6,7 @@
  * 综上：本组件不会吐出polygonLayer对象，只提供上面说的2的功能：吐出坐标信息，以及3里的监听事件回调机制。
  * */
 import * as L from 'leaflet';
-import { PolygonEditorState } from '../types';
+import { PolygonEditorState, type LeafletPolylineOptionsExpends } from '../types';
 export default class LeafletPolygon {
 
     private map: L.Map;
@@ -25,7 +25,7 @@ export default class LeafletPolygon {
     private stateListeners: ((state: PolygonEditorState) => void)[] = [];
 
 
-    constructor(map: L.Map, options: L.PolylineOptions = {}) {
+    constructor(map: L.Map, options: LeafletPolylineOptionsExpends = {}) {
         this.map = map;
         if (this.map) {
             // 初始化时，设置绘制状态为true，且发出状态通知
@@ -40,9 +40,9 @@ export default class LeafletPolygon {
     }
 
     // 初始化图层
-    private initLayers(options: L.PolylineOptions) {
+    private initLayers(options: LeafletPolylineOptionsExpends) {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[[-90, -180], [-90, -180], [-90, -180], [-90, -180]]坐标，也就是页面的左下角
-        const polygonOptions: L.PolylineOptions = {
+        const polygonOptions: LeafletPolylineOptionsExpends = {
             pane: 'overlayPane',
             ...this.drawLayerStyle,
             ...options
@@ -56,7 +56,7 @@ export default class LeafletPolygon {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletPolygon
      */
     private initMapEvent(map: L.Map) {
         map.on('click', this.mapClickEvent);
@@ -70,7 +70,7 @@ export default class LeafletPolygon {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletPolygon
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
         this.tempCoords.push([e.latlng.lat, e.latlng.lng])
@@ -80,7 +80,7 @@ export default class LeafletPolygon {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletPolygon
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
         if (this.polygonLayer) {
@@ -94,7 +94,7 @@ export default class LeafletPolygon {
      *
      *
      * @private
-     * @memberof LeafletDistance
+     * @memberof LeafletPolygon
      */
     private reset() {
         // 清空坐标把，因为没什么用了
@@ -112,7 +112,7 @@ export default class LeafletPolygon {
      *
      * @private
      * @param {L.LeafletMouseEvent} e
-     * @memberof markerPoint
+     * @memberof LeafletPolygon
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
         if (!this.tempCoords.length) return;
@@ -129,38 +129,38 @@ export default class LeafletPolygon {
         this.renderLayer(this.tempCoords);
     }
 
-    /** 渲染线图层
+    /** 渲染图层
      *
      *
      * @private
      * @param { [][]} coords
-     * @memberof LeafletLine
+     * @memberof LeafletPolygon
      */
     private renderLayer(coords: number[][]) {
         if (this.polygonLayer) {
             this.polygonLayer.setLatLngs(coords as any);
         } else {
-            throw new Error('线图层不存在，无法渲染');
+            throw new Error('图层不存在，无法渲染');
         }
     }
 
     /** 返回图层的空间信息 
      * 
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
-     * @memberof markerPoint
+     * @memberof LeafletPolygon
      */
     public geojson() {
         if (this.polygonLayer) {
             return this.polygonLayer.toGeoJSON();
         } else {
-            throw new Error("未捕获到marker图层，无法获取到geojson数据");
+            throw new Error("未捕获到图层，无法获取到geojson数据");
         }
     }
 
     /** 销毁图层，从地图中移除图层
      *
      *
-     * @memberof markerPoint
+     * @memberof LeafletPolygon
      */
     public destroy() {
         if (this.polygonLayer) {
@@ -175,7 +175,7 @@ export default class LeafletPolygon {
      *
      * @private
      * @param {L.Map} map 地图对象
-     * @memberof markerPoint
+     * @memberof LeafletPolygon
      */
     private offMapEvent(map: L.Map) {
         map.off('click', this.mapClickEvent);
@@ -220,7 +220,7 @@ export default class LeafletPolygon {
      *
      *
      * @param {(state: PolygonEditorState) => void} listener
-     * @memberof LeafletEditPolygon
+     * @memberof LeafletPolygon
      */
     public onStateChange(listener: (state: PolygonEditorState) => void): void {
         // 存储回调事件并立刻触发一次
@@ -242,7 +242,7 @@ export default class LeafletPolygon {
     /** 清空所有状态监听器 
      * 
      */
-    public clearAllStateListeners(): void {
+    private clearAllStateListeners(): void {
         this.stateListeners = [];
     }
 
@@ -250,7 +250,7 @@ export default class LeafletPolygon {
      *
      *
      * @private
-     * @memberof LeafletEditPolygon
+     * @memberof LeafletPolygon
      */
     private updateAndNotifyStateChange(status: PolygonEditorState): void {
         this.currentState = status;

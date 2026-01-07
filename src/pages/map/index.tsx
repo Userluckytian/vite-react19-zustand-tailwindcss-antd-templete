@@ -13,9 +13,14 @@ import { formatNumber, throttle } from "@/utils/utils";
 import { App } from "antd";
 import CustomLeafLetDraw from "@/components/custom-leaflet-draw";
 // 类型定义
+import FunctionPanel from "./opt-description";
+import MapFunctionPanel from "./opt-description/mapIndex";
+// 确保正确导入Leaflet CSS
+import "leaflet/dist/leaflet.css";
 interface MapPreviewProps {
   outputMapView?: (map: L.Map) => void;
 }
+
 interface BaseLayerConfig {
   name: "地图" | "地球" | "地形";
   option: string;
@@ -32,6 +37,14 @@ interface ShowVerorLayers {
 interface CurrentBaseLayers {
   type: string | null;
   layers: L.TileLayer[];
+}
+
+interface DrawLayer {
+  id: string;
+  name: string;
+  layer: any;
+  visible: boolean;
+  type: string;
 }
 // 常量配置
 const TDT_KEY = "e6372a5333c4bac9b9ef6097453c3cd6";
@@ -102,6 +115,135 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     mapTwo: true,
     mapThree: true,
   });
+
+  // 绘制图层管理
+  const [drawLayers, setDrawLayers] = useState<DrawLayer[]>([]);
+  const layerIdCounter = useRef(1);
+
+  // 处理绘制结果
+  const handleDrawResult = (result: any) => {
+    if (result && result.layer) {
+      // 使用回调函数方式确保获取最新的 drawLayers 长度
+      setDrawLayers(prev => {
+        const newLayer: DrawLayer = {
+          id: `layer_${layerIdCounter.current}`,
+          name: `图形${layerIdCounter.current}`,
+          layer: result.layer,
+          visible: true,
+          type: result.type || 'unknown'
+        };
+        layerIdCounter.current++;
+        return [...prev, newLayer];
+      });
+    }
+  };
+
+  // 切换图层显示/隐藏
+  const handleToggleLayer = (id: string) => {
+    setDrawLayers(prev => prev.map(layer => {
+      if (layer.id === id) {
+        const newVisible = !layer.visible;
+        if (newVisible) {
+          mapView?.addLayer(layer.layer);
+        } else {
+          mapView?.removeLayer(layer.layer);
+        }
+        return { ...layer, visible: newVisible };
+      }
+      return layer;
+    }));
+  };
+
+  // 移除图层
+  const handleRemoveLayer = (id: string) => {
+    setDrawLayers(prev => {
+      const layerToRemove = prev.find(layer => layer.id === id);
+      if (layerToRemove) {
+        mapView?.removeLayer(layerToRemove.layer);
+      }
+      return prev.filter(layer => layer.id !== id);
+    });
+  };
+
+  // 鼠标悬浮图层
+  const handleHoverLayer = (id: string) => {
+    console.log("鼠标悬浮图层", id);
+    const layer = drawLayers.find(layer => layer.id === id);
+    if (layer && layer.layer) {
+      try {
+        // 检查是否是点图层（Marker）
+        if (typeof layer.layer.setIcon === 'function') {
+          // 保存原始图标
+          (layer.layer as any)._originalIcon = (layer.layer as any)._originalIcon || layer.layer.getIcon();
+          // 创建高亮图标
+          const highlightIcon = L.divIcon({
+            className: 'draw-marker-icon',
+            html: '<div style="width: 20px;height: 20px;border: 3px solid #ffff00;border-radius: 50%;background-color: rgba(255, 255, 0, 0.3);box-sizing: border-box;"></div>'
+          });
+          layer.layer.setIcon(highlightIcon);
+        }
+        else if (layer.layer.options && typeof layer.layer.setStyle === 'function') {
+          // 高亮逻辑：保存原始样式并应用高亮样式
+          (layer.layer as any)._originalStyle = (layer.layer as any)._originalStyle || { ...layer.layer.options };
+          layer.layer.setStyle({
+            fillColor: '#ffff00',
+            color: '#ffff00',
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.3
+          });
+        }
+      } catch (error) {
+        console.error('设置图层高亮样式失败:', error, layer.layer);
+      }
+    }
+  };
+
+  // 鼠标离开图层
+  const handleLeaveLayer = () => {
+    // 使用回调函数确保获取最新的drawLayers状态
+    setDrawLayers(prevDrawLayers => {
+      // 移除所有图层的高亮样式，恢复到默认的红色样式
+      prevDrawLayers.forEach(layer => {
+        if (layer.layer) {
+          try {
+            // 检查是否是点图层（Marker）
+            if ((layer.layer as any)._originalIcon && typeof layer.layer.setIcon === 'function') {
+              // 恢复原始图标
+              layer.layer.setIcon((layer.layer as any)._originalIcon);
+              delete (layer.layer as any)._originalIcon;
+            }
+            else if ((layer.layer as any)._originalStyle && typeof layer.layer.setStyle === 'function') {
+              // 恢复原始样式
+              layer.layer.setStyle((layer.layer as any)._originalStyle);
+              delete (layer.layer as any)._originalStyle;
+            }
+          } catch (error) {
+            console.error('恢复图层原始样式失败:', error, layer.layer);
+          }
+        }
+      });
+      // 返回原始数组，不改变状态内容
+      return prevDrawLayers;
+    });
+  };
+
+  /*
+      google地图，很清晰，但需要翻墙才能看
+  */
+  const addGoogleMap = () => {
+    const satelliteMap = L.tileLayer(
+      "http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+      {
+        subdomains: ["mt0", "mt1", "mt2", "mt3"],
+      }
+    );
+    const baseLayers = {
+      谷歌影像: satelliteMap,
+    };
+    var layerControl = new L.Control.Layers(baseLayers, null);
+    layerControl.addTo(mapView);
+  };
   // 鼠标移动事件处理
   const handleMouseMove = throttle((e: L.LeafletMouseEvent) => {
     setLngLat(e.latlng);
@@ -128,7 +270,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     }
   };
   // 切换底图
-  const setBaseMap = (
+  const changeBaseMap = (
     type: "地图" | "地球" | "地形",
     layer: BaseLayerConfig
   ) => {
@@ -204,20 +346,26 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
   useEffect(() => {
     if (!mapView) return;
     let mapScaleControl: L.Control | null = null;
-    let mapZoomControl: L.Control | null = null;
+    // let mapZoomControl: L.Control | null = null;
     // 设置默认底图
-    setBaseMap("地图", BASE_LAYERS[0]);
+    changeBaseMap("地图", BASE_LAYERS[0]);
     // 添加控件
+    // 事件2： 添加地图比例尺工具条
     mapScaleControl = addScaleControl(mapView);
-    mapZoomControl = addZoomControl(mapView, {
-      zoomInTitle: "放大",
-      zoomOutTitle: "缩小",
-    });
-    // 添加事件监听
+    // 正确的实现应该类似这样
+    const zoomControl = L.control
+      .zoom({
+        zoomInText: "+",
+        zoomInTitle: "放大",
+        zoomOutText: "-",
+        zoomOutTitle: "缩小",
+      })
+      .addTo(mapView);
     mapView.on("mousemove", handleMouseMove);
     return () => {
       mapScaleControl?.remove();
-      mapZoomControl?.remove();
+      // 移除zoom控件
+      zoomControl.remove();
       mapView.off("mousemove", handleMouseMove);
     };
   }, [mapView]);
@@ -237,7 +385,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
             className="layerItem"
             key={`baselayer_${idx}`}
             style={layer.positionStyle}
-            onClick={() => setBaseMap(layer.name, layer)}
+            onClick={() => changeBaseMap(layer.name, layer)}
           >
             {layer.option && (
               <div className="layerOption">
@@ -258,11 +406,15 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
 
       {/* 绘制工具 */}
       <div className="draw-tools">
-        <CustomLeafLetDraw mapInstance={mapView} />
+        <CustomLeafLetDraw mapInstance={mapView} drawGeoJsonResult={handleDrawResult} />
       </div>
 
       {/* 经纬度信息 */}
       <div className="lnglat">
+        <span>层级：</span>
+        <span className="text-blue-600 font-bold">{
+          mapView?.getZoom() || 0}
+        </span>
         <span>经度：</span>
         <span className="text-blue-600 font-bold">
           {lnglat ? formatNumber(lnglat.lng, 3) : 0}
@@ -272,6 +424,34 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
           {lnglat ? formatNumber(lnglat.lat, 3) : 0}
         </span>
         <span> 中科天启</span>
+      </div>
+      {/* 收集绘制的图形面板 */}
+      <div
+        style={{
+          position: "absolute",
+          left: "40%",
+          transform: "translate(-50%, -50%)",
+          zIndex: 1000,
+        }}
+      >
+        <MapFunctionPanel
+          drawLayers={drawLayers}
+          onToggleLayer={handleToggleLayer}
+          onRemoveLayer={handleRemoveLayer}
+          onHoverLayer={handleHoverLayer}
+          onLeaveLayer={handleLeaveLayer}
+        />
+      </div>
+      {/* 功能说明组件 */}
+      <div
+        style={{
+          position: "absolute",
+          right: "680px",
+          transform: "translateY(-50%)",
+          zIndex: 1000,
+        }}
+      >
+        <FunctionPanel />
       </div>
     </div>
   );

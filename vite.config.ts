@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
+import viteCompression from 'vite-plugin-compression';
 import tailwindcss from '@tailwindcss/vite'
 import webConfig from './public/config.json'
-
 /**
  * JS模块分包
  * @param id - 标识符
@@ -56,6 +56,15 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    viteCompression({
+      // 压缩选项
+      verbose: true, // 是否在控制台输出压缩结果
+      disable: false, // 禁用压缩
+      deleteOriginFile: false, // 删除源文件
+      threshold: 10240, // 体积大于 threshold 的文件会被压缩，单位是字节（byte）
+      algorithm: 'gzip', // 使用 gzip 压缩
+      ext: '.gz', // 生成的压缩包后缀
+    }),
     tailwindcss(),
   ],
   css: {
