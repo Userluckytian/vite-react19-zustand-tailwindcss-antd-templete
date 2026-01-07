@@ -114,7 +114,7 @@ const Carousel = () => {
                     {radarItems.map((s, i) => (
                         <div
                             className="satellite-carousel"
-                            key={s.id ?? i}
+                            key={'carousel-' + (s.id ?? i)}
                             style={{ '--i': i } as React.CSSProperties}
                         >
                             <img src={s.url} alt={s.name} />

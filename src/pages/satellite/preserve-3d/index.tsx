@@ -112,7 +112,7 @@ const PerserveThreeD = () => {
         <div className="orbit-box">
             {/* <div className="orbit-bg"></div> */}
             {radarItems.map((s, i) =>
-                <div className="satellite" style={{ '--i': i } as React.CSSProperties} key={i}>
+                <div className="satellite" style={{ '--i': i } as React.CSSProperties} key={'preserve-3d-' + i}>
                     <img src={s.url} alt={s.name} />
                 </div>
             )}
