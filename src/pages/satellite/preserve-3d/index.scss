@@ -1,3 +1,4 @@
+@use "sass:math";
 $count: 12; // 卫星数量
 $r-x: 480px; // 水平半径
 $r-z: 110px; // 垂直半径
@@ -25,9 +26,9 @@ $pi: 3.1415926; // 手动常量，dart-sass 不炸
   height: 70px;
   margin: -90px 0 0 -40px;
   animation: orbit $duration linear infinite;
-  animation-delay: calc(var(--i) * #{$duration / $count} * -1);
+  animation-delay: calc(var(--i) * #{math.div($duration, $count)} * -1);
   transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-//   鼠标悬停时，卫星从1.5倍大小的放到过程用这条曲线弹出来，而不是生硬跳变
+  //   鼠标悬停时，卫星从1.5倍大小的放到过程用这条曲线弹出来，而不是生硬跳变
   img {
     width: 100%;
     height: 100%;
@@ -42,12 +43,17 @@ $pi: 3.1415926; // 手动常量，dart-sass 不炸
 }
 @keyframes orbit {
   @for $i from 0 through 360 {
-    $p: $i / 3.6;
-    $rad: $i * $pi / 180; // 无单位运算，dart-sass 通过
-    $x: $r-x * cos($rad);
-    $y: $r-z * sin($rad); // 原来管“垂直半径”的现在去 Y 轴
+    // 旧方式： $p: $i / 3.6;
+    $p: math.div($i, 3.6);
+    // 方式2：$p: calc($i / 3.6); // 或者用 calc
+
+    $rad: math.div($i * $pi, 180); // 无单位运算，dart-sass 通过
+
+    $x: $r-x * math.cos($rad);
+    $y: $r-z * math.sin($rad); // 原来管“垂直半径”的现在去 Y 轴
     $s: 1.2;
-    #{$p}% {
+    #{calc($p * 1%)} {
+      // 修复百分比生成
       // $angle: $i * -1deg;          // 圆心角反向
       // transform: translate3d($x, 0, $z) rotateY($angle);
       transform: translate3d($x, $y, 0) scale($s);
