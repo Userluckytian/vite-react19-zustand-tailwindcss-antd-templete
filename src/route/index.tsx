@@ -42,6 +42,9 @@ const frontRouteConfig = [
                 element: LazyLoadComp(lazy(() => import('@/pages/demos/route-demo')))
             },
             { path: "map", element: LazyLoadComp(lazy(() => import("@/pages/map"))) },
+            {
+                path:'satellite',element: LazyLoadComp(lazy(() => import("@/pages/satellite")))
+            },
             { path: "demoOne", element: LazyLoadComp(lazy(() => import("@/pages/demos/demo1"))) },
             { path: "demoTwo", element: LazyLoadComp(lazy(() => import("@/pages/demos/demo2"))) },
             {

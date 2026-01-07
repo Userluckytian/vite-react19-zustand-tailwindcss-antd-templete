@@ -41,6 +41,7 @@ export default function Layout() {
                     <ul className={cn('flex gap-3 items-center m-3.5')}>
                         {/* 地图模块应该包括绘制、地图切换、缩放、测量、底图切换等功能 */}
                         <li className={cn('w-25 text-[1rem] hover:cursor-pointer hover:opacity-80 hover:text-amber-600')} onClick={() => navigate('/layout/map')}>地图模块</li>
+                        <li className={cn('w-25 text-[1rem] hover:cursor-pointer hover:opacity-80 hover:text-amber-600')} onClick={() => navigate('/layout/satellite')}>卫星旋转模块</li>
                         {/* react 19 练习 */}
                         <li className={cn('w-25 text-[1rem] hover:cursor-pointer hover:opacity-80 hover:text-amber-600')} onClick={() => navigate('/layout/demoOne')}>react19</li>
                         {/* zustand 练习 */}
