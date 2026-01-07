@@ -59,10 +59,10 @@ const FunctionPanel = () => {
                             <li className="completed">✔ 【合并-union】选择多个图层，点击合并按钮，实现图层的合并操作（结果仅在控制台输出）</li>
                             <li className="doing">🌀 【整形要素工具： Reshape Feature】参见： <a href="https://pro.arcgis.com/en/pro-app/latest/help/editing/reshape-a-feature.htm?utm_source=copilot.com" target="Reshape-Feature-page">Reshape a line or polygon feature</a>
                                 <ul className='text-amber-600'>原则上应该要支持以下内容：
-                                    <li>①：支持线、面的重塑处理。（目前：仅支持面）</li>
+                                    <li>①：支持线、面的重塑处理。（✔）</li>
                                     <li>②：【Allow reshaping without a selection】允许无选择重塑。（目前：仅支持先选择再重塑）</li>
                                     <li>③：【Show Preview】实时预览reshape效果，便于判断结果是否符合预期。（目前：不支持）</li>
-                                    <li>④：【Reshape with single intersection】仅限线要素，允许单一交叉点重塑。（目前：我们暂时只做了支持面，暂时项目中不怎么用，先不做）</li>
+                                    <li>④：【Reshape with single intersection】仅限线要素，允许单一交叉点重塑。（✔）</li>
                                     <li>⑤：【Choose result on finish】完成后，由用户来选择要保留的部分。（目前：自动保留周长最大的特征，用户想要自己选择保留的部分）</li>
                                 </ul>
                             </li>

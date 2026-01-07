@@ -2,10 +2,10 @@
  * ArcMap-修整线： https://desktop.arcgis.com/zh-cn/arcmap/latest/manage-data/editing-existing-features/reshaping-lines.htm
  * ArcMap-修整面： https://desktop.arcgis.com/zh-cn/arcmap/latest/manage-data/editing-existing-features/reshaping-polygons.htm
  * ArcGIS Pro： https://pro.arcgis.com/en/pro-app/latest/help/editing/reshape-a-feature.htm?utm_source=copilot.com
- * 1: 支持线、面的重塑处理。（目前：仅支持面）
+ * 1: 支持线、面的重塑处理。（✔）
  * 2: 【Allow reshaping without a selection】允许无选择重塑。（目前：仅支持先选择再重塑）
  * 3: 【Show Preview】实时预览reshape效果，便于判断结果是否符合预期。（目前：不支持）
- * 4: 【Reshape with single intersection】仅限线要素，允许单一交叉点重塑。（目前：我们暂时只做了支持面）
+ * 4: 【Reshape with single intersection】仅限线要素，允许单一交叉点重塑。（✔）
  * 5: 【Choose result on finish】完成后，由用户来选择要保留的部分。（目前：自动保留周长最大的特征，用户想要自己选择保留的部分）
  * 挖孔面的特殊情况（暂时还没搞懂这块的行为）：
  * 1：我构建了一个挖孔的面，假设，面的外部定义为区域A，面定义为区域B，面的内环部分定义为区域C，我在区域A绘制一个起点P1，然后这条线经过A，经过B，经过C，再回到区域A，和面共有4个交点，其中外环2个，内环2个。我认为这是一分为2的行为，但通过重塑后，却得到了2部分：外环从分割线切分保留了一部分，内环区域被填充了一部分。（感觉对于arcgis来说，执行的是先只考虑外环面部分，再只考虑内环面部分，这样解释就合理了）
