@@ -425,6 +425,7 @@
     z-index: 400;
     background-color: #ffffff80;
     display: flex;
+    gap: 10px;
     .layerItem {
       position: relative;
       background-image: url("./images/map-style.png");

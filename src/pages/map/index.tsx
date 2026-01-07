@@ -13,9 +13,11 @@ import { formatNumber, throttle } from "@/utils/utils";
 import { App } from "antd";
 import CustomLeafLetDraw from "@/components/custom-leaflet-draw";
 // 类型定义
+import FunctionPanel from './opt-description';
 interface MapPreviewProps {
   outputMapView?: (map: L.Map) => void;
 }
+
 interface BaseLayerConfig {
   name: "地图" | "地球" | "地形";
   option: string;
@@ -102,6 +104,20 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     mapTwo: true,
     mapThree: true,
   });
+
+  /*
+      google地图，很清晰，但需要翻墙才能看
+  */
+  const addGoogleMap = () => {
+    const satelliteMap = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    });
+    const baseLayers = {
+      "谷歌影像": satelliteMap,
+    }
+    var layerControl = new L.Control.Layers(baseLayers, null);
+    layerControl.addTo(mapView);
+  }
   // 鼠标移动事件处理
   const handleMouseMove = throttle((e: L.LeafletMouseEvent) => {
     setLngLat(e.latlng);
@@ -208,11 +224,15 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
     // 设置默认底图
     setBaseMap("地图", BASE_LAYERS[0]);
     // 添加控件
+    // 事件2： 添加地图比例尺工具条
     mapScaleControl = addScaleControl(mapView);
+    // 事件3： 添加地图Zoom工具条
     mapZoomControl = addZoomControl(mapView, {
       zoomInTitle: "放大",
       zoomOutTitle: "缩小",
     });
+    // todo: 事件4：添加zoomout和zoomin事件--设置和显示地图缩放范围
+
     // 添加事件监听
     mapView.on("mousemove", handleMouseMove);
     return () => {
@@ -272,6 +292,10 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
           {lnglat ? formatNumber(lnglat.lat, 3) : 0}
         </span>
         <span> 中科天启</span>
+      </div>
+      {/* 说明信息 */}
+      <div className="leaflet-edit-pane">
+        <FunctionPanel />
       </div>
     </div>
   );
