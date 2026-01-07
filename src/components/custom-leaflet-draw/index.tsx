@@ -933,7 +933,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                         </div>
                         {/* 底部的分割线 */}
                         <Activity mode={idx !== toolbarList.length ? 'visible' : 'hidden'}>
-                            <Divider type="horizontal" style={{ margin: '0px' }} />
+                            <Divider orientation="horizontal" style={{ margin: '0px' }} />
                         </Activity>
                         {/* 绘制状态时的取消按钮 */}
                         {currSelTool === tool.id && !['delete', 'add'].includes(currSelTool) && <div className='cancel-btn' onClick={handleCancelDraw}>取消</div>}
