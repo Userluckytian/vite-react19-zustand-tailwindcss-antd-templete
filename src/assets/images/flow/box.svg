@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 150.52 80">
+    <defs>
+        <style>.cls-1{fill:none;}.cls-2{clip-path:url(#clip-path);}.cls-3{fill:url(#未命名的渐变_34);}.cls-4{fill:#3c86a6;}.cls-5{fill:#5ac8f7;}.cls-6{opacity:0.2;}</style>
+        <clipPath id="clip-path" transform="translate(0.26)">
+            <rect class="cls-1" x="0.74" y="2.14" width="148.52" height="75.63"/>
+        </clipPath>
+        <linearGradient id="未命名的渐变_34" x1="0.5" y1="39.96" x2="150.02" y2="39.96" gradientUnits="userSpaceOnUse">
+            <stop offset="0.45" stop-color="#5ac8f7" stop-opacity="0.04"/>
+            <stop offset="1" stop-color="#5ac8f7" stop-opacity="0.2"/>
+        </linearGradient>
+    </defs>
+    <title>看板8</title>
+    <g id="图层_2" data-name="图层 2">
+        <g id="组件">
+            <g id="看板8">
+                <g class="cls-2">
+                    <rect class="cls-3" x="0.5" y="1.64" width="149.52" height="76.63"/>
+                    <path class="cls-4" d="M149.25,2.14V77.77H.74V2.14H149.25m1-1H-.26V78.77H150.25V1.14Z" transform="translate(0.26)"/>
+                    <path class="cls-5" d="M149.25,77.77v0Z" transform="translate(0.26)"/>
+                </g>
+                <path class="cls-4" d="M148.54,2.85V77.07H1.45V2.85H148.54M150,1.44H0v77H150v-77Z" transform="translate(0.26)"/>
+                <polygon class="cls-5" points="32.56 2.85 0.26 2.85 0.26 0 30.89 0 32.56 2.85"/>
+                <polygon class="cls-5" points="1.72 0 1.72 22.52 0.26 21.69 0.26 0 1.72 0"/>
+                <polygon class="cls-5" points="1.72 13.21 1.72 30.75 0.99 30.34 0.99 12.8 1.72 13.21"/>
+                <polygon class="cls-5" points="117.96 2.85 150.26 2.85 150.26 0 119.64 0 117.96 2.85"/>
+                <polygon class="cls-5" points="148.81 0 148.81 22.52 150.26 21.69 150.26 0 148.81 0"/>
+                <polygon class="cls-5" points="148.81 13.21 148.81 30.75 149.54 30.34 149.54 12.8 148.81 13.21"/>
+                <polygon class="cls-5" points="32.56 77.15 0.26 77.15 0.26 80 30.89 80 32.56 77.15"/>
+                <polygon class="cls-5" points="1.72 80 1.72 57.48 0.26 58.31 0.26 80 1.72 80"/>
+                <polygon class="cls-5" points="1.72 66.78 1.72 49.25 0.99 49.66 0.99 67.2 1.72 66.78"/>
+                <polygon class="cls-5" points="117.96 77.15 150.26 77.15 150.26 80 119.64 80 117.96 77.15"/>
+                <polygon class="cls-5" points="148.81 80 148.81 57.48 150.26 58.31 150.26 80 148.81 80"/>
+                <polygon class="cls-5" points="148.81 66.78 148.81 49.25 149.54 49.66 149.54 67.2 148.81 66.78"/>
+            </g>
+        </g>
+    </g>
+</svg>
