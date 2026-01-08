@@ -14,7 +14,7 @@ import { App } from "antd";
 import CustomLeafLetDraw from "@/components/custom-leaflet-draw";
 // 类型定义
 import FunctionPanel from "./opt-description";
-import MapFunctionPanel from "./opt-description/mapIndex";
+import MapFunctionPanel from "./pick-layers";
 // 确保正确导入Leaflet CSS
 import "leaflet/dist/leaflet.css";
 interface MapPreviewProps {
@@ -426,33 +426,17 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
         <span> 中科天启</span>
       </div>
       {/* 收集绘制的图形面板 */}
-      <div
-        style={{
-          position: "absolute",
-          left: "40%",
-          transform: "translate(-50%, -50%)",
-          zIndex: 1000,
-        }}
-      >
-        <MapFunctionPanel
-          drawLayers={drawLayers}
-          onToggleLayer={handleToggleLayer}
-          onRemoveLayer={handleRemoveLayer}
-          onHoverLayer={handleHoverLayer}
-          onLeaveLayer={handleLeaveLayer}
-        />
-      </div>
+
+      <MapFunctionPanel
+        drawLayers={drawLayers}
+        onToggleLayer={handleToggleLayer}
+        onRemoveLayer={handleRemoveLayer}
+        onHoverLayer={handleHoverLayer}
+        onLeaveLayer={handleLeaveLayer}
+      />
       {/* 功能说明组件 */}
-      <div
-        style={{
-          position: "absolute",
-          right: "680px",
-          transform: "translateY(-50%)",
-          zIndex: 1000,
-        }}
-      >
-        <FunctionPanel />
-      </div>
+
+      <FunctionPanel />
     </div>
   );
 }

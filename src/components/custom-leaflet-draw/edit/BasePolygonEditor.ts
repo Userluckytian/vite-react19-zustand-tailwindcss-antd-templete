@@ -1,15 +1,15 @@
-import { PolygonEditorState } from "../types";
+import { PolygonEditorState, type MidpointPair, type SnapOptions } from "../types";
 import { BaseEditor } from "./BaseEditor";
 
 // BasePolygonEditor.ts - 多边形基类
 export abstract class BasePolygonEditor extends BaseEditor {
     protected vertexMarkers: L.Marker[][][] = []; // 存储顶点标记的数组
-    protected midpointMarkers: L.Marker[][][] = []; // 存储【线中点】标记的数组
+    protected midpointMarkers: MidpointPair[][][] = []; // 存储【线中点】标记的数组
     protected historyStack: number[][][][][] = []; // 历史记录，存储快照
     protected redoStack: number[][][][][] = []; // 重做记录，存储快照
 
-    constructor(map: L.Map) {
-        super(map);
+    constructor(map: L.Map, options: { snap?: SnapOptions }) {
+        super(map, options);
     }
 
     // #region 操作行为
@@ -91,6 +91,25 @@ export abstract class BasePolygonEditor extends BaseEditor {
         // 恢复双击地图放大事件
         this.map.doubleClickZoom.enable();
     }
+
+    /** 移除所有中点标记（若存在正在拖动的，则跳过）
+     *
+     *
+     * @memberof BasePolygonEditor
+     */
+    public removeAllMidPointMarkers(skipMarker?: L.Marker) {
+        this.midpointMarkers.flat(2).forEach(pair => {
+            if (pair.insert !== skipMarker) {
+                this.map.removeLayer(pair.insert);
+            }
+            if (pair.edge !== skipMarker) {
+                this.map.removeLayer(pair.edge);
+            }
+        });
+        this.midpointMarkers = [];
+    }
+
+
     // #endregion
 
     // #region 渲染行为

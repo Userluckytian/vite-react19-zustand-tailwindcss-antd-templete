@@ -1,4 +1,4 @@
-import { PolygonEditorState } from "../types";
+import { PolygonEditorState, type SnapOptions } from "../types";
 import { BaseEditor } from "./BaseEditor";
 
 // BaseRectangleEditor.ts - 矩形基类
@@ -8,8 +8,8 @@ export abstract class BaseRectangleEditor extends BaseEditor {
     protected historyStack: number[][][] = []; // 历史记录，存储快照
     protected redoStack: number[][][] = []; // 重做记录，存储快照
 
-    constructor(map: L.Map) {
-        super(map);
+    constructor(map: L.Map, options: { snap?: SnapOptions }) {
+        super(map, options);
     }
 
     // #region 操作行为

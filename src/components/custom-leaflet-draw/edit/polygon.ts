@@ -1,5 +1,5 @@
 import * as L from 'leaflet';
-import { PolygonEditorState, type LeafletPolylineOptionsExpends } from '../types';
+import { PolygonEditorState, type LeafletPolylineOptionsExpends, type MidpointPair } from '../types';
 import { booleanPointInPolygon, point } from '@turf/turf';
 import { BasePolygonEditor } from './BasePolygonEditor';
 
@@ -25,7 +25,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @memberof LeafletEditPolygon
      */
     constructor(map: L.Map, options: LeafletPolylineOptionsExpends = {}, defaultGeometry?: GeoJSON.Geometry) {
-        super(map);
+        super(map, { snap: options?.snap });
         if (this.map) {
             // 创建时激活
             this.activate();
@@ -259,7 +259,6 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         if (!this.polygonLayer) {
             throw new Error('图层不存在，无法渲染');
         }
-
         const latlngs = coords.map(polygon =>
             polygon.map(ring =>
                 ring.map(([lat, lng]) => L.latLng(lat, lng))
@@ -481,6 +480,10 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         // 清空重做栈
         this.redoStack = [];
 
+        // ✅ 设置吸附源（排除当前图层） 
+        const otherIndices = this.collectAllOtherGeometryIndices(this.map, this.polygonLayer);
+        this.snapController?.setGeometrySources(otherIndices);
+
         // 渲染每个顶点为可拖动 marker
         this.reBuildMarker(coords)
         // 渲染边的中线点
@@ -506,10 +509,8 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         this.vertexMarkers = [];
 
         // 移除所有中点 marker
-        this.midpointMarkers.flat(2).forEach(marker => {
-            this.map.removeLayer(marker);
-        });
-        this.midpointMarkers = [];
+        this.removeAllMidPointMarkers();
+
     }
 
 
@@ -520,111 +521,32 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @return {*}  {void}
      * @memberof LeafletEditPolygon
      */
-    private insertMidpointMarkers(): void {
+    private insertMidpointMarkers(skipMarker?: L.Marker): void {
         if (!this.polygonLayer || this.currentState !== PolygonEditorState.Editing) return;
 
         // 清除旧的中点标记（若数组中存在）
-        this.midpointMarkers.flat(2).forEach(m => this.map.removeLayer(m));
-        this.midpointMarkers = [];
+        this.removeAllMidPointMarkers(skipMarker);
 
         this.vertexMarkers.forEach((polygon, polygonIndex) => {
-            const polygonMidpoints: L.Marker[][] = [];
+            const polygonMidpoints: MidpointPair[][] = [];
 
             polygon.forEach((ring, ringIndex) => {
-                const ringMidpoints: L.Marker[] = [];
+                const ringMidpoints: MidpointPair[] = [];
 
                 for (let i = 0; i < ring.length; i++) {
                     const nextIndex = (i + 1) % ring.length;
-                    const p1 = ring[i].getLatLng();
-                    const p2 = ring[nextIndex].getLatLng();
+                    const p1 = ring[i];
+                    const p2 = ring[nextIndex];
+                    // ✅ 跳过当前边包含 skipMarker 的情况
+                    if (skipMarker && (skipMarker === p1 || skipMarker === p2 || (skipMarker as any).pairRef === p1 || (skipMarker as any).pairRef === p2)) { continue; }
+                    const insertMidpoint = this.createInsertMidpointMarker(p1, p2, polygonIndex, ringIndex, nextIndex, 0.3)
+                    // 插入边控制点（用于拖动边） 
+                    const edgeDragMarker = this.createEdgeDragMarker(p1, p2, polygonIndex, ringIndex, 0.6);
 
-                    const midpoint = L.latLng(
-                        (p1.lat + p2.lat) / 2,
-                        (p1.lng + p2.lng) / 2
-                    );
-
-                    const marker = L.marker(midpoint, {
-                        draggable: true,
-                        icon: this.buildMarkerIcon(
-                            "border-radius: 50%; background: #ffffff80; border: solid 1px #f00;",
-                            [14, 14]
-                        )
-                    }).addTo(this.map);
-
-                    // 中点被拖动时，图形同步更新
-                    marker.on('drag', () => {
-                        const latlng = marker.getLatLng();
-
-                        // 1. 拷贝当前顶点坐标
-                        const coords = this.vertexMarkers.map(polygon =>
-                            polygon.map(ring =>
-                                ring.map(m => [m.getLatLng().lat, m.getLatLng().lng])
-                            )
-                        );
-
-                        // 2. 插入中点坐标到对应位置（不修改原 marker 数组）
-                        const ring = coords[polygonIndex][ringIndex];
-                        const newRing = [...ring];
-                        newRing.splice(nextIndex, 0, [latlng.lat, latlng.lng]);
-
-                        // 3. 构造新的坐标结构
-                        const newCoords = [...coords];
-                        newCoords[polygonIndex] = [...coords[polygonIndex]];
-                        newCoords[polygonIndex][ringIndex] = newRing;
-
-                        // 4. 实时渲染
-                        this.renderLayer(newCoords);
-                    });
-                    // 中点拖动结束后，移除此处中点，执行添加新的顶点
-                    marker.on('dragend', () => {
-                        const latlng = marker.getLatLng();
-
-                        // 1. 从地图中移除中点 marker
-                        this.map.removeLayer(marker);
-
-                        // 2. 创建新的顶点 marker
-                        const newMarker = L.marker(latlng, {
-                            draggable: true,
-                            icon: this.buildMarkerIcon()
-                        }).addTo(this.map);
-
-                        // 3. 插入到顶点数组
-                        this.vertexMarkers[polygonIndex][ringIndex].splice(nextIndex, 0, newMarker);
-
-                        // 4. 绑定事件
-                        newMarker.on('drag', () => {
-                            this.renderLayerFromMarkers();
-                            this.updateMidpoints();
-                        });
-
-                        newMarker.on('dragend', () => {
-                            this.pushHistoryFromMarkers();
-                        });
-
-                        newMarker.on('contextmenu', () => {
-                            const currentRing = this.vertexMarkers[polygonIndex][ringIndex];
-                            if (currentRing.length > 3) {
-                                // 关键：查找当前 marker 的实际索引
-                                const currentIndex = currentRing.findIndex(m => m === newMarker);
-                                if (currentIndex !== -1) {
-                                    this.map.removeLayer(newMarker);
-                                    currentRing.splice(currentIndex, 1);
-                                    this.renderLayerFromMarkers();
-                                    this.pushHistoryFromMarkers();
-                                    this.updateMidpoints();
-                                }
-                            } else {
-                                alert('环点数不能少于3个');
-                            }
-                        });
-
-                        // 5. 刷新图层和中点
-                        this.renderLayerFromMarkers();
-                        this.pushHistoryFromMarkers();
-                        this.updateMidpoints();
-                    });
-
-                    ringMidpoints.push(marker);
+                    ringMidpoints.push({ insert: insertMidpoint, edge: edgeDragMarker });
+                    // 附加：互相引用 （虽然写的晚，但是一般都会在【createInsertMidpointMarker、createEdgeDragMarker】中绑定的dragstart事件之前完成）
+                    (insertMidpoint as any).pairRef = edgeDragMarker;
+                    (edgeDragMarker as any).pairRef = insertMidpoint;
                 }
 
                 polygonMidpoints.push(ringMidpoints);
@@ -634,19 +556,207 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         });
     }
 
-    /** 实时更新中线点的位置
+
+    /** 创建一个中点标记
+     *
+     *
+     * @private
+     * @param {L.Marker} p1 起点 marker
+     * @param {L.Marker} p2 终点 marker
+     * @param {number} polygonIndex 多边形索引
+     * @param {number} ringIndex 环索引
+     * @param {number} insertIndex 插入点的位置
+     * @param {number} positionRadio 位置比率
+     * @return {*}  {L.Marker}
+     * @memberof LeafletPolygonEditor
+     */
+    private createInsertMidpointMarker(
+        p1: L.Marker,
+        p2: L.Marker,
+        polygonIndex: number,
+        ringIndex: number,
+        insertIndex: number,
+        positionRadio: number
+    ): L.Marker {
+        const midPoint = this.getFractionalPointOnEdge(p1.getLatLng(), p2.getLatLng(), positionRadio);
+        const marker = L.marker(midPoint, {
+            draggable: true,
+            icon: this.buildMarkerIcon(
+                "border-radius: 50%; background: #ffffff80; border: solid 1px #f00;",
+                [14, 14]
+            )
+        }).addTo(this.map);
+
+        // 开始拖动时，移除线拖动的marker
+        marker.on('dragstart', () => {
+            const pair = (marker as any).pairRef as L.Marker;
+            if (pair) {
+                this.map.removeLayer(pair);
+            }
+        });
+
+        // 中点被拖动时，图形同步更新
+        marker.on('drag', () => {
+            // 0：先进行吸附处理（确定吸附点）
+            const latlng = this.applyVertexSnap(marker.getLatLng());
+
+            // 1. 拷贝当前顶点坐标
+            const coords = this.vertexMarkers.map(polygon =>
+                polygon.map(ring =>
+                    ring.map(m => [m.getLatLng().lat, m.getLatLng().lng])
+                )
+            );
+
+            // 2. 插入中点坐标到对应位置（不修改原 marker 数组）
+            const ring = coords[polygonIndex][ringIndex];
+            const newRing = [...ring];
+            newRing.splice(insertIndex, 0, [latlng.lat, latlng.lng]);
+
+            // 3. 构造新的坐标结构
+            const newCoords = [...coords];
+            newCoords[polygonIndex] = [...coords[polygonIndex]];
+            newCoords[polygonIndex][ringIndex] = newRing;
+
+            // 4. 实时渲染
+            this.renderLayer(newCoords);
+        });
+        // 中点拖动结束后，移除此处中点，执行添加新的顶点
+        marker.on('dragend', () => {
+            // 0. 先进行吸附处理（确定吸附点）
+            const latlng = this.applyVertexSnap(marker.getLatLng());
+
+            // 1. 从地图中移除中点 marker
+            this.map.removeLayer(marker);
+
+            // 2. 创建新的顶点 marker
+            const newMarker = L.marker(latlng, {
+                draggable: true,
+                icon: this.buildMarkerIcon()
+            }).addTo(this.map);
+
+            // 3. 插入到顶点数组
+            this.vertexMarkers[polygonIndex][ringIndex].splice(insertIndex, 0, newMarker);
+
+            // 4. 绑定事件
+            newMarker.on('drag', () => {
+                // 先进行吸附处理（确定吸附点）
+                const latlng = this.applyVertexSnap(newMarker.getLatLng());
+                marker.setLatLng(latlng);
+
+                this.renderLayerFromMarkers();
+                this.updateMidpoints();
+            });
+
+            newMarker.on('dragend', () => {
+                this.pushHistoryFromMarkers();
+            });
+
+            newMarker.on('contextmenu', () => {
+                const currentRing = this.vertexMarkers[polygonIndex][ringIndex];
+                if (currentRing.length > 3) {
+                    // 关键：查找当前 marker 的实际索引
+                    const currentIndex = currentRing.findIndex(m => m === newMarker);
+                    if (currentIndex !== -1) {
+                        this.map.removeLayer(newMarker);
+                        currentRing.splice(currentIndex, 1);
+                        this.renderLayerFromMarkers();
+                        this.pushHistoryFromMarkers();
+                        this.updateMidpoints();
+                    }
+                } else {
+                    alert('环点数不能少于3个');
+                }
+            });
+
+            // 5. 刷新图层和中点
+            this.renderLayerFromMarkers();
+            this.pushHistoryFromMarkers();
+            this.updateMidpoints();
+        });
+        return marker;
+    }
+
+    /** 创建一个可拖动的边控制点，用于拖动整条边
+     * @param p1 起点 marker
+     * @param p2 终点 marker
+     * @param polygonIndex 多边形索引
+     * @param ringIndex 环索引
+     * @param {number} positionRadio 位置比率
+     * @returns L.Marker
+     */
+    private createEdgeDragMarker(
+        p1: L.Marker,
+        p2: L.Marker,
+        polygonIndex: number,
+        ringIndex: number,
+        positionRadio: number
+    ): L.Marker {
+        const midDragPoint = this.getFractionalPointOnEdge(p1.getLatLng(), p2.getLatLng(), positionRadio);
+        const marker = L.marker(midDragPoint, {
+            draggable: true,
+            icon: this.buildMarkerIcon(
+                "border-radius: 50%; background: #007bff80; border: solid 1px #007bff;",
+                [12, 12]
+            )
+        }).addTo(this.map);
+        let lastLatLng: L.LatLng | null = null;
+
+        marker.on('dragstart', () => {
+            lastLatLng = marker.getLatLng();
+
+            // 移除配对中点
+            const pair = (marker as any).pairRef as L.Marker;
+            if (pair && this.map.hasLayer(pair)) {
+                this.map.removeLayer(pair);
+            }
+        });
+
+        marker.on('drag', () => {
+            if (!lastLatLng) return;
+
+            const current = this.applyVertexSnap(marker.getLatLng());
+            const deltaLat = current.lat - lastLatLng.lat;
+            const deltaLng = current.lng - lastLatLng.lng;
+
+            const latlng1 = p1.getLatLng();
+            const latlng2 = p2.getLatLng();
+
+            p1.setLatLng([latlng1.lat + deltaLat, latlng1.lng + deltaLng]);
+            p2.setLatLng([latlng2.lat + deltaLat, latlng2.lng + deltaLng]);
+
+            this.renderLayerFromMarkers();
+            this.updateMidpoints(marker); // ✅ 传入当前 marker，避免被销毁
+            lastLatLng = current;
+        });
+
+        marker.on('dragend', () => {
+            // 1. 从地图中移除中点 marker
+            this.map.removeLayer(marker);
+            // 2. 重新渲染更新中点 marker
+            this.updateMidpoints();
+            this.pushHistoryFromMarkers();
+        });
+
+
+        return marker;
+    }
+
+
+
+
+
+    /** 实时更新中线点的位置（传参意思：用户正在拖动的避免销毁和重新构建）
      *
      *
      * @private
      * @memberof LeafletEditPolygon
      */
-    private updateMidpoints(): void {
+    private updateMidpoints(skipMarker?: L.Marker): void {
         // 清除旧的中点
-        this.midpointMarkers.flat(2).forEach(m => this.map.removeLayer(m));
-        this.midpointMarkers = [];
+        this.removeAllMidPointMarkers(skipMarker);
 
         // 重新插入
-        this.insertMidpointMarkers();
+        this.insertMidpointMarkers(skipMarker);
     }
 
     /** 动态生成marker图标(天地图应该是构建的点图层+marker图层两个)
@@ -707,6 +817,10 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
 
                     // 拖动时更新图形
                     marker.on('drag', () => {
+                        // 先进行吸附处理（确定吸附点）
+                        const latlng = this.applyVertexSnap(marker.getLatLng());
+                        marker.setLatLng(latlng);
+
                         this.renderLayerFromMarkers();
                         this.updateMidpoints();
                     });
@@ -806,6 +920,14 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         }
         return false;
     }
+    /** 转换【多边形】的GeoJSON数据为Leaflet可接受的格式
+     *
+     *
+     * @private
+     * @param {GeoJSON.Geometry} geometry
+     * @return {*}  {(L.LatLngExpression[][] | L.LatLngExpression[][][])}
+     * @memberof LeafletPolygonEditor
+     */
     private convertGeoJSONToLatLngs(
         geometry: GeoJSON.Geometry
     ): L.LatLngExpression[][] | L.LatLngExpression[][][] {
@@ -825,6 +947,20 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             throw new Error('不支持的 geometry 类型: ' + geometry.type);
         }
     }
+
+    /**
+     * 获取边上某个比例位置的点（例如 1/3、2/3）
+     * @param p1 起点
+     * @param p2 终点
+     * @param ratio 比例（0~1），例如 1/3 = 0.333
+     * @returns L.LatLng
+     */
+    private getFractionalPointOnEdge(p1: L.LatLng, p2: L.LatLng, ratio: number): L.LatLng {
+        const lat = p1.lat + (p2.lat - p1.lat) * ratio;
+        const lng = p1.lng + (p2.lng - p1.lng) * ratio;
+        return L.latLng(lat, lng);
+    }
+
 
 
     // #endregion

@@ -67,7 +67,16 @@ const FunctionPanel = () => {
                                     <li>⑤：【Choose result on finish】完成后，由用户来选择要保留的部分。（✔）</li>
                                 </ul>
                             </li>
-                            <li className="doing">🌀【顶点吸附】</li>
+                            <li className="doing">🌀【顶点吸附】
+                                （结果仅在控制台输出）
+                                <ul className='text-amber-600'>
+                                    <li>①：拖动面时，不进行吸附行为（✔）</li>
+                                    <li>②：拖动点接近另一个点时，点被吸附到一起（✔）</li>
+                                    <li>③：拖动一个点接近一条线时，点会被吸附到线上（✔）</li>
+                                    <li>④：拖动一条线接近另一条线时，会根据鼠标按下拖动的那个坐标去吸附目标线，而拖动的线会跟着跑，同步的图形也在变化（✔）</li>
+                                    <li>⑤：若可吸附，高亮目标线</li>
+                                </ul>
+                            </li>
                             <li className="pending">【magic魔棒选择要素工具】</li>
                         </ul>
                     </div>

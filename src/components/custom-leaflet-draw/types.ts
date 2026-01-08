@@ -10,6 +10,24 @@ import type LeafletDistance from "./measure/distance";
 import type LeafletRectangleEditor from "./edit/rectangle";
 import type LeafletPolygonEditor from "./edit/polygon";
 
+// #region  吸附内容 
+export type SnapMode = 'vertex' | 'edge';
+export type SnapOptions = {
+    enabled: boolean; // 是否开启对齐(吸附)功能
+    modes: SnapMode[]; // 吸附模式
+    tolerance?: number; // 吸附范围阈值
+}
+// 空间索引，为处理吸附时，线和面这种类型的对象提供索引
+export interface GeometryIndex {
+    type: 'polygon' | 'polyline';
+    vertices: L.LatLng[];
+    edges: { start: L.LatLng; end: L.LatLng }[];
+    bounds: L.LatLngBounds;
+    geometry: GeoJSON.Geometry;
+}
+
+// #endregion 
+
 
 export enum PolygonEditorState {
     Idle = 'idle',       // 空闲状态：既不是绘制中，也不是编辑中
@@ -23,13 +41,22 @@ export type measureInstance = LeafletArea | LeafletDistance;
 export type editorInstance = LeafletEditPolygon | LeafletEditRectangle | LeafletRectangleEditor | LeafletPolygonEditor;
 export type leafletGeoEditorInstance = drawInstance | measureInstance | editorInstance;
 
+// 中点标记（插入中点标记（红色marker） 和 拖动边的标记（蓝色marker））
+export type MidpointPair = {
+    insert: L.Marker;
+    edge: L.Marker;
+};
+
 /* 拓展leaflet-绘制面、线属性（用于存放用户自定义的属性内容）  */
 export interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
     origin?: any; // 可以存放源信息
     defaultStyle?: any; // 存放（用户自己想要设置的）图层的默认样式信息
+    snap?: SnapOptions;
     [key: string]: unknown
 }
 
+
+// #region 拓扑内容
 /* topo操作执行合并(union)后返回的结果 */
 export interface TopoMergeResult {
     mergedLayers: L.GeoJSON[];
@@ -58,4 +85,6 @@ export interface ReshapeOptions {
      */
     AllowReshapingWithoutSelection?: Boolean;
 }
+
+// #endregion
 

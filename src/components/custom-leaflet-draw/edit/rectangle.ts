@@ -31,7 +31,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      * @memberof LeafletEditPolygon
      */
     constructor(map: L.Map, options: LeafletPolylineOptionsExpends = {}, defaultGeometry?: GeoJSON.Geometry) {
-        super(map);
+        super(map, { snap: options?.snap });
         console.log(this.map);
         if (this.map) {
             // 创建时激活
@@ -62,7 +62,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         };
         let coords: L.LatLngBoundsExpression = [[181, 181], [182, 182]]; // 默认空图形
         if (defaultGeometry) {
-            coords = this.convertGeoJSONToLatLngs(defaultGeometry);
+            coords = this.convertRectGeoJSONToLatLngs(defaultGeometry);
         }
         this.rectangleLayer = L.rectangle(coords, polylineOptions);
         this.rectangleLayer.addTo(this.map);
@@ -300,7 +300,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
     private show() {
         this.isVisible = true;
         // 使用用户默认设置的样式，而不是我自定义的！
-        this.rectangleLayer?.setStyle({...(this.rectangleLayer.options as any).defaultStyle, layerVisible: true});
+        this.rectangleLayer?.setStyle({ ...(this.rectangleLayer.options as any).defaultStyle, layerVisible: true });
     }
     /** 控制图层隐藏
      *
@@ -316,7 +316,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
             fillColor: 'red', // same color as the line
             fillOpacity: 0,
         };
-        this.rectangleLayer?.setStyle({...hideStyle, layerVisible: false} as any);
+        this.rectangleLayer?.setStyle({ ...hideStyle, layerVisible: false } as any);
         // ✅ 退出编辑状态（若存在）
         if (this.currentState === PolygonEditorState.Editing) {
             this.exitEditMode();
@@ -655,7 +655,15 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         return false;
     }
 
-    private convertGeoJSONToLatLngs(geometry: GeoJSON.Geometry): L.LatLngBoundsExpression {
+    /** 转换【矩形】的geojson-经纬度坐标
+     *
+     *
+     * @private
+     * @param {GeoJSON.Geometry} geometry
+     * @return {*}  {L.LatLngBoundsExpression}
+     * @memberof LeafletRectangleEditor
+     */
+    private convertRectGeoJSONToLatLngs(geometry: GeoJSON.Geometry): L.LatLngBoundsExpression {
         if (geometry.type === 'Polygon') {
             const coords = geometry.coordinates[0]; // [[lng, lat], ...]
             const lats = coords.map(c => c[1]);
@@ -671,7 +679,6 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
             throw new Error('不支持的 geometry 类型: ' + geometry.type);
         }
     }
-
 
     // #endregion
 

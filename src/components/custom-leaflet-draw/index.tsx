@@ -11,7 +11,7 @@ import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import LeafletEditPolygon from './simpleEdit/polygon';
-import { PolygonEditorState, type leafletGeoEditorInstance, type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
+import { PolygonEditorState, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
 import LeafletEditRectangle from './simpleEdit/rectangle';
 import { LeafletTopology } from './topo/topo';
 import LeafletRectangleEditor from './edit/rectangle';
@@ -155,11 +155,6 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             id: 'manual',
             label: '完成后，由用户来选择要保留的部分（仅支持面行为，结果在控制台，用户来渲染）',
             visible: false
-        },
-        {
-            id: 'adsorption',
-            label: '吸附（应该是一个默认功能，而不单独为谁服务）',
-            visible: false
         }
     ]);
 
@@ -198,6 +193,12 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             handleCancelDraw();
             return;
         }
+
+        // 吸附参数
+        const snap: SnapOptions = {
+            enabled: true,
+            modes: ['edge', 'vertex']
+        };
         // // 先清理之前的绘制
         // clearCurrentDraw();
 
@@ -241,7 +242,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 saveEditorAndAddListener(editRectangleLayer);
                 break;
             case 'polygon_editor':
-                const polygonLayerEditor = new LeafletPolygonEditor(mapInstance);
+                const polygonLayerEditor = new LeafletPolygonEditor(mapInstance, { snap });
                 saveEditorAndAddListener(polygonLayerEditor);
                 break;
             case 'rectangle_editor':
