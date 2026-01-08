@@ -17,7 +17,7 @@ import { Popover } from "antd";
 const TuoYuan = () => {
   // 雷达椭圆轨道动画相关
   const radarContainerRef = useRef<HTMLDivElement | null>(null);
-  const radarRefs = useRef<HTMLImageElement[]>([]);
+  const radarRefs = useRef<any[]>([]);
   const animRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
   const [paused, setPaused] = useState<boolean>(false);
@@ -282,7 +282,7 @@ const TuoYuan = () => {
             title={item.name}
           >
             <img
-              ref={(el) => (radarRefs.current[index] = el as HTMLImageElement)}
+              ref={(el) => (radarRefs.current[index] = el as any)}
               className="radar-item"
               src={item.url}
               alt={item.name}
