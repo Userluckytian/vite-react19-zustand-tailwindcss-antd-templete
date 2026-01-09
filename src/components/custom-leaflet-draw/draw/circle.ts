@@ -10,7 +10,6 @@ import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
 const km_value = 1000; // 1千米 = 1000米
 export default class LeafletCircle {
-
     private map: L.Map;
     private circleLayer: L.Circle | null = null;
     // 图层初始化时
@@ -22,13 +21,10 @@ export default class LeafletCircle {
     private center: L.LatLng | null = null;
     private radius: number | null = null;
     private tempCoords: L.LatLng[] = [];
-
     // 1：我们需要记录当前状态是处于绘制状态--见：currentState变量
     private currentState: PolygonEditorState = PolygonEditorState.Idle; // 默认空闲状态
     // 2：我们需要一个数组，存储全部的监听事件，然后在状态改变时，触发所有这些事件的监听回调！
     private stateListeners: ((state: PolygonEditorState) => void)[] = [];
-
-
     constructor(map: L.Map, options: L.CircleOptions = {}) {
         this.map = map;
         if (this.map) {
@@ -42,7 +38,6 @@ export default class LeafletCircle {
             this.initMapEvent(this.map);
         }
     }
-
     // 初始化图层
     private initLayers(options: L.CircleOptions) {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[-90, -180]坐标，也就是页面的左下角
@@ -56,6 +51,13 @@ export default class LeafletCircle {
         this.circleLayer.addTo(this.map);
     }
 
+
+
+
+
+
+
+    
     /** 初始化地图事件监听
      *
      *
@@ -67,7 +69,6 @@ export default class LeafletCircle {
         map.on('click', this.mapClickEvent);
         map.on('mousemove', this.mapMouseMoveEvent);
     }
-
     // #region 工具函数，点图层的逻辑只需要看上面的内容就行了
     /**  地图点击事件，用于设置点的位置
      *
