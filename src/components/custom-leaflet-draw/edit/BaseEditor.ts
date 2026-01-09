@@ -196,8 +196,6 @@ export abstract class BaseEditor {
         return latlng;
 
     }
-    /** 【边缘吸附器】确定最终的坐标
-
 
     /** 【顶点吸附器】收集所有其他图层的顶点信息
      *

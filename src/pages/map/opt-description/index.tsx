@@ -57,7 +57,7 @@ const FunctionPanel = () => {
                         <ul className="function-list">
                             <li className="completed">✔ 【裁剪-clip】选择一个或者多个图层，绘制一条穿过它们的折线，拆分图层（结果仅在控制台输出）</li>
                             <li className="completed">✔ 【合并-union】选择多个图层，点击合并按钮，实现图层的合并操作（结果仅在控制台输出）</li>
-                            <li className="doing">✔ 【整形要素工具： Reshape Feature】参见： <a href="https://pro.arcgis.com/en/pro-app/latest/help/editing/reshape-a-feature.htm?utm_source=copilot.com" target="Reshape-Feature-page">Reshape a line or polygon feature</a>
+                            <li className="completed">✔ 【整形要素工具： Reshape Feature】参见： <a href="https://pro.arcgis.com/en/pro-app/latest/help/editing/reshape-a-feature.htm?utm_source=copilot.com" target="Reshape-Feature-page">Reshape a line or polygon feature</a>
                                 （结果仅在控制台输出）
                                 <ul className='text-amber-600'>原则上应该要支持以下内容：
                                     <li>①：支持线、面的重塑处理。（✔）</li>
