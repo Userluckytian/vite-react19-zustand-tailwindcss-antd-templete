@@ -1,11 +1,11 @@
-.function-panel {
+.layers-panel {
   position: fixed;
-  top: 100px;
-  left: 90px;
+  bottom: 50px;
+  left: 10px;
   background: white;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  z-index: 500;
   min-width: 450px;
   max-width: 1000px;
   transition: all 0.3s ease;
@@ -14,7 +14,7 @@
   user-select: none;
 }
 
-.function-panel.collapsed {
+.layers-panel.collapsed {
   max-width: 300px;
 }
 
@@ -42,11 +42,11 @@
   transition: transform 0.3s ease;
 }
 
-.function-panel.expanded .toggle-icon {
+.layers-panel.expanded .toggle-icon {
   transform: rotate(0deg);
 }
 
-.function-panel.collapsed .toggle-icon {
+.layers-panel.collapsed .toggle-icon {
   transform: rotate(360deg);
 }
 
@@ -214,14 +214,14 @@
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .function-panel {
+  .layers-panel {
     top: 10px;
     right: 10px;
     left: 10px;
     max-width: none;
   }
   
-  .function-panel.collapsed {
+  .layers-panel.collapsed {
     max-width: none;
     width: auto;
   }

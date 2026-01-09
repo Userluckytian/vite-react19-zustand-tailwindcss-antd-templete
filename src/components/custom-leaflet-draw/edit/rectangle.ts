@@ -31,8 +31,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      * @memberof LeafletEditPolygon
      */
     constructor(map: L.Map, options: LeafletPolylineOptionsExpends = {}, defaultGeometry?: GeoJSON.Geometry) {
-        super(map);
-        console.log(this.map);
+        super(map, { snap: options?.snap });
         if (this.map) {
             // 创建时激活
             this.activate();
@@ -41,7 +40,6 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
             this.updateAndNotifyStateChange(existGeometry ? PolygonEditorState.Idle : PolygonEditorState.Drawing);
             // 鼠标手势设置为十字
 
-            console.log('???');
             this.map.getContainer().style.cursor = existGeometry ? 'grab' : 'crosshair';
             // 不需要设置十字光标和禁用双击放大
             existGeometry ? this.map.doubleClickZoom.enable() : this.map.doubleClickZoom.disable();
@@ -62,7 +60,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         };
         let coords: L.LatLngBoundsExpression = [[181, 181], [182, 182]]; // 默认空图形
         if (defaultGeometry) {
-            coords = this.convertGeoJSONToLatLngs(defaultGeometry);
+            coords = this.convertRectGeoJSONToLatLngs(defaultGeometry);
         }
         this.rectangleLayer = L.rectangle(coords, polylineOptions);
         this.rectangleLayer.addTo(this.map);
@@ -300,7 +298,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
     private show() {
         this.isVisible = true;
         // 使用用户默认设置的样式，而不是我自定义的！
-        this.rectangleLayer?.setStyle({...(this.rectangleLayer.options as any).defaultStyle, layerVisible: true});
+        this.rectangleLayer?.setStyle({ ...(this.rectangleLayer.options as any).defaultStyle, layerVisible: true });
     }
     /** 控制图层隐藏
      *
@@ -316,7 +314,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
             fillColor: 'red', // same color as the line
             fillOpacity: 0,
         };
-        this.rectangleLayer?.setStyle({...hideStyle, layerVisible: false} as any);
+        this.rectangleLayer?.setStyle({ ...hideStyle, layerVisible: false } as any);
         // ✅ 退出编辑状态（若存在）
         if (this.currentState === PolygonEditorState.Editing) {
             this.exitEditMode();
@@ -347,7 +345,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      * @memberof LeafletEditPolygon
      */
     public getLayerVisible(): boolean {
-        return (this.rectangleLayer.options as any).layerVisible;
+        return (this.rectangleLayer?.options as any).layerVisible;
     }
 
 
@@ -361,17 +359,24 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         // #region 1：绘制图层用到的内容
         this.destroyLayer();
         // #endregion
+
         // #region 2：编辑模式用到的内容
         // 关闭事件监听内容
         this.deactivate();
         // 编辑模式的内容也重置
         this.exitEditMode();
         // #endregion
-        // #region3：地图相关内容处理（关闭事件监听，恢复部分交互功能【缩放、鼠标手势】）
+
+        // #region 3：吸附用到的内容
+        this.cleanupSnapResources();
+        // #endregion
+
+        // #region4：地图相关内容处理（关闭事件监听，恢复部分交互功能【缩放、鼠标手势】）
         this.offMapEvent(this.map);
         this.reset();
         // #endregion
-        // #region4：清除类自身绑定的相关事件
+        
+        // #region5：清除类自身绑定的相关事件
         this.clearAllStateListeners();
         // 设置为空闲状态，并发出状态通知
         this.updateAndNotifyStateChange(PolygonEditorState.Idle);
@@ -441,6 +446,12 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         const coords: number[][] = corners.map(p => [p.lat, p.lng]);
         // 记录初始快照
         this.historyStack.push(coords);
+        // 清空重做栈
+        this.redoStack = [];
+
+        // ✅ 设置吸附源（排除当前图层） 
+        const otherIndices = this.collectAllOtherGeometryIndices(this.map, this.rectangleLayer);
+        this.snapController?.setGeometrySources(otherIndices);
 
         // 渲染每个顶点为可拖动 marker
         this.reBuildMarker(coords)
@@ -549,17 +560,21 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
 
     /** 绑定 marker 事件 */
     private bindMarkerEvents(marker: L.Marker, index: number): void {
-        marker.on('drag', (e: L.LeafletMouseEvent) => {
-            const newLatLng = e.latlng;
-
+        marker.on('drag', () => {
+            // 应用吸附
+            const { snappedLatLng: newLatLng } = this.applySnapWithTarget(marker.getLatLng());
             // 更新当前拖动的 marker
             marker.setLatLng(newLatLng);
+
 
             // 重新计算矩形的四个角
             this.updateRectangleCorners(index, newLatLng);
         });
 
         marker.on('dragend', () => {
+            // 拖动结束时清除吸附高亮
+            this.clearSnapHighlights();
+            // 更新历史记录
             const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
             this.historyStack.push([...updated]);
         });
@@ -655,7 +670,15 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         return false;
     }
 
-    private convertGeoJSONToLatLngs(geometry: GeoJSON.Geometry): L.LatLngBoundsExpression {
+    /** 转换【矩形】的geojson-经纬度坐标
+     *
+     *
+     * @private
+     * @param {GeoJSON.Geometry} geometry
+     * @return {*}  {L.LatLngBoundsExpression}
+     * @memberof LeafletRectangleEditor
+     */
+    private convertRectGeoJSONToLatLngs(geometry: GeoJSON.Geometry): L.LatLngBoundsExpression {
         if (geometry.type === 'Polygon') {
             const coords = geometry.coordinates[0]; // [[lng, lat], ...]
             const lats = coords.map(c => c[1]);
@@ -671,7 +694,6 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
             throw new Error('不支持的 geometry 类型: ' + geometry.type);
         }
     }
-
 
     // #endregion
 
