@@ -98,16 +98,30 @@ export abstract class BasePolygonEditor extends BaseEditor {
      * @memberof BasePolygonEditor
      */
     public removeAllMidPointMarkers(skipMarker?: L.Marker) {
+        const newMidpoints: MidpointPair[] = [];
+
         this.midpointMarkers.flat(2).forEach(pair => {
-            if (pair.insert !== skipMarker) {
+            const keepInsert = pair.insert === skipMarker;
+            const keepEdge = pair.edge === skipMarker;
+
+            if (!keepInsert) {
                 this.map.removeLayer(pair.insert);
             }
-            if (pair.edge !== skipMarker) {
+
+            if (!keepEdge) {
                 this.map.removeLayer(pair.edge);
             }
+
+            // 如果有任一 marker 被保留，就保留这个 pair
+            if (keepInsert || keepEdge) {
+                newMidpoints.push(pair);
+            }
         });
-        this.midpointMarkers = [];
+
+        // 重新组织为二维结构（可选）
+        this.midpointMarkers = newMidpoints.length > 0 ? [[[...newMidpoints]]] : [];
     }
+
 
 
     // #endregion

@@ -730,8 +730,6 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         });
 
         marker.on('dragend', () => {
-            // 1. 从地图中移除中点 marker
-            this.map.removeLayer(marker);
             // 2. 重新渲染更新中点 marker
             this.updateMidpoints();
             this.pushHistoryFromMarkers();
