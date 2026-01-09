@@ -246,7 +246,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 saveEditorAndAddListener(polygonLayerEditor);
                 break;
             case 'rectangle_editor':
-                const rectangleLayerEditor = new LeafletRectangleEditor(mapInstance);
+                const rectangleLayerEditor = new LeafletRectangleEditor(mapInstance, { snap });
                 saveEditorAndAddListener(rectangleLayerEditor);
                 break;
             case 'add':

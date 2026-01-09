@@ -32,7 +32,6 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      */
     constructor(map: L.Map, options: LeafletPolylineOptionsExpends = {}, defaultGeometry?: GeoJSON.Geometry) {
         super(map, { snap: options?.snap });
-        console.log(this.map);
         if (this.map) {
             // 创建时激活
             this.activate();
@@ -41,7 +40,6 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
             this.updateAndNotifyStateChange(existGeometry ? PolygonEditorState.Idle : PolygonEditorState.Drawing);
             // 鼠标手势设置为十字
 
-            console.log('???');
             this.map.getContainer().style.cursor = existGeometry ? 'grab' : 'crosshair';
             // 不需要设置十字光标和禁用双击放大
             existGeometry ? this.map.doubleClickZoom.enable() : this.map.doubleClickZoom.disable();
@@ -361,17 +359,24 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         // #region 1：绘制图层用到的内容
         this.destroyLayer();
         // #endregion
+
         // #region 2：编辑模式用到的内容
         // 关闭事件监听内容
         this.deactivate();
         // 编辑模式的内容也重置
         this.exitEditMode();
         // #endregion
-        // #region3：地图相关内容处理（关闭事件监听，恢复部分交互功能【缩放、鼠标手势】）
+
+        // #region 3：吸附用到的内容
+        this.cleanupSnapResources();
+        // #endregion
+
+        // #region4：地图相关内容处理（关闭事件监听，恢复部分交互功能【缩放、鼠标手势】）
         this.offMapEvent(this.map);
         this.reset();
         // #endregion
-        // #region4：清除类自身绑定的相关事件
+        
+        // #region5：清除类自身绑定的相关事件
         this.clearAllStateListeners();
         // 设置为空闲状态，并发出状态通知
         this.updateAndNotifyStateChange(PolygonEditorState.Idle);
@@ -441,6 +446,12 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         const coords: number[][] = corners.map(p => [p.lat, p.lng]);
         // 记录初始快照
         this.historyStack.push(coords);
+        // 清空重做栈
+        this.redoStack = [];
+
+        // ✅ 设置吸附源（排除当前图层） 
+        const otherIndices = this.collectAllOtherGeometryIndices(this.map, this.rectangleLayer);
+        this.snapController?.setGeometrySources(otherIndices);
 
         // 渲染每个顶点为可拖动 marker
         this.reBuildMarker(coords)
@@ -549,17 +560,21 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
 
     /** 绑定 marker 事件 */
     private bindMarkerEvents(marker: L.Marker, index: number): void {
-        marker.on('drag', (e: L.LeafletMouseEvent) => {
-            const newLatLng = e.latlng;
-
+        marker.on('drag', () => {
+            // 应用吸附
+            const { snappedLatLng: newLatLng } = this.applySnapWithTarget(marker.getLatLng());
             // 更新当前拖动的 marker
             marker.setLatLng(newLatLng);
+
 
             // 重新计算矩形的四个角
             this.updateRectangleCorners(index, newLatLng);
         });
 
         marker.on('dragend', () => {
+            // 拖动结束时清除吸附高亮
+            this.clearSnapHighlights();
+            // 更新历史记录
             const updated = this.vertexMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng]);
             this.historyStack.push([...updated]);
         });

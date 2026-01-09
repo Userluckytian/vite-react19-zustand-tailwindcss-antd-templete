@@ -1,5 +1,5 @@
 import * as L from "leaflet";
-import { PolygonEditorState, type GeometryIndex, type SnapMode, type SnapOptions } from "../types";
+import { PolygonEditorState, type GeometryIndex, type SnapMode, type SnapOptions, type SnapResult } from "../types";
 import { SnapController } from "../utils/SnapController";
 
 // BaseEditor.ts - 基础形状编辑器
@@ -17,6 +17,7 @@ export abstract class BaseEditor {
 
     // 吸附
     protected snapController?: SnapController; // 顶点吸附控制器
+    private snapHighlightLayer: L.LayerGroup; // 吸附时，高亮显示的图层组
     private highlightCircleMarker: L.CircleMarker | null = null; // 吸附时，高亮显示的marker
     private highlightEdgeLayer: L.Polyline | null = null; // 吸附时，高亮显示的边线
 
@@ -24,6 +25,7 @@ export abstract class BaseEditor {
         if (!map) throw new Error('传入的地图对象异常，请先确保地图对象已实例完成。');
         this.map = map;
         // 初始化吸附控制器 
+        this.snapHighlightLayer = L.layerGroup().addTo(map);
         this.initSnap(map, options?.snap);
     }
 
@@ -186,12 +188,7 @@ export abstract class BaseEditor {
      * @return {*}  {L.LatLng}
      * @memberof BaseEditor
      */
-    protected applySnapWithTarget(latlng: L.LatLng, autoHighlight: boolean = true): {
-        snappedLatLng: L.LatLng;
-        snapped: boolean;
-        type?: 'vertex' | 'edge';
-        target?: L.LatLng | { start: L.LatLng; end: L.LatLng };
-    } {
+    protected applySnapWithTarget(latlng: L.LatLng, autoHighlight: boolean = true): SnapResult {
         // 移除高亮的图层
         this.clearSnapHighlights();
         const snappedVertex = this.snapController?.snapVertex?.(latlng);
@@ -267,14 +264,15 @@ export abstract class BaseEditor {
             this.highlightCircleMarker.remove();
             this.highlightCircleMarker = null;
         }
-        // 添加新的高亮图层
-        this.highlightCircleMarker = L.circleMarker(latlng, {
+        const marker = L.circleMarker(latlng, {
             radius: 15,
             color: '#00ff00',
             weight: 2,
-            fillOpacity: 0.8,
-            pane: 'overlayPane'
-        }).addTo(this.map); // 你可以维护一个临时图层组用于清除
+            fillOpacity: 0.8
+        });
+
+        this.snapHighlightLayer.addLayer(marker);
+        this.highlightCircleMarker = marker;
     }
 
     /** 高亮吸附目标线段
@@ -291,12 +289,14 @@ export abstract class BaseEditor {
             this.highlightEdgeLayer = null;
         }
         // 添加新的高亮图层
-        this.highlightEdgeLayer = L.polyline([edge.start, edge.end], {
+        const edgeLine = L.polyline([edge.start, edge.end], {
             color: '#00ff00',
             weight: 5,
             dashArray: '4,2',
             pane: 'overlayPane'
-        }).addTo(this.map);
+        })
+        this.snapHighlightLayer.addLayer(edgeLine);
+        this.highlightEdgeLayer = edgeLine;
     }
 
     /** 移除上次吸附高亮图层
@@ -307,14 +307,19 @@ export abstract class BaseEditor {
      */
     protected clearSnapHighlights() {
         // 清除上一次的高亮图层
-        if (this.highlightCircleMarker) {
-            this.highlightCircleMarker.remove();
-            this.highlightCircleMarker = null;
-        }
-        if (this.highlightEdgeLayer) {
-            this.highlightEdgeLayer.remove();
-            this.highlightEdgeLayer = null;
-        }
+        this.snapHighlightLayer.clearLayers();
+        this.highlightCircleMarker = null;
+        this.highlightEdgeLayer = null;
+    }
+
+    // 清理吸附相关资源的方法
+    protected cleanupSnapResources(): void {
+        // 1. 清理高亮层
+        this.clearSnapHighlights();
+        this.map.removeLayer(this.snapHighlightLayer);
+
+        // 2. 清理吸附控制器
+        this.snapController = undefined;
     }
 
 

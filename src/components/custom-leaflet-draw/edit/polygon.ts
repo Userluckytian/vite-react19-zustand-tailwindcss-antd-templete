@@ -371,6 +371,10 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         this.exitEditMode();
         // #endregion
 
+        // #region 3：吸附用到的内容
+        this.cleanupSnapResources();
+        // #endregion
+
         // #region3：地图相关内容处理（关闭事件监听，恢复部分交互功能【缩放、鼠标手势】）
         this.offMapEvent(this.map);
         this.reset();
