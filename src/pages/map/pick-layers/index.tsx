@@ -10,7 +10,7 @@ interface DrawLayer {
   type: string;
 }
 
-interface MapFunctionPanelProps {
+interface MapLayerPanelProps {
   drawLayers: DrawLayer[];
   onToggleLayer: (id: string) => void;
   onRemoveLayer: (id: string) => void;
@@ -18,20 +18,20 @@ interface MapFunctionPanelProps {
   onLeaveLayer: () => void;
 }
 
-const MapFunctionPanel = ({
+const MapLayerPanel = ({
   drawLayers,
   onToggleLayer,
   onRemoveLayer,
   onHoverLayer,
   onLeaveLayer,
-}: MapFunctionPanelProps) => {
+}: MapLayerPanelProps) => {
   const [isExpanded, setIsExpanded] = React.useState(true);
 
   const togglePanel = () => {
     setIsExpanded(!isExpanded);
   };
   return (
-    <div className={`function-panel ${isExpanded ? "expanded" : "collapsed"}`}>
+    <div className={`layers-panel ${isExpanded ? "expanded" : "collapsed"}`}>
       <div className="panel-header" onClick={togglePanel}>
         <h3>绘制图形面板</h3>
         <span className="toggle-icon">{isExpanded ? "▲" : "▼"}</span>
@@ -52,9 +52,8 @@ const MapFunctionPanel = ({
                   <div className="layer-name">{layer.name}</div>
                   <div className="layer-actions">
                     <button
-                      className={`action-btn toggle-btn ${
-                        layer.visible ? "visible" : "hidden"
-                      }`}
+                      className={`action-btn toggle-btn ${layer.visible ? "visible" : "hidden"
+                        }`}
                       onClick={() => onToggleLayer(layer.id)}
                       title={layer.visible ? "隐藏" : "显示"}
                     >
@@ -78,4 +77,4 @@ const MapFunctionPanel = ({
   );
 };
 
-export default MapFunctionPanel;
+export default MapLayerPanel;

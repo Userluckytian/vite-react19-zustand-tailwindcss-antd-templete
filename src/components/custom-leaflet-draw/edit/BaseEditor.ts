@@ -1,4 +1,6 @@
-import { PolygonEditorState } from "../types";
+import * as L from "leaflet";
+import { PolygonEditorState, type GeometryIndex, type SnapMode, type SnapOptions, type SnapResult } from "../types";
+import { SnapController } from "../utils/SnapController";
 
 // BaseEditor.ts - 基础形状编辑器
 export abstract class BaseEditor {
@@ -13,9 +15,18 @@ export abstract class BaseEditor {
     protected dragStartLatLng: L.LatLng | null = null; // 拖动多边形时，用户鼠标按下（mousedown）那一刻的坐标点，然后鼠标移动（mousemove）时，遍历全部的marker，做坐标偏移计算。
     protected isVisible = true; // 图层可见性
 
-    constructor(map: L.Map) {
+    // 吸附
+    protected snapController?: SnapController; // 顶点吸附控制器
+    private snapHighlightLayer: L.LayerGroup; // 吸附时，高亮显示的图层组
+    private highlightCircleMarker: L.CircleMarker | null = null; // 吸附时，高亮显示的marker
+    private highlightEdgeLayer: L.Polyline | null = null; // 吸附时，高亮显示的边线
+
+    constructor(map: L.Map, options: { snap?: SnapOptions }) {
         if (!map) throw new Error('传入的地图对象异常，请先确保地图对象已实例完成。');
         this.map = map;
+        // 初始化吸附控制器 
+        this.snapHighlightLayer = L.layerGroup().addTo(map);
+        this.initSnap(map, options?.snap);
     }
 
     // #region 实例是否是激活状态（编辑时，就是激活态，否则就是非激活态，这时，关闭全部事件） 
@@ -41,8 +52,8 @@ export abstract class BaseEditor {
     }
 
     /**
-         * 停用当前编辑器实例
-         */
+     * 停用当前编辑器实例
+     */
     protected deactivate(): void {
         // console.log('停用编辑器:', this.constructor.name);
 
@@ -141,6 +152,178 @@ export abstract class BaseEditor {
 
     // #endregion
 
+    // #region 吸附行为
+    /* 
+    arcgis，
+    1：拖动面时，不进行吸附行为，
+    2：拖动点接近另一个点时，点被吸附到一起，
+    3：拖动一个点接近一条线时，点会被吸附到线上
+    4：拖动一条线接近另一条线时，会根据鼠标按下拖动的那个坐标去吸附目标线，而拖动的线会跟着跑，同步的图形也在变化
+     */
+
+
+    /** 初始化吸附控制器
+     *
+     *
+     * @protected
+     * @param {L.Map} map
+     * @param {SnapOptions} [snap]
+     * @memberof BaseEditor
+     */
+    private initSnap(map: L.Map, snap?: SnapOptions) {
+        if (!snap?.enabled) return;
+
+        this.snapController = new SnapController(map);
+        this.snapController.setModes(snap.modes ?? ['vertex']);
+        this.snapController.setTolerance(snap.tolerance ?? 8);
+    }
+
+
+
+    /** 【吸附器】确定最终的坐标(顶点会去吸附边和其他顶点)
+     *
+     *
+     * @protected
+     * @param {L.LatLng} latlng
+     * @return {*}  {L.LatLng}
+     * @memberof BaseEditor
+     */
+    protected applySnapWithTarget(latlng: L.LatLng, autoHighlight: boolean = true): SnapResult {
+        // 移除高亮的图层
+        this.clearSnapHighlights();
+        const snappedVertex = this.snapController?.snapVertex?.(latlng);
+        if (snappedVertex) {
+            console.log('顶点吸附：', snappedVertex);
+            if (autoHighlight) this.highlightPoint(snappedVertex); // ✅ 自动高亮
+            return {
+                snappedLatLng: snappedVertex,
+                snapped: true,
+                type: 'vertex',
+                target: snappedVertex
+            };
+        }
+
+        const snappedEdge = this.snapController?.snapEdge?.(latlng);
+        if (snappedEdge) {
+            console.log('边缘吸附：', snappedEdge);
+            const edge = this.snapController?.getClosestEdge?.(latlng); // 返回输入点即将吸附的目标边线
+            if (autoHighlight && edge) this.highlightEdge(edge); // ✅ 自动高亮
+            return {
+                snappedLatLng: snappedEdge,
+                snapped: true,
+                type: 'edge',
+                target: edge
+            };
+        }
+
+        return {
+            snappedLatLng: latlng,
+            snapped: false
+        };
+    }
+
+
+    /** 【顶点吸附器】收集所有其他图层的顶点信息
+     *
+     *
+     * @protected
+     * @param {L.Map} map
+     * @param {L.Layer} excludeLayer
+     * @return {*}  {L.LatLng[]}
+     * @memberof BaseEditor
+     */
+    protected collectAllOtherGeometryIndices(map: L.Map, excludeLayer: L.Layer): GeometryIndex[] {
+        const indices: GeometryIndex[] = [];
+
+        map.eachLayer((layer: any) => {
+            if (layer !== excludeLayer && layer.toGeoJSON) {
+                const geo = layer.toGeoJSON();
+                const geometry = geo.type === 'Feature' ? geo.geometry : geo;
+                try {
+                    const index = this.buildGeometryIndex(geometry);
+                    indices.push(index);
+                } catch (e) {
+                    console.warn('跳过不支持的图层类型', e);
+                }
+            }
+        });
+
+        return indices;
+    }
+
+    /** 高亮吸附目标点
+     *
+     *
+     * @protected
+     * @param {{ start: L.LatLng; end: L.LatLng }} edge
+     * @memberof BaseEditor
+     */
+    private highlightPoint(latlng: L.LatLng) {
+        // 清除上一次的高亮图层
+        if (this.highlightCircleMarker) {
+            this.highlightCircleMarker.remove();
+            this.highlightCircleMarker = null;
+        }
+        const marker = L.circleMarker(latlng, {
+            radius: 15,
+            color: '#00ff00',
+            weight: 2,
+            fillOpacity: 0.8
+        });
+
+        this.snapHighlightLayer.addLayer(marker);
+        this.highlightCircleMarker = marker;
+    }
+
+    /** 高亮吸附目标线段
+     *
+     *
+     * @protected
+     * @param {{ start: L.LatLng; end: L.LatLng }} edge
+     * @memberof BaseEditor
+     */
+    private highlightEdge(edge: { start: L.LatLng; end: L.LatLng }) {
+        // 移除上次吸附高亮图层
+        if (this.highlightEdgeLayer) {
+            this.highlightEdgeLayer.remove();
+            this.highlightEdgeLayer = null;
+        }
+        // 添加新的高亮图层
+        const edgeLine = L.polyline([edge.start, edge.end], {
+            color: '#00ff00',
+            weight: 5,
+            dashArray: '4,2',
+            pane: 'overlayPane'
+        })
+        this.snapHighlightLayer.addLayer(edgeLine);
+        this.highlightEdgeLayer = edgeLine;
+    }
+
+    /** 移除上次吸附高亮图层
+     * 
+     *
+     * @protected
+     * @memberof BaseEditor
+     */
+    protected clearSnapHighlights() {
+        // 清除上一次的高亮图层
+        this.snapHighlightLayer.clearLayers();
+        this.highlightCircleMarker = null;
+        this.highlightEdgeLayer = null;
+    }
+
+    // 清理吸附相关资源的方法
+    protected cleanupSnapResources(): void {
+        // 1. 清理高亮层
+        this.clearSnapHighlights();
+        this.map.removeLayer(this.snapHighlightLayer);
+
+        // 2. 清理吸附控制器
+        this.snapController = undefined;
+    }
+
+
+    // #endregion
 
     // #region 渲染行为
 
@@ -151,6 +334,100 @@ export abstract class BaseEditor {
      * @memberof BaseEditor
      */
     public abstract exitEditMode(): void;
+
+    // #endregion
+
+    // #region 辅助函数
+
+    /** 提取多边形的坐标点（全部平铺到一个数组中）
+     *
+     *
+     * @protected
+     * @param {GeoJSON.GeoJSON} geo
+     * @return {*}  {L.LatLng[]}
+     * @memberof BaseEditor
+     */
+    protected extractVerticesFromGeoJSON(geo: GeoJSON.GeoJSON): L.LatLng[] {
+        const result: L.LatLng[] = [];
+        if (geo.type === 'Feature') geo = geo.geometry;
+        if (geo.type === 'Polygon') {
+            geo.coordinates.forEach(ring =>
+                ring.forEach(([lng, lat]) => result.push(L.latLng(lat, lng)))
+            );
+        } else if (geo.type === 'MultiPolygon') {
+            geo.coordinates.forEach(polygon =>
+                polygon.forEach(ring =>
+                    ring.forEach(([lng, lat]) => result.push(L.latLng(lat, lng)))
+                )
+            );
+        }
+        return result;
+    }
+
+    /** 构建空间数据索引 
+     *
+     *
+     * @protected
+     * @param {GeoJSON.Geometry} geometry
+     * @return {*}  {GeometryIndex}
+     * @memberof BaseEditor
+     */
+    protected buildGeometryIndex(geometry: GeoJSON.Geometry): GeometryIndex {
+        const vertices: L.LatLng[] = [];
+        const edges: { start: L.LatLng; end: L.LatLng }[] = [];
+
+        if (geometry.type === 'Polygon') {
+            geometry.coordinates.forEach(ring => {
+                const ringPoints = ring.map(([lng, lat]) => L.latLng(lat, lng));
+                vertices.push(...ringPoints);
+                for (let i = 0; i < ringPoints.length; i++) {
+                    const start = ringPoints[i];
+                    const end = ringPoints[(i + 1) % ringPoints.length]; // 闭合
+                    edges.push({ start, end });
+                }
+            });
+        } else if (geometry.type === 'MultiPolygon') {
+            geometry.coordinates.forEach(polygon => {
+                polygon.forEach(ring => {
+                    const ringPoints = ring.map(([lng, lat]) => L.latLng(lat, lng));
+                    vertices.push(...ringPoints);
+                    for (let i = 0; i < ringPoints.length; i++) {
+                        const start = ringPoints[i];
+                        const end = ringPoints[(i + 1) % ringPoints.length];
+                        edges.push({ start, end });
+                    }
+                });
+            });
+        } else if (geometry.type === 'LineString') {
+            const linePoints = geometry.coordinates.map(([lng, lat]) => L.latLng(lat, lng));
+            vertices.push(...linePoints);
+            for (let i = 0; i < linePoints.length - 1; i++) {
+                edges.push({ start: linePoints[i], end: linePoints[i + 1] });
+            }
+        } else if (geometry.type === 'MultiLineString') {
+            geometry.coordinates.forEach(line => {
+                const linePoints = line.map(([lng, lat]) => L.latLng(lat, lng));
+                vertices.push(...linePoints);
+                for (let i = 0; i < linePoints.length - 1; i++) {
+                    edges.push({ start: linePoints[i], end: linePoints[i + 1] });
+                }
+            });
+        } else {
+            throw new Error(`不支持的 geometry 类型: ${geometry.type}`);
+        }
+
+        const bounds = L.latLngBounds(vertices);
+
+        return {
+            type: geometry.type.startsWith('Polygon') ? 'polygon' : 'polyline',
+            vertices,
+            edges,
+            bounds,
+            geometry
+        };
+    }
+
+
 
     // #endregion
 }

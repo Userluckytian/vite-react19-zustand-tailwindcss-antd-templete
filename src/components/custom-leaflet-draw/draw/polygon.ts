@@ -6,7 +6,7 @@
  * 综上：本组件不会吐出polygonLayer对象，只提供上面说的2的功能：吐出坐标信息，以及3里的监听事件回调机制。
  * */
 import * as L from 'leaflet';
-import { PolygonEditorState } from '../types';
+import { PolygonEditorState, type LeafletPolylineOptionsExpends } from '../types';
 export default class LeafletPolygon {
 
     private map: L.Map;
@@ -25,7 +25,7 @@ export default class LeafletPolygon {
     private stateListeners: ((state: PolygonEditorState) => void)[] = [];
 
 
-    constructor(map: L.Map, options: L.PolylineOptions = {}) {
+    constructor(map: L.Map, options: LeafletPolylineOptionsExpends = {}) {
         this.map = map;
         if (this.map) {
             // 初始化时，设置绘制状态为true，且发出状态通知
@@ -40,9 +40,9 @@ export default class LeafletPolygon {
     }
 
     // 初始化图层
-    private initLayers(options: L.PolylineOptions) {
+    private initLayers(options: LeafletPolylineOptionsExpends) {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[[-90, -180], [-90, -180], [-90, -180], [-90, -180]]坐标，也就是页面的左下角
-        const polygonOptions: L.PolylineOptions = {
+        const polygonOptions: LeafletPolylineOptionsExpends = {
             pane: 'overlayPane',
             ...this.drawLayerStyle,
             ...options
