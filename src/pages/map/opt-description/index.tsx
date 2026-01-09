@@ -45,7 +45,8 @@ const FunctionPanel = () => {
                         </div>
                         <ul className="function-list">
                             <li className="completed">✔ 【编辑点】拖动顶点，以及右键实现顶点移除</li>
-                            <li className="completed">✔ 【中点插入】点击线中间的点，实现添加新的点</li>
+                            <li className="completed">✔ 【中点插入】拖动线上的红色marker，实现添加新的点</li>
+                            <li className="completed">✔ 【拖动边】拖动线上的蓝色marker，实现拖动边功能</li>
                             <li className="completed">✔ 【拖动面】可以拖动整个面移动</li>
                             <li className="completed">✔ 【快捷键】关联键盘事件</li>
                             <li className="completed">✔ 【撤销】撤销刚才的操作</li>
