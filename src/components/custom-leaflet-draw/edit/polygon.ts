@@ -350,7 +350,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @memberof LeafletEditPolygon
      */
     public getLayerVisible(): boolean {
-        return (this.polygonLayer.options as any).layerVisible;
+        return (this.polygonLayer?.options as any).layerVisible;
     }
 
 

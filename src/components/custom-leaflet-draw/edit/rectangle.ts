@@ -345,7 +345,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      * @memberof LeafletEditPolygon
      */
     public getLayerVisible(): boolean {
-        return (this.rectangleLayer.options as any).layerVisible;
+        return (this.rectangleLayer?.options as any).layerVisible;
     }
 
 

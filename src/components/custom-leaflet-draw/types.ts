@@ -20,10 +20,10 @@ export type SnapOptions = {
 
 // 吸附结果
 export interface SnapResult {
-    snappedLatLng: L.LatLng;                                    // 吸附后的位置
-    snapped: boolean;                                           // 是否发生吸附
-    type?: 'vertex' | 'edge';                                   // 吸附类型
-    target?: L.LatLng | { start: L.LatLng; end: L.LatLng };     // 吸附目标
+    snappedLatLng: L.LatLng;                                                            // 吸附后的位置
+    snapped: boolean;                                                                   // 是否发生吸附
+    type?: 'vertex' | 'edge';                                                           // 吸附类型
+    target?: L.LatLng | { start: L.LatLng; end: L.LatLng } | undefined | null;          // 吸附目标
 }
 
 // 空间索引，为处理吸附时，线和面这种类型的对象提供索引
