@@ -41,11 +41,11 @@ $slope: -5deg; // 俯瞰坡度
   top: 50%;
   width: $r * 2;
   height: $r * 2;
-  margin: -$r 0 0 -$r;
+  margin: (-$r) 0 0 (-$r);
   //   border: $ringW solid rgba(255, 255, 255, 0.25); /* 半透明环 */
   background-image: url("@/assets/images/bottom-pane.png");
   border-radius: 50%;
-  transform: rotateX(90deg) translateZ(-50px) translateX(-480px); /* 水平 + 稍低 */
+  transform: rotateX(90deg) translateZ(-50px);
 }
 
 /* ④ 卫星：落在环面边缘，水平旋转 */
@@ -56,7 +56,7 @@ $slope: -5deg; // 俯瞰坡度
   width: 70px;
   height: 90px;
   margin: -45px 0 0 -35px;
-  transform: rotateY(calc(var(--i) * 360deg / #{$count})) translateZ($r);
+  transform: rotateY(calc(var(--i) * 360deg / #{$count})) translateZ($r - 20px);
   transition: transform 0.3s;
   img {
     width: 100%;
