@@ -598,7 +598,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         // 中点被拖动时，图形同步更新
         marker.on('drag', () => {
             // 0：先进行吸附处理（确定吸附点）
-            const latlng = this.applyVertexSnap(marker.getLatLng());
+            const { snappedLatLng: latlng } = this.applySnapWithTarget(marker.getLatLng());
 
             // 1. 拷贝当前顶点坐标
             const coords = this.vertexMarkers.map(polygon =>
@@ -622,8 +622,10 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         });
         // 中点拖动结束后，移除此处中点，执行添加新的顶点
         marker.on('dragend', () => {
-            // 0. 先进行吸附处理（确定吸附点）
-            const latlng = this.applyVertexSnap(marker.getLatLng());
+            // 0：先进行吸附处理（只是用于确定吸附点，不再进行高亮）
+            const { snappedLatLng: latlng } = this.applySnapWithTarget(marker.getLatLng(), false);
+            // 移除可能存在的高亮
+            this.clearSnapHighlights();
 
             // 1. 从地图中移除中点 marker
             this.map.removeLayer(marker);
@@ -640,7 +642,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             // 4. 绑定事件
             newMarker.on('drag', () => {
                 // 先进行吸附处理（确定吸附点）
-                const latlng = this.applyVertexSnap(newMarker.getLatLng());
+                const { snappedLatLng: latlng } = this.applySnapWithTarget(newMarker.getLatLng());
                 marker.setLatLng(latlng);
 
                 this.renderLayerFromMarkers();
@@ -648,6 +650,9 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             });
 
             newMarker.on('dragend', () => {
+                // 1. 移除可能存在的高亮
+                this.clearSnapHighlights();
+                // 2. 更新历史记录
                 this.pushHistoryFromMarkers();
             });
 
@@ -714,7 +719,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         marker.on('drag', () => {
             if (!lastLatLng) return;
 
-            const current = this.applyVertexSnap(marker.getLatLng());
+            const { snappedLatLng: current } = this.applySnapWithTarget(marker.getLatLng());
             const deltaLat = current.lat - lastLatLng.lat;
             const deltaLng = current.lng - lastLatLng.lng;
 
@@ -730,6 +735,8 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         });
 
         marker.on('dragend', () => {
+            // 1. 移除可能存在的高亮
+            this.clearSnapHighlights();
             // 2. 重新渲染更新中点 marker
             this.updateMidpoints();
             this.pushHistoryFromMarkers();
@@ -816,7 +823,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
                     // 拖动时更新图形
                     marker.on('drag', () => {
                         // 先进行吸附处理（确定吸附点）
-                        const latlng = this.applyVertexSnap(marker.getLatLng());
+                        const { snappedLatLng: latlng } = this.applySnapWithTarget(marker.getLatLng());
                         marker.setLatLng(latlng);
 
                         this.renderLayerFromMarkers();
@@ -825,6 +832,9 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
 
                     // 拖动结束后记录历史
                     marker.on('dragend', () => {
+                        // 1. 移除可能存在的高亮
+                        this.clearSnapHighlights();
+                        // 2. 更新历史记录
                         this.pushHistoryFromMarkers();
                     });
 

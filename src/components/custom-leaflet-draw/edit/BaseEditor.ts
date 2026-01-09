@@ -17,7 +17,8 @@ export abstract class BaseEditor {
 
     // 吸附
     protected snapController?: SnapController; // 顶点吸附控制器
-    private edgeSources: { start: L.LatLng; end: L.LatLng }[] = [];
+    private highlightCircleMarker: L.CircleMarker | null = null; // 吸附时，高亮显示的marker
+    private highlightEdgeLayer: L.Polyline | null = null; // 吸附时，高亮显示的边线
 
     constructor(map: L.Map, options: { snap?: SnapOptions }) {
         if (!map) throw new Error('传入的地图对象异常，请先确保地图对象已实例完成。');
@@ -175,7 +176,9 @@ export abstract class BaseEditor {
         this.snapController.setTolerance(snap.tolerance ?? 8);
     }
 
-    /** 【顶点吸附器】确定最终的坐标(顶点会去吸附边和其他顶点)
+
+
+    /** 【吸附器】确定最终的坐标(顶点会去吸附边和其他顶点)
      *
      *
      * @protected
@@ -183,19 +186,45 @@ export abstract class BaseEditor {
      * @return {*}  {L.LatLng}
      * @memberof BaseEditor
      */
-    protected applyVertexSnap(latlng: L.LatLng): L.LatLng {
+    protected applySnapWithTarget(latlng: L.LatLng, autoHighlight: boolean = true): {
+        snappedLatLng: L.LatLng;
+        snapped: boolean;
+        type?: 'vertex' | 'edge';
+        target?: L.LatLng | { start: L.LatLng; end: L.LatLng };
+    } {
+        // 移除高亮的图层
+        this.clearSnapHighlights();
         const snappedVertex = this.snapController?.snapVertex?.(latlng);
-        snappedVertex && console.log('顶点吸附：', snappedVertex);
-        if (snappedVertex) return snappedVertex;
-        
-        
+        if (snappedVertex) {
+            console.log('顶点吸附：', snappedVertex);
+            if (autoHighlight) this.highlightPoint(snappedVertex); // ✅ 自动高亮
+            return {
+                snappedLatLng: snappedVertex,
+                snapped: true,
+                type: 'vertex',
+                target: snappedVertex
+            };
+        }
+
         const snappedEdge = this.snapController?.snapEdge?.(latlng);
-        snappedEdge && console.log('边缘吸附：', snappedEdge);
-        if (snappedEdge) return snappedEdge;
+        if (snappedEdge) {
+            console.log('边缘吸附：', snappedEdge);
+            const edge = this.snapController?.getClosestEdge?.(latlng); // 返回输入点即将吸附的目标边线
+            if (autoHighlight && edge) this.highlightEdge(edge); // ✅ 自动高亮
+            return {
+                snappedLatLng: snappedEdge,
+                snapped: true,
+                type: 'edge',
+                target: edge
+            };
+        }
 
-        return latlng;
-
+        return {
+            snappedLatLng: latlng,
+            snapped: false
+        };
     }
+
 
     /** 【顶点吸附器】收集所有其他图层的顶点信息
      *
@@ -223,6 +252,69 @@ export abstract class BaseEditor {
         });
 
         return indices;
+    }
+
+    /** 高亮吸附目标点
+     *
+     *
+     * @protected
+     * @param {{ start: L.LatLng; end: L.LatLng }} edge
+     * @memberof BaseEditor
+     */
+    private highlightPoint(latlng: L.LatLng) {
+        // 清除上一次的高亮图层
+        if (this.highlightCircleMarker) {
+            this.highlightCircleMarker.remove();
+            this.highlightCircleMarker = null;
+        }
+        // 添加新的高亮图层
+        this.highlightCircleMarker = L.circleMarker(latlng, {
+            radius: 15,
+            color: '#00ff00',
+            weight: 2,
+            fillOpacity: 0.8,
+            pane: 'overlayPane'
+        }).addTo(this.map); // 你可以维护一个临时图层组用于清除
+    }
+
+    /** 高亮吸附目标线段
+     *
+     *
+     * @protected
+     * @param {{ start: L.LatLng; end: L.LatLng }} edge
+     * @memberof BaseEditor
+     */
+    private highlightEdge(edge: { start: L.LatLng; end: L.LatLng }) {
+        // 移除上次吸附高亮图层
+        if (this.highlightEdgeLayer) {
+            this.highlightEdgeLayer.remove();
+            this.highlightEdgeLayer = null;
+        }
+        // 添加新的高亮图层
+        this.highlightEdgeLayer = L.polyline([edge.start, edge.end], {
+            color: '#00ff00',
+            weight: 5,
+            dashArray: '4,2',
+            pane: 'overlayPane'
+        }).addTo(this.map);
+    }
+
+    /** 移除上次吸附高亮图层
+     * 
+     *
+     * @protected
+     * @memberof BaseEditor
+     */
+    protected clearSnapHighlights() {
+        // 清除上一次的高亮图层
+        if (this.highlightCircleMarker) {
+            this.highlightCircleMarker.remove();
+            this.highlightCircleMarker = null;
+        }
+        if (this.highlightEdgeLayer) {
+            this.highlightEdgeLayer.remove();
+            this.highlightEdgeLayer = null;
+        }
     }
 
 

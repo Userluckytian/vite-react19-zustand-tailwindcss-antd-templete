@@ -33,7 +33,6 @@ export class SnapController {
 
     private map: L.Map;
     private tolerance: number = 8; // px
-    private lineTolerance: number = 12; // px
     private modes: SnapMode[] = ['vertex'];
 
     private vertexSources: L.LatLng[] = []; // 顶点吸附源
@@ -73,7 +72,7 @@ export class SnapController {
     public setGeometrySources(indices: GeometryIndex[]) {
         this.vertexSources = indices.flatMap(i => i.vertices);
         this.edgeSources = indices.flatMap(i => i.edges);
-        console.log(this.vertexSources, this.edgeSources);
+        console.log('吸附源：', this.vertexSources, this.edgeSources);
     }
 
 
@@ -99,6 +98,30 @@ export class SnapController {
     }
 
 
+    /** 返回输入点即将吸附的目标边线
+     *
+     *
+     * @param {L.LatLng} input
+     * @return {*}  {({ start: L.LatLng; end: L.LatLng } | null)}
+     * @memberof SnapController
+     */
+    public getClosestEdge(input: L.LatLng): { start: L.LatLng; end: L.LatLng } | null {
+        let closest: { start: L.LatLng; end: L.LatLng } | null = null;
+        let minDistance = Infinity;
+        const inputPx = this.map.latLngToLayerPoint(input);
+        for (const edge of this.edgeSources) {
+            const projected = this.projectPointToSegment(input, edge.start, edge.end);
+            const projectedPx = this.map.latLngToContainerPoint(projected);
+            // 像素距离计算
+            const distance = inputPx.distanceTo(projectedPx);
+            if (distance < minDistance && distance <= this.tolerance) {
+                minDistance = distance;
+                closest = edge;
+            }
+        }
+
+        return closest;
+    }
 
 
 
@@ -112,15 +135,18 @@ export class SnapController {
      */
     public snapEdge(latlng: L.LatLng): L.LatLng | null {
         if (!this.edgeSources.length) return null;
-
+        const latlngPx = this.map.latLngToContainerPoint(latlng);
         let closestPoint: L.LatLng | null = null;
         let minDistance = Infinity;
 
         for (const { start, end } of this.edgeSources) {
             const projected = this.projectPointToSegment(latlng, start, end);
-            const distance = latlng.distanceTo(projected);
-            if (distance < minDistance && distance <= this.lineTolerance) {
-                minDistance = distance;
+
+            // 使用像素坐标计算距离
+            const projectedPx = this.map.latLngToContainerPoint(projected);
+            const distancePx = latlngPx.distanceTo(projectedPx);
+            if (distancePx < minDistance && distancePx <= this.tolerance) {
+                minDistance = distancePx;
                 closestPoint = projected;
             }
         }
