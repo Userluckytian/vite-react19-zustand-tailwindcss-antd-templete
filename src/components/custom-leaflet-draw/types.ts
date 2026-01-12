@@ -44,6 +44,11 @@ export enum PolygonEditorState {
     Editing = 'editing'  // 正在编辑
 }
 
+/* 定义编辑器监听事件---的配置属性信息  */
+export interface EditorListenerConfigs {
+    immediateNotify?: boolean; // 是否立即触发状态监听
+}
+
 /* 类型实例类型 */
 export type drawInstance = LeafletCircle | MarkerPoint | LeafletPolygon | LeafletPolyline | LeafletRectangle;
 export type measureInstance = LeafletArea | LeafletDistance;

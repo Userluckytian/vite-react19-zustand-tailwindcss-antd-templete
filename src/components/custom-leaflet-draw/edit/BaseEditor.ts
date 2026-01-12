@@ -1,5 +1,5 @@
 import * as L from "leaflet";
-import { PolygonEditorState, type GeometryIndex, type SnapMode, type SnapOptions, type SnapResult } from "../types";
+import { PolygonEditorState, type EditorListenerConfigs, type GeometryIndex, type SnapMode, type SnapOptions, type SnapResult } from "../types";
 import { SnapController } from "../utils/SnapController";
 
 // BaseEditor.ts - 基础形状编辑器
@@ -100,12 +100,17 @@ export abstract class BaseEditor {
     /** 状态改变时，触发存储的所有监听事件的回调
      *
      *
-     * @private
+     * @protected
+     * @param {PolygonEditorState} status
+     * @param {boolean} [immediateNotify] (立即发出消息通知)
+     * @return {*}  {void}
      * @memberof BaseEditor
      */
-    protected updateAndNotifyStateChange(status: PolygonEditorState): void {
+    protected updateAndNotifyStateChange(status: PolygonEditorState, immediateNotify: boolean = true): void {
         this.currentState = status;
-        this.stateListeners.forEach(fn => fn(this.currentState));
+        if (immediateNotify) {
+            this.stateListeners.forEach(fn => fn(this.currentState));
+        }
     }
 
     /** 设置当前的状态，
@@ -121,13 +126,14 @@ export abstract class BaseEditor {
     /** 外部监听者添加的回调监听函数，存储到这边，状态改变时，触发这些监听事件的回调
      *
      *
-     * @param {(state: PolygonEditorState) => void} listener
+     * @param {(state: PolygonEditorState) => void} listener // 监听事件
+     * @param {EditorListenerConfigs} [configs={ immediateNotify: false }] // 配置参数
      * @memberof BaseEditor
      */
-    public onStateChange(listener: (state: PolygonEditorState) => void): void {
+    public onStateChange(listener: (state: PolygonEditorState) => void, configs: EditorListenerConfigs = { immediateNotify: false }): void {
         // 存储回调事件并立刻触发一次
         this.stateListeners.push(listener);
-        listener(this.currentState);
+        configs.immediateNotify && listener(this.currentState);
     }
 
     /** 移除监听器的方法
