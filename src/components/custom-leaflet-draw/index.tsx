@@ -16,6 +16,7 @@ import LeafletEditRectangle from './simpleEdit/rectangle';
 import { LeafletTopology } from './topo/topo';
 import LeafletRectangleEditor from './edit/rectangle';
 import LeafletPolygonEditor from './edit/polygon';
+import * as MagicWand from './image-extraction/magicWand';
 interface CustomLeafLetDrawProps {
     mapInstance: L.Map; // 传入的地图实例
     drawGeoJsonResult?: (result: any) => void; // 绘制结果吐出
