@@ -1,0 +1,62 @@
+@use "sass:math";
+$count: 12; // 卫星数量
+$r-x: 480px; // 水平半径
+$r-z: 110px; // 垂直半径
+$duration: 12s; // 周期
+$pi: 3.1415926; // 手动常量，dart-sass 不炸
+.orbit-box {
+  width: 1150px;
+  height: 300px;
+  background: url("@/assets/images/bottom-pane.png");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  display: flex;
+  justify-content: center;
+  margin: 0 auto;
+  position: relative;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  transform: rotateX(35deg);
+}
+.satellite {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 70px;
+  height: 70px;
+  margin: -90px 0 0 -40px;
+  animation: orbit $duration linear infinite;
+  animation-delay: calc(var(--i) * #{math.div($duration, $count)} * -1);
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  //   鼠标悬停时，卫星从1.5倍大小的放到过程用这条曲线弹出来，而不是生硬跳变
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+.orbit-box:hover .satellite {
+  animation-play-state: paused;
+}
+.satellite:hover {
+  transform: scale(1.5);
+}
+@keyframes orbit {
+  @for $i from 0 through 360 {
+    // 旧方式： $p: $i / 3.6;
+    $p: math.div($i, 3.6);
+    // 方式2：$p: calc($i / 3.6); // 或者用 calc
+
+    $rad: math.div($i * $pi, 180); // 无单位运算，dart-sass 通过
+
+    $x: $r-x * math.cos($rad);
+    $y: $r-z * math.sin($rad); // 原来管“垂直半径”的现在去 Y 轴
+    $s: 1.2;
+    #{calc($p * 1%)} {
+      // 修复百分比生成
+      // $angle: $i * -1deg;          // 圆心角反向
+      // transform: translate3d($x, 0, $z) rotateY($angle);
+      transform: translate3d($x, $y, 0) scale($s);
+    }
+  }
+}

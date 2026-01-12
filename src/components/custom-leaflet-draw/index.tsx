@@ -1,6 +1,6 @@
 import React, { Activity, Fragment, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import CustomIcon from '../custom-icon';
-import { App, Divider } from 'antd';
+import { App, Divider, Switch } from 'antd';
 import * as L from 'leaflet';
 import './index.scss';
 import MarkerPoint from './draw/markerPoint';
@@ -11,7 +11,7 @@ import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import LeafletEditPolygon from './simpleEdit/polygon';
-import { PolygonEditorState, type leafletGeoEditorInstance, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
+import { PolygonEditorState, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
 import LeafletEditRectangle from './simpleEdit/rectangle';
 import { LeafletTopology } from './topo/topo';
 import LeafletRectangleEditor from './edit/rectangle';
@@ -139,17 +139,52 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         }
     ]
     ) // 工具栏列表
-    const [currSelTool, setCurrSelTool] = useState<string | null>(null); // 当前使用的【绘制条上的绘制工具】
     const currSelToolRef = useRef<string | null>(null); // 使用 ref 存储最新的工具类型
+    const [currSelTool, setCurrSelTool] = useState<string | null>(null); // 当前使用的【绘制条上的绘制工具】
     const [drawLayers, setDrawLayers] = useState<any[]>([]); // 存放绘制的图层
     const [currEditLayer, setCurrEditLayer] = useState<any>(null); // 当前编辑的图层【我们设置的是一次仅可编辑一个图层】
     const [topologyInstance, setTopologyInstance] = useState<any>(null);
-    
+
+    const [reshapeBar, setReshapeBar] = useState<any[]>([
+        {
+            id: 'allowNoChoise',
+            label: '允许无选择重塑',
+            visible: false
+        },
+        {
+            id: 'manual',
+            label: '完成后，由用户来选择要保留的部分（仅支持面行为，结果在控制台，用户来渲染）',
+            visible: false
+        }
+    ]);
+
+    // 改变reshapeBar的选项
+    const changeReshapeBarOptions = (item: any, checked: boolean) => {
+        item.visible = !item.visible;
+        setReshapeBar((pre: any) => {
+            const tempData = JSON.parse(JSON.stringify(pre));
+            const itemIdx = reshapeBar.findIndex((it: any) => it.id === item.id);
+            itemIdx > -1 && (tempData[itemIdx] = item);
+            return tempData;
+        })
+        switch (item.id) {
+            case 'allowNoChoise':
+                break;
+            case 'manual':
+                break;
+
+            default:
+                break;
+        }
+
+    }
+
+
     // 同步 currSelTool 到 ref
     useEffect(() => {
         currSelToolRef.current = currSelTool;
     }, [currSelTool]);
-    
+
     // 工具按钮点击
     const handleToolClick = (toolId: string) => {
 
@@ -158,6 +193,12 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             handleCancelDraw();
             return;
         }
+
+        // 吸附参数
+        const snap: SnapOptions = {
+            enabled: true,
+            modes: ['edge', 'vertex']
+        };
         // // 先清理之前的绘制
         // clearCurrentDraw();
 
@@ -201,11 +242,11 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 saveEditorAndAddListener(editRectangleLayer);
                 break;
             case 'polygon_editor':
-                const polygonLayerEditor = new LeafletPolygonEditor(mapInstance);
+                const polygonLayerEditor = new LeafletPolygonEditor(mapInstance, { snap });
                 saveEditorAndAddListener(polygonLayerEditor);
                 break;
             case 'rectangle_editor':
-                const rectangleLayerEditor = new LeafletRectangleEditor(mapInstance);
+                const rectangleLayerEditor = new LeafletRectangleEditor(mapInstance, { snap });
                 saveEditorAndAddListener(rectangleLayerEditor);
                 break;
             case 'add':
@@ -214,28 +255,46 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     "coordinates": [
                         [
                             [
-                                129.726563,
-                                42.032974
+                                102.10387893927167,
+                                28.447770110343942
                             ],
                             [
-                                154.335938,
-                                41.574361
+                                105.582591,
+                                28.251648
                             ],
                             [
-                                151.347656,
-                                31.503629
+                                106.204812,
+                                31.298223
                             ],
                             [
-                                136.40625,
-                                30.600094
+                                103.01435564306644,
+                                31.431075274005355
                             ],
                             [
-                                129.814453,
-                                35.675147
+                                102.10387893927167,
+                                28.447770110343942
+                            ]
+                        ],
+                        [
+                            [
+                                103.293457,
+                                29.42046
                             ],
                             [
-                                129.726563,
-                                42.032974
+                                103.293457,
+                                30.315988
+                            ],
+                            [
+                                105.095215,
+                                30.486551
+                            ],
+                            [
+                                105.380859,
+                                29.343875
+                            ],
+                            [
+                                103.293457,
+                                29.42046
                             ]
                         ]
                     ]
@@ -245,68 +304,24 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     "coordinates": [
                         [
                             [
-                                148.359375,
-                                28.304381
+                                100.876465,
+                                28.516969
                             ],
                             [
-                                148.359375,
-                                34.71432511521565
+                                102.10387893925075,
+                                28.44777011034512
                             ],
                             [
-                                151.347656,
-                                33.870416
+                                103.01435564304498,
+                                31.431075274006247
                             ],
                             [
-                                138.955078,
-                                37.370157
+                                101.271973,
+                                31.503629
                             ],
                             [
-                                143.964844,
-                                44.590467
-                            ],
-                            [
-                                159.257813,
-                                46.498392
-                            ],
-                            [
-                                169.189453,
-                                44.150681
-                            ],
-                            [
-                                176.308594,
-                                34.016242
-                            ],
-                            [
-                                160.664063,
-                                33.72434
-                            ],
-                            [
-                                148.359375,
-                                34.71432511521565
-                            ],
-                            [
-                                148.359375,
-                                37.857507
-                            ],
-                            [
-                                166.025391,
-                                37.857507
-                            ],
-                            [
-                                166.025391,
-                                33.82437383072691
-                            ],
-                            [
-                                166.025391,
-                                33.82437383072691
-                            ],
-                            [
-                                166.025391,
-                                28.304381
-                            ],
-                            [
-                                148.359375,
-                                28.304381
+                                100.876465,
+                                28.516969
                             ]
                         ]
                     ]
@@ -317,8 +332,44 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                         [
                             [
                                 [
+                                    102.590332,
+                                    18.937464
+                                ],
+                                [
+                                    102.919922,
+                                    18.145852
+                                ],
+                                [
+                                    103.939991,
+                                    18.12198
+                                ],
+                                [
                                     103.051758,
                                     14.081927
+                                ],
+                                [
+                                    106.47623230452568,
+                                    14.289011419681762
+                                ],
+                                [
+                                    109.54186425796593,
+                                    20.600407678388187
+                                ],
+                                [
+                                    103.205566,
+                                    20.014645
+                                ],
+                                [
+                                    102.590332,
+                                    18.937464
+                                ]
+                            ]
+                        ],
+                        [
+                            [
+                                [
+                                    106.47623230454701,
+                                    14.289011419683053
                                 ],
                                 [
                                     117.993164,
@@ -333,32 +384,16 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                                     19.103648
                                 ],
                                 [
-                                    118.40388034681555,
-                                    20.194539446101615
+                                    118.322754,
+                                    21.412162
                                 ],
                                 [
-                                    111.20361300000145,
-                                    19.331877999991118
+                                    109.54186425798815,
+                                    20.60040767839024
                                 ],
                                 [
-                                    111.20361300000029,
-                                    19.331877999991022
-                                ],
-                                [
-                                    104.63378900000428,
-                                    19.02057699999127
-                                ],
-                                [
-                                    103.72696259274902,
-                                    18.126965362890054
-                                ],
-                                [
-                                    103.939991,
-                                    18.12198
-                                ],
-                                [
-                                    103.051758,
-                                    14.081927
+                                    106.47623230454701,
+                                    14.289011419683053
                                 ]
                             ],
                             [
@@ -395,27 +430,80 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                                     13.154376
                                 ],
                                 [
-                                    101.074219,
+                                    97.4364787587324,
                                     13.154376
                                 ],
                                 [
-                                    101.074219,
-                                    15.61924579742138
+                                    98.88330745073758,
+                                    17.895114
                                 ],
                                 [
                                     94.658203,
-                                    15.457340119850556
+                                    17.895114
                                 ],
                                 [
                                     94.658203,
                                     13.154376
                                 ]
                             ]
+                        ],
+                        [
+                            [
+                                [
+                                    97.4364787587514,
+                                    13.154376
+                                ],
+                                [
+                                    101.074219,
+                                    13.154376
+                                ],
+                                [
+                                    101.074219,
+                                    17.895114
+                                ],
+                                [
+                                    98.88330745075729,
+                                    17.895114
+                                ],
+                                [
+                                    97.4364787587514,
+                                    13.154376
+                                ]
+                            ]
                         ]
                     ]
                 };
-                const polygonEditor = new LeafletPolygonEditor(mapInstance!, {}, polyGeom);
+                const polygonEditor = new LeafletPolygonEditor(mapInstance!, {}, geometry);
+                const polygonEditor2 = new LeafletPolygonEditor(mapInstance!, {}, polygonGeom);
+                const polygonEditor3 = new LeafletPolygonEditor(mapInstance!, {}, polyGeom);
                 saveEditorAndAddListener(polygonEditor, 'add');
+
+                const polyGeomline: any = {
+                    "type": "LineString",
+                    "coordinates": [
+                        [
+                            124.892578,
+                            39.504041
+                        ],
+                        [
+                            126.62344029494868,
+                            42.3445773598043
+                        ],
+                        [
+                            153.457031,
+                            42.617791
+                        ]
+                    ]
+                };
+                const lineLayer111 = L.geoJSON(polyGeomline, {
+                    style: {
+                        color: 'red', // 设置边线颜色
+                        weight: 2,
+                        fillColor: "red", // 设置填充颜色
+                        fillOpacity: 0.3, // 设置填充透明度
+                    }
+                });
+                lineLayer111.addTo(mapInstance);
                 break;
             case 'add_hole':
                 const hole_geometry: any = {
@@ -597,10 +685,10 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         // 对于有默认 geometry 的工具，立即触发绘制结果回调
         if (props.drawGeoJsonResult && toolId && ['add', 'add_hole', 'add_hole_multi'].includes(toolId)) {
             try {
-                const layerInstance = (editor as any).polygonLayer || (editor as any).markerLayer || 
-                                    (editor as any).lineLayer || (editor as any).circleLayer || 
-                                    (editor as any).rectangleLayer;
-                
+                const layerInstance = (editor as any).polygonLayer || (editor as any).markerLayer ||
+                    (editor as any).lineLayer || (editor as any).circleLayer ||
+                    (editor as any).rectangleLayer;
+
                 if (layerInstance) {
                     let geoJsonData = null;
                     try {
@@ -629,12 +717,12 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     try {
                         // 获取绘制工具类型
                         const toolType = currentTool;
-                        if (toolType && ['point', 'line', 'polygon', 'circle', 'rectangle', 'measure_distance', 'measure_area', 'polygon_editor', 'rectangle_editor','magic'].includes(toolType)) {
+                        if (toolType && ['point', 'line', 'polygon', 'circle', 'rectangle', 'measure_distance', 'measure_area', 'polygon_editor', 'rectangle_editor', 'magic'].includes(toolType)) {
                             // 获取 Leaflet 图层实例
-                            const layerInstance = (editor as any).polygonLayer || (editor as any).markerLayer || 
-                                                (editor as any).lineLayer || (editor as any).circleLayer || 
-                                                (editor as any).rectangleLayer;
-                            
+                            const layerInstance = (editor as any).polygonLayer || (editor as any).markerLayer ||
+                                (editor as any).lineLayer || (editor as any).circleLayer ||
+                                (editor as any).rectangleLayer;
+
                             if (layerInstance && props.drawGeoJsonResult) {
                                 // 获取绘制的 GeoJSON 数据（容错处理）
                                 let geoJsonData = null;
@@ -754,7 +842,11 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     }
     // 整形要素
     const reshapeFeature = () => {
-        topologyInstance && topologyInstance.reshapeFeature(({ doReshapeLayers, reshapedGeoms }: TopoReshapeFeatureResult) => {
+        const options: ReshapeOptions = {
+            AllowReshapingWithoutSelection: reshapeBar[0].visible ? true : false,
+            chooseStrategy: reshapeBar[1].visible ? 'manual' : 'auto',
+        };
+        topologyInstance && topologyInstance.reshapeFeature(options, ({ doReshapeLayers, reshapedGeoms }: TopoReshapeFeatureResult) => {
             // try {
             // console.log('整形--reshapedGeoms', reshapedGeoms, doReshapeLayers);
             // 第一步：删除之前的旧图层
@@ -841,9 +933,9 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                             {/* {tool.title && <span>{tool.title}</span>} */}
                         </div>
                         {/* 底部的分割线 */}
-                        <Activity mode={idx !== toolbarList.length ? 'visible' : 'hidden'}>
-                            <Divider type="horizontal" style={{ margin: '0px' }} />
-                        </Activity>
+                        {/* <Activity mode={idx !== toolbarList.length ? 'visible' : 'hidden'}>
+                            <Divider orientation="horizontal" style={{ margin: '0px' }} />
+                        </Activity> */}
                         {/* 绘制状态时的取消按钮 */}
                         {currSelTool === tool.id && !['delete', 'add'].includes(currSelTool) && <div className='cancel-btn' onClick={handleCancelDraw}>取消</div>}
                     </div>
@@ -868,8 +960,33 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     <div className='topology-tool-item item-bar' onClick={() => pickLayer()}>↩️ 选择</div>
                     <div className='topology-tool-item item-bar' onClick={() => cut()}>↩️ 裁切</div>
                     <div className='topology-tool-item item-bar' onClick={() => union()}>🔄 合并</div>
-                    <div className='topology-tool-item item-bar' onClick={() => reshapeFeature()}>🔄 整形要素工具</div>
                     <div className='topology-tool-item item-bar' onClick={() => clearTopo()}>🔄 清除</div>
+                </div>
+            }
+            {/* 整形要素工具条：（开关在topo工具条上，） */}
+            {!currEditLayer
+                &&
+                <div className="leaflet-reshape-toolbar leaflet-bar">
+                    <div className='top'>
+                        <div>整形工具条：</div>
+                        {!reshapeBar[0].visible && <div className='topology-tool-item item-bar' onClick={() => pickLayer()}>↩️ 选择</div>}
+                        <div className='topology-tool-item item-bar' onClick={() => reshapeFeature()}>🔄 整形要素工具</div>
+                        <div className='topology-tool-item item-bar' onClick={() => clearTopo()}>🔄 清除</div>
+                    </div>
+                    <div className='bottom'>
+                        {
+                            reshapeBar.map((ite: any, index: number) => {
+                                return (
+                                    <div className='reshape-item' key={'SCEML-' + index}>
+                                        <div className='switch-btn'>
+                                            <Switch checkedChildren="开" unCheckedChildren="关" value={ite.visible} onChange={(e) => { changeReshapeBarOptions(ite, e) }} />
+                                        </div>
+                                        <div className='label'>{ite.label}</div>
+                                    </div>
+                                )
+                            })
+                        }
+                    </div>
                 </div>
             }
         </>

@@ -1,0 +1,82 @@
+$count: 12;
+$r: 480px; // 轨道半径
+$ringW: 60px; // 环宽度（可改）
+$duration: 20s;
+$slope: -5deg; // 俯瞰坡度
+
+.carousel-box {
+  width: 1150px;
+  height: 300px;
+  margin: 0 auto;
+  position: relative;
+  perspective: 1200px;
+  overflow: visible;
+  perspective: 500;
+}
+
+/* ① 视角壳：只倾斜，不带旋转 */
+.carousel-tilt {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: rotateX($slope);
+  transform-style: preserve-3d;
+}
+
+/* ② 转盘原点：水平转 */
+.carousel-origin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  animation: rotate $duration linear infinite;
+}
+
+/* ③ 圆环：水平放倒 + 半径 = 轨道半径 */
+.ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: $r * 2;
+  height: $r * 2;
+  margin: -$r 0 0 -$r;
+  //   border: $ringW solid rgba(255, 255, 255, 0.25); /* 半透明环 */
+  background-image: url("@/assets/images/bottom-pane.png");
+  border-radius: 50%;
+  transform: rotateX(90deg) translateZ(-50px) translateX(-480px); /* 水平 + 稍低 */
+}
+
+/* ④ 卫星：落在环面边缘，水平旋转 */
+.satellite-carousel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 70px;
+  height: 90px;
+  margin: -45px 0 0 -35px;
+  transform: rotateY(calc(var(--i) * 360deg / #{$count})) translateZ($r);
+  transition: transform 0.3s;
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
+/* 水平旋转 */
+@keyframes rotate {
+  to {
+    transform: rotateY(-360deg);
+  }
+}
+
+/* 交互 */
+.carousel-box:hover .carousel-origin {
+  animation-play-state: paused;
+}
+.satellite-carousel:hover {
+  transform: rotateY(calc(var(--i) * 360deg / #{$count})) translateZ($r)
+    scale(1.2);
+}

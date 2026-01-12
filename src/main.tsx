@@ -21,6 +21,14 @@ import { RouterProvider } from "react-router";
 import router from './route'
 /* react-router------------end */
 
+
+/* dayjs------------start */
+import dayjs from 'dayjs';
+import 'dayjs/locale/zh-cn';
+import { setLocalInfo } from './store/session-store/local';
+dayjs.locale('zh-cn');
+/* dayjs------------end */
+
 /* antd-design------------start */
 
 import { App, ConfigProvider, theme } from "antd";
@@ -47,16 +55,10 @@ import zhCN from "antd/locale/zh_CN";
   });
   ```
 */
-// import '@ant-design/v5-patch-for-react-19'; // 兼容react19的patch
-import { unstableSetRender } from 'antd';
+
 /* antd-design------------end */
 
-/* dayjs------------start */
-import dayjs from 'dayjs';
-import 'dayjs/locale/zh-cn';
-import { setLocalInfo } from './store/session-store/local';
-dayjs.locale('zh-cn');
-/* dayjs------------end */
+
 
 const configPath = './config.json';
 
@@ -68,18 +70,6 @@ const getUserConfig = async (path: string) => {
   }
   return await response.json();
 }
-
-unstableSetRender((node, container) => {
-  // @ts-ignore
-  container._reactRoot ||= createRoot(container);
-  // @ts-ignore
-  const root = container._reactRoot;
-  root.render(node);
-  return async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    root.unmount();
-  };
-});
 
 
 // raect19新的API之：父传子不再需要写provider字样, 之前需要携带 GlobalContext.provider。

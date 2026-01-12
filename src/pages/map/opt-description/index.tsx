@@ -45,7 +45,8 @@ const FunctionPanel = () => {
                         </div>
                         <ul className="function-list">
                             <li className="completed">✔ 【编辑点】拖动顶点，以及右键实现顶点移除</li>
-                            <li className="completed">✔ 【中点插入】点击线中间的点，实现添加新的点</li>
+                            <li className="completed">✔ 【中点插入】拖动线上的红色marker，实现添加新的点</li>
+                            <li className="completed">✔ 【拖动边】拖动线上的蓝色marker，实现拖动边功能</li>
                             <li className="completed">✔ 【拖动面】可以拖动整个面移动</li>
                             <li className="completed">✔ 【快捷键】关联键盘事件</li>
                             <li className="completed">✔ 【撤销】撤销刚才的操作</li>
@@ -57,13 +58,24 @@ const FunctionPanel = () => {
                         <ul className="function-list">
                             <li className="completed">✔ 【裁剪-clip】选择一个或者多个图层，绘制一条穿过它们的折线，拆分图层（结果仅在控制台输出）</li>
                             <li className="completed">✔ 【合并-union】选择多个图层，点击合并按钮，实现图层的合并操作（结果仅在控制台输出）</li>
-                            <li className="doing">🌀 【整形要素工具： Reshape Feature】参见： <a href="https://pro.arcgis.com/en/pro-app/latest/help/editing/reshape-a-feature.htm?utm_source=copilot.com" target="Reshape-Feature-page">Reshape a line or polygon feature</a>
+                            <li className="completed">✔ 【整形要素工具： Reshape Feature】参见： <a href="https://pro.arcgis.com/en/pro-app/latest/help/editing/reshape-a-feature.htm?utm_source=copilot.com" target="Reshape-Feature-page">Reshape a line or polygon feature</a>
+                                （结果仅在控制台输出）
                                 <ul className='text-amber-600'>原则上应该要支持以下内容：
-                                    <li>①：支持线、面的重塑处理。（目前：仅支持面）</li>
-                                    <li>②：【Allow reshaping without a selection】允许无选择重塑。（目前：仅支持先选择再重塑）</li>
+                                    <li>①：支持线、面的重塑处理。（✔）</li>
+                                    <li>②：【Allow reshaping without a selection】允许无选择重塑。（✔）</li>
                                     <li>③：【Show Preview】实时预览reshape效果，便于判断结果是否符合预期。（目前：不支持）</li>
-                                    <li>④：【Reshape with single intersection】仅限线要素，允许单一交叉点重塑。（目前：我们暂时只做了支持面，暂时项目中不怎么用，先不做）</li>
-                                    <li>⑤：【Choose result on finish】完成后，由用户来选择要保留的部分。（目前：自动保留周长最大的特征，用户想要自己选择保留的部分）</li>
+                                    <li>④：【Reshape with single intersection】仅限线要素，允许单一交叉点重塑。（✔）</li>
+                                    <li>⑤：【Choose result on finish】完成后，由用户来选择要保留的部分。（✔）</li>
+                                </ul>
+                            </li>
+                            <li className="completed">🌀【顶点吸附】
+                                （结果仅在控制台输出）
+                                <ul className='text-amber-600'>
+                                    <li>①：拖动面时，不进行吸附行为（✔）</li>
+                                    <li>②：拖动点接近另一个点时，点被吸附到一起（✔）</li>
+                                    <li>③：拖动一个点接近一条线时，点会被吸附到线上（✔）</li>
+                                    <li>④：拖动一条线接近另一条线时，会根据鼠标按下拖动的那个坐标去吸附目标线，而拖动的线会跟着跑，同步的图形也在变化（✔）</li>
+                                    <li>⑤：若可吸附，高亮目标线（✔）</li>
                                 </ul>
                             </li>
                             <li className="pending">【magic魔棒选择要素工具】</li>

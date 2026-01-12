@@ -1,0 +1,36 @@
+.HN3-home-content {
+  padding: 10px;
+  .HN3-home-radar {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, 100%); /* X轴和Y轴都移动50% */
+    // y周轴偏移
+    width: 1183px;
+    height: 200px;
+    background: url("@/assets/images/bottom-pane.png");
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    display: flex;
+    justify-content: center;
+    .radar-content {
+      position: relative;
+      width: calc(100% - 180px);
+      height: calc(100% - 40px);
+      .radar-item {
+        width: 60px;
+        height: 50px;
+        position: absolute;
+        transform: translate(-50%, -50%);
+        will-change: left, top, transform;
+        cursor: pointer;
+      }
+
+      img {
+        /* 兼容以前的 img 规则，保留尺寸 */
+        width: 60px;
+        height: 50px;
+      }
+    }
+  }
+}
