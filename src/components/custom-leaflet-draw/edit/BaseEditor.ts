@@ -322,8 +322,9 @@ export abstract class BaseEditor {
     protected cleanupSnapResources(): void {
         // 1. 清理高亮层
         this.clearSnapHighlights();
-        this.map.removeLayer(this.snapHighlightLayer);
-
+        if (this.map.hasLayer(this.snapHighlightLayer)) {
+            this.map.removeLayer(this.snapHighlightLayer);
+        }
         // 2. 清理吸附控制器
         this.snapController = undefined;
     }
