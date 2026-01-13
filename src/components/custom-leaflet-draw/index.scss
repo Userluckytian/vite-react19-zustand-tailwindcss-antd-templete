@@ -84,3 +84,16 @@ $tip-pane-width: 340px;
     }
   }
 }
+
+.edit-config-toolbar {
+  width: 340px;
+  top: 40px;
+  .edit-config-content {
+    width: 100%;
+    .edit-config-item {
+      display: flex;
+      margin-bottom: 10px;
+      gap: 10px;
+    }
+  }
+}

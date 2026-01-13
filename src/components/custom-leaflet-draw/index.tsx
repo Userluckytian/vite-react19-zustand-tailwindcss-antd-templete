@@ -11,7 +11,7 @@ import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import LeafletEditPolygon from './simpleEdit/polygon';
-import { PolygonEditorState, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
+import { PolygonEditorState, type DragMarkerOptions, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
 import LeafletEditRectangle from './simpleEdit/rectangle';
 import { LeafletTopology } from './topo/topo';
 import LeafletRectangleEditor from './edit/rectangle';
@@ -158,6 +158,25 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             visible: false
         }
     ]);
+    const [editConfigBar, setEditConfigBar] = useState<any[]>([
+        {
+            id: 'snap',
+            label: '吸附',
+            enable: true
+        },
+        {
+            id: 'midPoint',
+            label: '渲染中点marker',
+            enable: true
+        },
+        {
+            id: 'edgeMarker',
+            label: '渲染拖动线marker',
+            enable: true
+        },
+    ]);
+
+    const polygonEditorRef = useRef<LeafletPolygonEditor | null>(null);
 
     // 改变reshapeBar的选项
     const changeReshapeBarOptions = (item: any, checked: boolean) => {
@@ -172,6 +191,35 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             case 'allowNoChoise':
                 break;
             case 'manual':
+                break;
+
+            default:
+                break;
+        }
+
+    }
+    // 改变EditConfigBar的选项
+    const changeEditConfigBarOptions = (item: any, checked: boolean) => {
+        item.enable = !item.enable;
+        setEditConfigBar((pre: any) => {
+            const tempData = JSON.parse(JSON.stringify(pre));
+            const itemIdx = reshapeBar.findIndex((it: any) => it.id === item.id);
+            itemIdx > -1 && (tempData[itemIdx] = item);
+            return tempData;
+        })
+        switch (item.id) {
+            case 'snap':
+
+                break;
+            case 'midPoint':
+                polygonEditorRef.current.updateDragMidMarkerOptions({
+                    enabled: checked,
+                })
+                break;
+            case 'edgeMarker':
+                polygonEditorRef.current.updateDragLineMarkerOptions({
+                    enabled: checked,
+                })
                 break;
 
             default:
@@ -200,6 +248,29 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             enabled: true,
             modes: ['edge', 'vertex']
         };
+        // 顶点渲染参数
+        const midPointMarkerConfig: DragMarkerOptions = {
+            enabled: true,
+            dragMarkerStyle: {
+                icon: L.divIcon({
+                    className: 'polygon-midpoint-insert',
+                    html: `<div style="border-radius:50%;background:#fff;border:2px solid #f00;width:14px;height:14px"></div>`,
+                    iconSize: [14, 14]
+                }),
+                pane: 'markerPane'
+            }
+        }
+        const edgeMarkerConfig: DragMarkerOptions = {
+            enabled: true,
+            dragMarkerStyle: {
+                icon: L.divIcon({
+                    className: 'polygon-midpoint-insert',
+                    html: `<div style="border-radius:50%;background:#fff;border:2px solid #0f0;width:14px;height:14px"></div>`,
+                    iconSize: [14, 14]
+                }),
+                pane: 'markerPane'
+            }
+        }
         // // 先清理之前的绘制
         // clearCurrentDraw();
 
@@ -243,7 +314,12 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 saveEditorAndAddListener(editRectangleLayer);
                 break;
             case 'polygon_editor':
-                const polygonLayerEditor = new LeafletPolygonEditor(mapInstance, { snap });
+                const polygonLayerEditor = new LeafletPolygonEditor(mapInstance, {
+                    snap,
+                    dragLineMarkerOptions: edgeMarkerConfig,
+                    dragMidMarkerOptions: midPointMarkerConfig
+                });
+                polygonEditorRef.current = polygonLayerEditor;
                 saveEditorAndAddListener(polygonLayerEditor);
                 break;
             case 'rectangle_editor':
@@ -964,7 +1040,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     <div className='topology-tool-item item-bar' onClick={() => clearTopo()}>🔄 清除</div>
                 </div>
             }
-            {/* 整形要素工具条：（开关在topo工具条上，） */}
+            {/* 整形要素工具条 */}
             {!currEditLayer
                 &&
                 <div className="leaflet-reshape-toolbar leaflet-bar">
@@ -981,6 +1057,26 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                                     <div className='reshape-item' key={'SCEML-' + index}>
                                         <div className='switch-btn'>
                                             <Switch checkedChildren="开" unCheckedChildren="关" value={ite.visible} onChange={(e) => { changeReshapeBarOptions(ite, e) }} />
+                                        </div>
+                                        <div className='label'>{ite.label}</div>
+                                    </div>
+                                )
+                            })
+                        }
+                    </div>
+                </div>
+            }
+            {/* 编辑配置工具 */}
+            {currEditLayer
+                &&
+                <div className="edit-config-toolbar leaflet-bar">
+                    <div className='edit-config-content'>
+                        {
+                            editConfigBar.map((ite: any, index: number) => {
+                                return (
+                                    <div className='edit-config-item' key={'ECTLB-' + index}>
+                                        <div className='switch-btn'>
+                                            <Switch checkedChildren="开" unCheckedChildren="关" value={ite.enable} onChange={(e) => { changeEditConfigBarOptions(ite, e) }} />
                                         </div>
                                         <div className='label'>{ite.label}</div>
                                     </div>
