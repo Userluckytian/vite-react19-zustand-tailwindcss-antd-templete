@@ -16,7 +16,16 @@ export type SnapOptions = {
     enabled: boolean; // 是否开启对齐(吸附)功能
     modes: SnapMode[]; // 吸附模式
     tolerance?: number; // 吸附范围阈值
+    highlight?: SnapHighlightLayerOptions; // 吸附高亮配置
+};
+
+// 吸附高亮图层配置
+export interface SnapHighlightLayerOptions {
+    enabled?: boolean;           // 是否显示高亮
+    pointStyle?: L.CircleMarkerOptions;
+    edgeStyle?: L.PolylineOptions;
 }
+
 export type DragMarkerOptions = {
     enabled: boolean; // 是否启用拖拽线功能
     dragMarkerStyle?: L.MarkerOptions; // 拖动边的样式

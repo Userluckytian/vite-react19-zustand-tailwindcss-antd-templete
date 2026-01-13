@@ -1,5 +1,5 @@
 import * as L from "leaflet";
-import { PolygonEditorState, type EditorListenerConfigs, type GeometryIndex, type SnapMode, type SnapOptions, type SnapResult } from "../types";
+import { PolygonEditorState, type EditorListenerConfigs, type GeometryIndex, type SnapHighlightLayerOptions, type SnapMode, type SnapOptions, type SnapResult } from "../types";
 import { SnapController } from "../utils/SnapController";
 
 // BaseEditor.ts - 基础形状编辑器
@@ -20,6 +20,25 @@ export abstract class BaseEditor {
     private snapHighlightLayer: L.LayerGroup; // 吸附时，高亮显示的图层组
     private highlightCircleMarker: L.CircleMarker | null = null; // 吸附时，高亮显示的marker
     private highlightEdgeLayer: L.Polyline | null = null; // 吸附时，高亮显示的边线
+
+    // 添加高亮配置属性
+    protected snapHighlightOptions: SnapHighlightLayerOptions = {
+        enabled: true,
+        pointStyle: {
+            radius: 15,
+            color: '#00ff00',
+            weight: 2,
+            fillOpacity: 0.8,
+            pane: 'overlayPane'
+        },
+        edgeStyle: {
+            color: '#00ff00',
+            weight: 5,
+            dashArray: '4,2',
+            pane: 'overlayPane'
+        }
+    };
+
 
     constructor(map: L.Map, options: { snap?: SnapOptions }) {
         if (!map) throw new Error('传入的地图对象异常，请先确保地图对象已实例完成。');
@@ -159,12 +178,12 @@ export abstract class BaseEditor {
     // #endregion
 
     // #region 吸附行为
-    /* 
-    arcgis，
-    1：拖动面时，不进行吸附行为，
-    2：拖动点接近另一个点时，点被吸附到一起，
-    3：拖动一个点接近一条线时，点会被吸附到线上
-    4：拖动一条线接近另一条线时，会根据鼠标按下拖动的那个坐标去吸附目标线，而拖动的线会跟着跑，同步的图形也在变化
+    /** 
+      * arcgis，
+      * 1：拖动面时，不进行吸附行为，
+      * 2：拖动点接近另一个点时，点被吸附到一起，
+      * 3：拖动一个点接近一条线时，点会被吸附到线上
+      * 4：拖动一条线接近另一条线时，会根据鼠标按下拖动的那个坐标去吸附目标线，而拖动的线会跟着跑，同步的图形也在变化
      */
 
 
@@ -180,11 +199,70 @@ export abstract class BaseEditor {
         if (!snap?.enabled) return;
 
         this.snapController = new SnapController(map);
-        this.snapController.setModes(snap.modes ?? ['vertex']);
-        this.snapController.setTolerance(snap.tolerance ?? 8);
+        this.snapController.setModes(snap?.modes ?? ['vertex']);
+        this.snapController.setTolerance(snap?.tolerance ?? 8);
     }
 
+    /**
+     * 动态启用/禁用吸附功能
+     * @param options 吸附选项
+     */
+    public updateSnapOptions(options: SnapOptions): void {
+        if (options.enabled) {
+            // 1：无论下面那个，都要设置高亮信息（这种写法是把吸附控制器和高亮行为区分开了，不知道是对是错！）
+            if (options?.highlight) {
+                this.snapHighlightOptions = options.highlight;
+            }
+            // 2：启用吸附
+            if (!this.snapController) {
+                // 初始化吸附控制器
+                this.initSnap(this.map, options);
+            } else if (options) {
+                // 更新配置
+                this.snapController.setModes(options.modes ?? ['vertex']);
+                this.snapController.setTolerance(options?.tolerance ?? 8);
+            }
+        } else {
+            // 禁用吸附
+            if (this.snapController) {
+                this.cleanupSnapResources();
+            }
+        }
+    }
 
+    /**
+     * 获取当前吸附配置
+     */
+    public getSnapOptions(): SnapOptions | null {
+        if (!this.snapController) {
+            return null;
+        }
+
+        return {
+            enabled: true,
+            modes: this.snapController.getModes(),
+            tolerance: this.snapController.getTolerance()
+        };
+    }
+
+    /**
+     * 设置吸附源（其他几何图形）
+     * @param layers 要排除的图层列表
+     */
+    protected setSnapSources(excludeLayers: L.Layer[]): void {
+        if (!this.snapController) {
+            throw new Error('吸附功能未启用');
+        }
+
+        const allIndices: GeometryIndex[] = [];
+
+        excludeLayers.forEach(excludeLayer => {
+            const indices = this.collectAllOtherGeometryIndices(this.map, excludeLayer);
+            allIndices.push(...indices);
+        });
+
+        this.snapController.setGeometrySources(allIndices);
+    }
 
     /** 【吸附器】确定最终的坐标(顶点会去吸附边和其他顶点)
      *
@@ -194,13 +272,13 @@ export abstract class BaseEditor {
      * @return {*}  {L.LatLng}
      * @memberof BaseEditor
      */
-    protected applySnapWithTarget(latlng: L.LatLng, autoHighlight: boolean = true): SnapResult {
+    protected applySnapWithTarget(latlng: L.LatLng): SnapResult {
         // 移除高亮的图层
         this.clearSnapHighlights();
         const snappedVertex = this.snapController?.snapVertex?.(latlng);
         if (snappedVertex) {
-            console.log('顶点吸附：', snappedVertex);
-            if (autoHighlight) this.highlightPoint(snappedVertex); // ✅ 自动高亮
+            // console.log('顶点吸附：', snappedVertex);
+            if (this.snapHighlightOptions.enabled) this.highlightPoint(snappedVertex);
             return {
                 snappedLatLng: snappedVertex,
                 snapped: true,
@@ -211,9 +289,9 @@ export abstract class BaseEditor {
 
         const snappedEdge = this.snapController?.snapEdge?.(latlng);
         if (snappedEdge) {
-            console.log('边缘吸附：', snappedEdge);
+            // console.log('边缘吸附：', snappedEdge);
             const edge = this.snapController?.getClosestEdge?.(latlng); // 返回输入点即将吸附的目标边线
-            if (autoHighlight && edge) this.highlightEdge(edge); // ✅ 自动高亮
+            if (this.snapHighlightOptions.enabled && edge) this.highlightEdge(edge);
             return {
                 snappedLatLng: snappedEdge,
                 snapped: true,
@@ -270,13 +348,10 @@ export abstract class BaseEditor {
             this.highlightCircleMarker.remove();
             this.highlightCircleMarker = null;
         }
-        const marker = L.circleMarker(latlng, {
-            radius: 15,
-            color: '#00ff00',
-            weight: 2,
-            fillOpacity: 0.8
-        });
-
+        const marker = L.circleMarker(latlng, this.snapHighlightOptions.pointStyle);
+        if (!this.snapHighlightLayer) {
+            this.snapHighlightLayer = L.layerGroup().addTo(this.map);
+        }
         this.snapHighlightLayer.addLayer(marker);
         this.highlightCircleMarker = marker;
     }
@@ -295,12 +370,10 @@ export abstract class BaseEditor {
             this.highlightEdgeLayer = null;
         }
         // 添加新的高亮图层
-        const edgeLine = L.polyline([edge.start, edge.end], {
-            color: '#00ff00',
-            weight: 5,
-            dashArray: '4,2',
-            pane: 'overlayPane'
-        })
+        const edgeLine = L.polyline([edge.start, edge.end], this.snapHighlightOptions.edgeStyle)
+        if (!this.snapHighlightLayer) {
+            this.snapHighlightLayer = L.layerGroup().addTo(this.map);
+        }
         this.snapHighlightLayer.addLayer(edgeLine);
         this.highlightEdgeLayer = edgeLine;
     }
@@ -313,7 +386,9 @@ export abstract class BaseEditor {
      */
     protected clearSnapHighlights() {
         // 清除上一次的高亮图层
-        this.snapHighlightLayer.clearLayers();
+        if(this.snapHighlightLayer){
+            this.snapHighlightLayer.clearLayers();
+        }
         this.highlightCircleMarker = null;
         this.highlightEdgeLayer = null;
     }
@@ -322,8 +397,10 @@ export abstract class BaseEditor {
     protected cleanupSnapResources(): void {
         // 1. 清理高亮层
         this.clearSnapHighlights();
-        if (this.map.hasLayer(this.snapHighlightLayer)) {
+        // 清空组
+        if (this.snapHighlightLayer && this.map.hasLayer(this.snapHighlightLayer)) {
             this.map.removeLayer(this.snapHighlightLayer);
+            this.snapHighlightLayer = undefined;
         }
         // 2. 清理吸附控制器
         this.snapController = undefined;
@@ -420,7 +497,8 @@ export abstract class BaseEditor {
                 }
             });
         } else {
-            throw new Error(`不支持的 geometry 类型: ${geometry.type}`);
+            // 不再执行输出错误信息
+            // throw new Error(`不支持的 geometry 类型: ${geometry.type}`);
         }
 
         const bounds = L.latLngBounds(vertices);

@@ -209,7 +209,28 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         })
         switch (item.id) {
             case 'snap':
-
+                const snapAllOptions: SnapOptions = {
+                    enabled: checked,
+                    modes: ['edge', 'vertex'],
+                    tolerance: 8,
+                    highlight: {
+                        enabled: true,
+                        pointStyle: {
+                            radius: 15,
+                            color: '#00ff00',
+                            weight: 2,
+                            fillOpacity: 0.8,
+                            pane: 'overlayPane'
+                        },
+                        edgeStyle: {
+                            color: '#00ff00',
+                            weight: 5,
+                            dashArray: '4,2',
+                            pane: 'overlayPane'
+                        }
+                    }
+                };
+                polygonEditorRef.current.toggleSnap(snapAllOptions);
                 break;
             case 'midPoint':
                 polygonEditorRef.current.updateDragMidMarkerOptions({

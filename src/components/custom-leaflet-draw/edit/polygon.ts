@@ -1,5 +1,5 @@
 import * as L from 'leaflet';
-import { PolygonEditorState, type LeafletPolylineOptionsExpends, type MidpointPair } from '../types';
+import { PolygonEditorState, type LeafletPolylineOptionsExpends, type MidpointPair, type SnapOptions } from '../types';
 import { booleanPointInPolygon, point } from '@turf/turf';
 import { BasePolygonEditor } from './BasePolygonEditor';
 import { buildMarkerIcon } from '../utils/commonUtils';
@@ -491,8 +491,9 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         this.redoStack = [];
 
         // ✅ 设置吸附源（排除当前图层） 
-        const otherIndices = this.collectAllOtherGeometryIndices(this.map, this.polygonLayer);
-        this.snapController?.setGeometrySources(otherIndices);
+        if (this.IsEnableSnap()) {
+            this.setSnapSources([this.polygonLayer]);
+        }
 
         // 渲染每个顶点为可拖动 marker
         this.reBuildMarker(coords)
@@ -559,7 +560,11 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         // 中点被拖动时，图形同步更新
         marker.on('drag', () => {
             // 0：先进行吸附处理（确定吸附点）
-            const { snappedLatLng: latlng } = this.applySnapWithTarget(marker.getLatLng());
+            let latlng = marker.getLatLng();
+            if (this.IsEnableSnap()) {
+                const { snappedLatLng } = this.applySnapWithTarget(marker.getLatLng());
+                latlng = snappedLatLng;
+            }
 
             // 1. 拷贝当前顶点坐标
             const coords = this.vertexMarkers.map(polygon =>
@@ -584,7 +589,11 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         // 中点拖动结束后，移除此处中点，执行添加新的顶点
         marker.on('dragend', () => {
             // 0：先进行吸附处理（只是用于确定吸附点，不再进行高亮）
-            const { snappedLatLng: latlng } = this.applySnapWithTarget(marker.getLatLng(), false);
+            let latlng = marker.getLatLng();
+            if (this.IsEnableSnap()) {
+                const { snappedLatLng } = this.applySnapWithTarget(marker.getLatLng());
+                latlng = snappedLatLng;
+            }
             // 移除可能存在的高亮
             this.clearSnapHighlights();
 
@@ -603,7 +612,11 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             // 4. 绑定事件
             newMarker.on('drag', () => {
                 // 先进行吸附处理（确定吸附点）
-                const { snappedLatLng: latlng } = this.applySnapWithTarget(newMarker.getLatLng());
+                let latlng = newMarker.getLatLng();
+                if (this.IsEnableSnap()) {
+                    const { snappedLatLng } = this.applySnapWithTarget(marker.getLatLng());
+                    latlng = snappedLatLng;
+                }
                 marker.setLatLng(latlng);
 
                 this.renderLayerFromMarkers();
@@ -741,7 +754,11 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
                     // 拖动时更新图形
                     marker.on('drag', () => {
                         // 先进行吸附处理（确定吸附点）
-                        const { snappedLatLng: latlng } = this.applySnapWithTarget(marker.getLatLng());
+                        let latlng = marker.getLatLng();
+                        if (this.IsEnableSnap()) {
+                            const { snappedLatLng } = this.applySnapWithTarget(marker.getLatLng());
+                            latlng = snappedLatLng;
+                        }
                         marker.setLatLng(latlng);
 
                         this.renderLayerFromMarkers();
@@ -802,6 +819,22 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         this.historyStack.push(coords);
     }
 
+    // #endregion
+
+    // #region 吸附函数
+
+    /**
+     * 快捷方法：动态切换吸附功能
+     */
+    public toggleSnap(options?: SnapOptions): void {
+        this.updateSnapOptions(options);
+        // 如果正在编辑，需要更新吸附源
+        if (this.currentState === PolygonEditorState.Editing) {
+            if (this.IsEnableSnap()) {
+                this.setSnapSources([this.polygonLayer]);
+            }
+        }
+    }
 
     // #endregion
 
@@ -843,6 +876,21 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
                 this.activate();
                 return true;
             }
+        }
+        return false;
+    }
+
+    /** 是否开启了吸附操作
+     *
+     *
+     * @private
+     * @return {*}  {boolean}
+     * @memberof LeafletPolygonEditor
+     */
+    private IsEnableSnap(): boolean {
+        const snapOptions = this.getSnapOptions();
+        if (snapOptions && snapOptions.enabled && this.snapController) {
+            return true;
         }
         return false;
     }
