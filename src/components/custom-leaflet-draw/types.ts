@@ -17,6 +17,10 @@ export type SnapOptions = {
     modes: SnapMode[]; // 吸附模式
     tolerance?: number; // 吸附范围阈值
 }
+export type DragMarkerOptions = {
+    enabled: boolean; // 是否启用拖拽线功能
+    dragMarkerStyle?: L.MarkerOptions; // 拖动边的样式
+}
 
 // 吸附结果
 export interface SnapResult {
@@ -61,11 +65,26 @@ export type MidpointPair = {
     edge: L.Marker;
 };
 
+// 中点初始化的配置信息（仅库内部使用）
+export interface MidPointInitOptions {
+    midPointEnable?: boolean;
+    midPointDefaultMarkerOptions?: L.MarkerOptions;
+    midPointPositionRatio?: number;
+    edgeEnable?: boolean;
+    edgeDefaultMarkerOptions?: L.MarkerOptions;
+    edgePositionRatio?: number;
+    showOnHover?: boolean; // 暂时没有使用
+}
+
+
+
 /* 拓展leaflet-绘制面、线属性（用于存放用户自定义的属性内容）  */
 export interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
     origin?: any; // 可以存放源信息
     defaultStyle?: any; // 存放（用户自己想要设置的）图层的默认样式信息
-    snap?: SnapOptions;
+    snap?: SnapOptions;  // 吸附配置信息
+    dragLineMarkerOptions?: DragMarkerOptions; // 拖动边属性信息
+    dragMidMarkerOptions?: DragMarkerOptions; // 拖动中点marker属性信息
     [key: string]: unknown
 }
 
