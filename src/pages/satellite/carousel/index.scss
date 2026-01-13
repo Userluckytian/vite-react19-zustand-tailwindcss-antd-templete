@@ -41,7 +41,7 @@ $slope: -5deg; // 俯瞰坡度
   top: 50%;
   width: $r * 2;
   height: $r * 2;
-  margin: -$r 0 0 -$r;
+  margin: (-$r) 0 0 (-$r);
   //   border: $ringW solid rgba(255, 255, 255, 0.25); /* 半透明环 */
   background-image: url("@/assets/images/bottom-pane.png");
   border-radius: 50%;
