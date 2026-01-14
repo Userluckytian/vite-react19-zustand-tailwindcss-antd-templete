@@ -339,8 +339,8 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     dragLineMarkerOptions: edgeMarkerConfig,
                     dragMidMarkerOptions: midPointMarkerConfig
                 });
-                polygonEditorRef.current = polygonLayerEditor;
-                saveEditorAndAddListener(polygonLayerEditor);
+                saveEditorAndAddListener(polygonLayerEditor, true);
+
                 break;
             case 'rectangle_editor':
                 const rectangleLayerEditor = new LeafletRectangleEditor(mapInstance, { snap });
@@ -573,7 +573,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 const polygonEditor = new LeafletPolygonEditor(mapInstance!, {}, geometry);
                 const polygonEditor2 = new LeafletPolygonEditor(mapInstance!, {}, polygonGeom);
                 const polygonEditor3 = new LeafletPolygonEditor(mapInstance!, {}, polyGeom);
-                saveEditorAndAddListener(polygonEditor, 'add');
+                saveEditorAndAddListener(polygonEditor, false, 'add');
 
                 const polyGeomline: any = {
                     "type": "LineString",
@@ -653,7 +653,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     ]
                 };
                 const holePolygonEditor = new LeafletPolygonEditor(mapInstance!, {}, hole_geometry);
-                saveEditorAndAddListener(holePolygonEditor, 'add_hole');
+                saveEditorAndAddListener(holePolygonEditor, false, 'add_hole');
                 break;
             case 'add_hole_multi':
                 const hole_multi_geometry: any = {
@@ -756,7 +756,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     ]
                 };
                 const holeMultiPolygonEditor = new LeafletPolygonEditor(mapInstance!, {}, hole_multi_geometry);
-                saveEditorAndAddListener(holeMultiPolygonEditor, 'add_hole_multi');
+                saveEditorAndAddListener(holeMultiPolygonEditor, false, 'add_hole_multi');
                 break;
             case 'delete':
                 // 销毁图层
@@ -777,7 +777,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
      *
      * @param {leafletGeoEditorInstance} editor
      */
-    const saveEditorAndAddListener = (editor: leafletGeoEditorInstance, toolId?: string) => {
+    const saveEditorAndAddListener = (editor: leafletGeoEditorInstance, needSnapToobar: boolean = false, toolId?: string) => {
         setDrawLayers((pre: any[]) => [...pre, editor]);
         // 对于有默认 geometry 的工具，立即触发绘制结果回调
         if (props.drawGeoJsonResult && toolId && ['add', 'add_hole', 'add_hole_multi'].includes(toolId)) {
@@ -808,6 +808,9 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             const currentTool = currSelToolRef.current;
             if (status === PolygonEditorState.Editing) {
                 setCurrEditLayer(editor);
+                if (needSnapToobar) {
+                    polygonEditorRef.current = editor as LeafletPolygonEditor;
+                }
             } else {
                 if (status === PolygonEditorState.Idle && currentTool && !['add', 'add_hole', 'add_hole_multi'].includes(currentTool)) {
                     // 绘制完成，尝试获取绘制的图层数据
