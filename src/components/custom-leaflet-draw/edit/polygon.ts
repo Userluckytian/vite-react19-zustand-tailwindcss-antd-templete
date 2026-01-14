@@ -826,12 +826,12 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
     /**
      * 快捷方法：动态切换吸附功能
      */
-    public toggleSnap(options?: SnapOptions): void {
+    public toggleSnap(options: SnapOptions): void {
         this.updateSnapOptions(options);
         // 如果正在编辑，需要更新吸附源
         if (this.currentState === PolygonEditorState.Editing) {
             if (this.IsEnableSnap()) {
-                this.setSnapSources([this.polygonLayer]);
+                this.setSnapSources([this.polygonLayer!]);
             }
         }
     }

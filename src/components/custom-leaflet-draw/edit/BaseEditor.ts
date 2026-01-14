@@ -17,7 +17,7 @@ export abstract class BaseEditor {
 
     // 吸附
     protected snapController?: SnapController; // 顶点吸附控制器
-    private snapHighlightLayer: L.LayerGroup; // 吸附时，高亮显示的图层组
+    private snapHighlightLayer: L.LayerGroup | undefined; // 吸附时，高亮显示的图层组
     private highlightCircleMarker: L.CircleMarker | null = null; // 吸附时，高亮显示的marker
     private highlightEdgeLayer: L.Polyline | null = null; // 吸附时，高亮显示的边线
 

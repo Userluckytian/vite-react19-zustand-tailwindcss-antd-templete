@@ -68,8 +68,8 @@ export abstract class BasePolygonEditor extends BaseEditor {
             showOnHover: true
         };
         // 强制设置可拖动
-        userConfig.midPointDefaultMarkerOptions.draggable = true;
-        userConfig.edgeDefaultMarkerOptions.draggable = true;
+        userConfig.midPointDefaultMarkerOptions!.draggable = true;
+        userConfig.edgeDefaultMarkerOptions!.draggable = true;
         // save
         this.midpointOptions = userConfig;
     }
@@ -104,9 +104,9 @@ export abstract class BasePolygonEditor extends BaseEditor {
                     // ✅ 跳过当前边包含 skipMarker 的情况
                     if (skipMarker && (skipMarker === p1 || skipMarker === p2 || (skipMarker as any).pairRef === p1 || (skipMarker as any).pairRef === p2)) { continue; }
 
-                    const insertMidpoint = isEnabledMidPointsMarker ? this.createInsertMidpointMarker(p1, p2, polygonIndex, ringIndex, nextIndex, this.midpointOptions.midPointPositionRatio) : null
+                    const insertMidpoint = isEnabledMidPointsMarker ? this.createInsertMidpointMarker(p1, p2, polygonIndex, ringIndex, nextIndex, this.midpointOptions.midPointPositionRatio!) : null
                     // 插入边控制点（用于拖动边） 
-                    const edgeDragMarker = isEnabledEdgeMarker ? this.createEdgeDragMarker(p1, p2, polygonIndex, ringIndex, this.midpointOptions.edgePositionRatio) : null;
+                    const edgeDragMarker = isEnabledEdgeMarker ? this.createEdgeDragMarker(p1, p2, polygonIndex, ringIndex, this.midpointOptions.edgePositionRatio!) : null;
 
                     ringMidpoints.push({ insert: insertMidpoint, edge: edgeDragMarker });
                     // 附加：互相引用 （虽然写的晚，但是一般都会在【createInsertMidpointMarker、createEdgeDragMarker】中绑定的dragstart事件之前完成）

@@ -70,8 +70,8 @@ export type leafletGeoEditorInstance = drawInstance | measureInstance | editorIn
 
 // 中点标记（插入中点标记（红色marker） 和 拖动边的标记（蓝色marker））
 export type MidpointPair = {
-    insert: L.Marker;
-    edge: L.Marker;
+    insert: L.Marker | null;
+    edge: L.Marker | null;
 };
 
 // 中点初始化的配置信息（仅库内部使用）
