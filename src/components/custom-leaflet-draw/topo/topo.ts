@@ -115,7 +115,7 @@ export class LeafletTopology {
           this.selectedLayers = tempIntersectLayer.filter((it: L.Layer) => (it.options as any).drawFlag !== drawReshapeLineFlag);
         }
         // console.log('final-this.selectedLayers', this.selectedLayers);
-        
+
         const { doReshapeLayers, reshapedGeoms } = reshapeSelectedLayersByLine(geoJson, this.selectedLayers, options);
         // 行为1：正常输出
         // console.log('reshapedGeoms', reshapedGeoms, 'doReshapeLayers', doReshapeLayers);
@@ -263,5 +263,14 @@ export class LeafletTopology {
     }
     this.selectedLayers = [];
     this.enableMapOpt();
+  }
+
+  /** 返回选择的全部图层
+   *
+   *
+   * @memberof LeafletTopology
+   */
+  public getSelectLayers() {
+    return this.selectedLayers;
   }
 }
