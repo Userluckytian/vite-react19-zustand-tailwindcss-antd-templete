@@ -202,7 +202,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         item.enable = !item.enable;
         setEditConfigBar((pre: any) => {
             const tempData = JSON.parse(JSON.stringify(pre));
-            const itemIdx = reshapeBar.findIndex((it: any) => it.id === item.id);
+            const itemIdx = editConfigBar.findIndex((it: any) => it.id === item.id);
             itemIdx > -1 && (tempData[itemIdx] = item);
             return tempData;
         })
@@ -245,7 +245,6 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             default:
                 break;
         }
-
     }
 
 
