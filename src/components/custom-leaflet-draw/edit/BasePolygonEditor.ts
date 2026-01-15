@@ -155,7 +155,7 @@ export abstract class BasePolygonEditor extends BaseEditor {
     /** 更新【中点插入marker】坐标渲染属性信息
      *
      *
-     * @protected
+     * @public
      * @param {MidPointInitOptions} options
      * @memberof BasePolygonEditor
      */
@@ -173,7 +173,7 @@ export abstract class BasePolygonEditor extends BaseEditor {
     /** 更新【中点线marker】坐标渲染属性信息
      *
      *
-     * @protected
+     * @public
      * @param {MidPointInitOptions} options
      * @memberof BasePolygonEditor
      */
