@@ -16,6 +16,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         fill: true, // no fill color means default fill color (gray for `dot` and `circle` markers, transparent for `plus` and `star`)
     };
     private tempCoords: number[][] = [];
+    private lastMoveCoord: number[] = []; // 存储鼠标移动的最后一个点的坐标信息
 
 
     /** 创建一个多边形编辑类
@@ -65,6 +66,10 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         this.polygonLayer = L.polygon(coords, polygonOptions);
         this.polygonLayer.addTo(this.map);
         this.initPolygonEvent();
+        // ✅ 设置吸附源（排除当前图层） 
+        if (this.IsEnableSnap()) {
+            this.setSnapSources([this.polygonLayer]);
+        }
     }
 
 
@@ -105,6 +110,31 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         map.on('mouseup', this.mapMouseUpEvent);
     }
 
+    // #region 绘制用到的工具函数
+    public undoDraw(): boolean {
+        if (this.currentState !== PolygonEditorState.Drawing)
+            return false;
+
+        if (this.tempCoords.length > 0) {
+            // 移除最后一个点
+            this.tempCoords.pop();
+
+            // ✅ 修复：检查是否还有剩余点
+            if (this.tempCoords.length > 0) {
+                const finalCoords = [...this.tempCoords, this.lastMoveCoord];
+                this.renderLayer([[finalCoords]]);
+            } else {
+                // 没有点了，清空渲染
+                this.renderLayer([[]]);
+                this.lastMoveCoord = []; // 清空移动点
+            }
+            return true;
+        }
+
+        return false;
+    }
+    // #endregion
+
     // #region 工具函数，点图层的逻辑只需要看上面的内容就行了
     /**  地图点击事件，用于设置点的位置
      *
@@ -118,7 +148,12 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         if (!this.isActive()) return;
         // 绘制时的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
-            this.tempCoords.push([e.latlng.lat, e.latlng.lng])
+            let waitingAddCoord = [e.latlng.lat, e.latlng.lng];
+            if (this.IsEnableSnap()) {
+                const { snappedLatLng } = this.applySnapWithTarget(e.latlng);
+                waitingAddCoord = [snappedLatLng.lat, snappedLatLng.lng];
+            }
+            this.tempCoords.push(waitingAddCoord)
             return;
         }
     }
@@ -141,7 +176,10 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             const renderCoords = [[...finalCoords, finalCoords[0]]];
             this.renderLayer([renderCoords]);
             this.tempCoords = []; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
+            this.lastMoveCoord = []; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
             this.reset();
+            // 移除（吸附后）可能存在的高亮
+            this.clearSnapHighlights();
             // 设置为空闲状态，并发出状态通知
             this.updateAndNotifyStateChange(PolygonEditorState.Idle);
             return;
@@ -179,18 +217,17 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         if (!this.isActive()) return;
         // 逻辑1： 绘制时的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
-            if (!this.tempCoords.length) return;
-            const lastMoveEndPoint: number[] = [e.latlng.lat, e.latlng.lng];
-            // 1：一个点也没有时，我们移动事件，也什么也不做。
-            // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。
-            if (this.tempCoords.length === 1) {
-                this.tempCoords = [this.tempCoords[0], lastMoveEndPoint]
+
+            this.lastMoveCoord = [e.latlng.lat, e.latlng.lng];
+            if (this.IsEnableSnap()) {
+                const { snappedLatLng } = this.applySnapWithTarget(e.latlng);
+                this.lastMoveCoord = [snappedLatLng.lat, snappedLatLng.lng];
             }
-            // 3：有两个及以上的点时，我们删掉在只有一个点时，塞入的最后移动的那个点，也就是前一个if语句中塞入的那个点，然后添加此刻移动结束的点。
-            const fixedPoints = this.tempCoords.slice(0, this.tempCoords.length - 1); // 除最后一个点外的所有点
-            this.tempCoords = [...fixedPoints, lastMoveEndPoint];
+            // 上面提供了吸附能力，但是如果坐标数组中没有点，原则上，鼠标移动事件不应该执行任何操作。
+            if (!this.tempCoords.length) return;
+            const movedPathCoords = [...this.tempCoords, this.lastMoveCoord];
             // 实时渲染, 包装成 [面][环][点] 结构
-            this.renderLayer([[this.tempCoords]]);
+            this.renderLayer([[movedPathCoords]]);
             return;
         }
         // 逻辑2：编辑状态下的逻辑（编辑状态下如果分多个逻辑，需要定义新的变量用于区分。但这些都是在编辑状态下才会执行）
