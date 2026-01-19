@@ -142,7 +142,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const currSelToolRef = useRef<string | null>(null); // 使用 ref 存储最新的工具类型
     const [currSelTool, setCurrSelTool] = useState<string | null>(null); // 当前使用的【绘制条上的绘制工具】
     const [drawLayers, setDrawLayers] = useState<any[]>([]); // 存放绘制的图层
-    const [currEditLayer, setCurrEditLayer] = useState<any>(null); // 当前编辑的图层【我们设置的是一次仅可编辑一个图层】
+    const [currEditor, setCurrEditor] = useState<any>(null); // 当前编辑的图层【我们设置的是一次仅可编辑一个图层】
     const [topologyInstance, setTopologyInstance] = useState<any>(null);
 
     const [reshapeBar, setReshapeBar] = useState<any[]>([
@@ -219,13 +219,13 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                             color: '#00ff00',
                             weight: 2,
                             fillOpacity: 0.8,
-                            pane: 'overlayPane'
+                            pane: 'mapPane'
                         },
                         edgeStyle: {
                             color: '#00ff00',
                             weight: 5,
                             dashArray: '4,2',
-                            pane: 'overlayPane'
+                            pane: 'mapPane'
                         }
                     }
                 };
@@ -761,8 +761,8 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 // 销毁图层
                 clearAllIfExist();
                 // 关闭工具条
-                if (currEditLayer) {
-                    setCurrEditLayer(null);
+                if (currEditor) {
+                    setCurrEditor(null);
                 }
                 break;
 
@@ -805,8 +805,10 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         // 添加监听逻辑
         editor.onStateChange((status: PolygonEditorState) => {
             const currentTool = currSelToolRef.current;
-            if (status === PolygonEditorState.Editing) {
-                setCurrEditLayer(editor);
+            if (status === PolygonEditorState.Drawing) {
+                setCurrEditor(editor);
+            } else if (status === PolygonEditorState.Editing) {
+                setCurrEditor(editor);
                 if (needSnapToobar) {
                     polygonEditorRef.current = editor as LeafletPolygonEditor;
                 }
@@ -843,9 +845,9 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                         console.error('获取绘制结果失败:', error);
                     }
                 }
-                setCurrEditLayer(null);
+                setCurrEditor(null);
             }
-        })
+        }, { immediateNotify: true })
     }
 
     // #region 绘制工具条事件
@@ -873,20 +875,25 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     // #endregion
 
     // #region 编辑工具条事件
-    const undoEdit = () => {
-        currEditLayer && currEditLayer.undoEdit();
+    const undoDraw = () => {
+        currEditor && currEditor.undoDraw();
+    }
+    // #endregion
 
+    // #region 编辑工具条事件
+    const undoEdit = () => {
+        currEditor && currEditor.undoEdit();
     }
     const redoEdit = () => {
-        currEditLayer && currEditLayer.redoEdit();
+        currEditor && currEditor.redoEdit();
     }
     // 重置到最初状态
     const resetToInitial = () => {
-        currEditLayer && currEditLayer.resetToInitial();
+        currEditor && currEditor.resetToInitial();
     }
     // 完成编辑
     const saveEdit = () => {
-        currEditLayer && currEditLayer.commitEdit();
+        currEditor && currEditor.commitEdit();
     }
     // #endregion
 
@@ -985,7 +992,12 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         }
         if (e.ctrlKey && e.key === 'z') {
             e.preventDefault();
-            undoEdit();
+            const state = (currEditor as LeafletPolygonEditor).getCurrentState();
+            if (state === PolygonEditorState.Drawing) {
+                undoDraw();
+            } else {
+                undoEdit();
+            }
         }
         if (e.ctrlKey && e.key === 's') {
             e.preventDefault();
@@ -1004,7 +1016,8 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         }
-    }, [currEditLayer])
+    }, [currEditor])
+
     useEffect(() => {
         if (mapInstance) {
             const topology = LeafletTopology.getInstance(mapInstance);
@@ -1041,7 +1054,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 ))}
             </div>
             {/* 编辑工具条 */}
-            {currEditLayer
+            {currEditor
                 &&
                 <div className="leaflet-edit-toolbar leaflet-bar">
                     <div>编辑工具条：</div>
@@ -1052,7 +1065,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 </div>
             }
             {/* 拓扑工具条(俩条件：1：地图上存在图层 2：不是编辑模式时。才展示拓扑工具条) */}
-            {!currEditLayer
+            {!currEditor
                 &&
                 <div className="leaflet-topology-toolbar leaflet-bar">
                     <div>拓扑工具条：</div>
@@ -1063,7 +1076,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 </div>
             }
             {/* 整形要素工具条 */}
-            {!currEditLayer
+            {!currEditor
                 &&
                 <div className="leaflet-reshape-toolbar leaflet-bar">
                     <div className='top'>
@@ -1089,7 +1102,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 </div>
             }
             {/* 编辑配置工具 */}
-            {currEditLayer
+            {currEditor
                 &&
                 <div className="edit-config-toolbar leaflet-bar">
                     <div className='edit-config-content'>

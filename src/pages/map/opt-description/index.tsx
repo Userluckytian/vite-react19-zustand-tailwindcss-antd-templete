@@ -44,6 +44,8 @@ const FunctionPanel = () => {
                             </ol>
                         </div>
                         <ul className="function-list">
+                            <li className="completed">✔ 【绘制时撤销已经绘制的点的最后一个点】</li>
+                            <li className="completed">✔ 【绘制时吸附已经存在的图层】</li>
                             <li className="completed">✔ 【编辑点】拖动顶点，以及右键实现顶点移除</li>
                             <li className="completed">✔ 【中点插入】拖动线上的红色marker，实现添加新的点</li>
                             <li className="completed">✔ 【拖动边】拖动线上的蓝色marker，实现拖动边功能</li>
