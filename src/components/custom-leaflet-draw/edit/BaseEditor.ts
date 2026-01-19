@@ -29,13 +29,13 @@ export abstract class BaseEditor {
             color: '#00ff00',
             weight: 2,
             fillOpacity: 0.8,
-            pane: 'overlayPane'
+            pane: 'mapPane'  // 过高的pane会影响绘制时双击结束的操作，会导致无法触发双击事件。
         },
         edgeStyle: {
             color: '#00ff00',
             weight: 5,
             dashArray: '4,2',
-            pane: 'overlayPane'
+            pane: 'mapPane'  // 过高的pane会影响绘制时双击结束的操作，会导致无法触发双击事件。
         }
     };
 
@@ -132,7 +132,7 @@ export abstract class BaseEditor {
         }
     }
 
-    /** 设置当前的状态，
+    /** 设置编辑器当前的状态，
      *
      *
      * @param {PolygonEditorState} status
@@ -140,6 +140,15 @@ export abstract class BaseEditor {
      */
     public setCurrentState(status: PolygonEditorState): void {
         this.currentState = status;
+    }
+    /** 返回编辑器当前的状态，
+     *
+     *
+     * @param {PolygonEditorState} status
+     * @memberof BaseEditor
+     */
+    public getCurrentState(): PolygonEditorState {
+        return this.currentState;
     }
 
     /** 外部监听者添加的回调监听函数，存储到这边，状态改变时，触发这些监听事件的回调
