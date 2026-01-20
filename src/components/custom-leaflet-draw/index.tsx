@@ -146,11 +146,11 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const [topologyInstance, setTopologyInstance] = useState<any>(null);
 
     const [reshapeBar, setReshapeBar] = useState<any[]>([
-        {
-            id: 'enableEdit',
-            label: '重新打开编辑功能',
-            visible: false
-        },
+        // {
+        //     id: 'enableEdit',
+        //     label: '重新打开编辑功能',
+        //     visible: false
+        // },
         {
             id: 'allowNoChoise',
             label: '允许无选择重塑',
