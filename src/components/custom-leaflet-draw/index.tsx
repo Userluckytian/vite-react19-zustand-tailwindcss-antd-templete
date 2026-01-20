@@ -11,7 +11,7 @@ import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import LeafletEditPolygon from './simpleEdit/polygon';
-import { PolygonEditorState, type DragMarkerOptions, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
+import { PolygonEditorState, type DragMarkerOptions, type EditOptions, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
 import LeafletEditRectangle from './simpleEdit/rectangle';
 import { LeafletTopology } from './topo/topo';
 import LeafletRectangleEditor from './edit/rectangle';
@@ -147,6 +147,11 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
 
     const [reshapeBar, setReshapeBar] = useState<any[]>([
         {
+            id: 'enableEdit',
+            label: '重新打开编辑功能',
+            visible: false
+        },
+        {
             id: 'allowNoChoise',
             label: '允许无选择重塑',
             visible: false
@@ -158,6 +163,11 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         }
     ]);
     const [editConfigBar, setEditConfigBar] = useState<any[]>([
+        {
+            id: 'edit',
+            label: '编辑',
+            enable: true
+        },
         {
             id: 'snap',
             label: '吸附',
@@ -175,7 +185,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         },
     ]);
 
-    const polygonEditorRef = useRef<LeafletPolygonEditor | null>(null);
+    const polygonEditorRef = useRef<LeafletPolygonEditor | LeafletRectangleEditor | null>(null);
 
     // 改变reshapeBar的选项
     const changeReshapeBarOptions = (item: any, checked: boolean) => {
@@ -187,6 +197,9 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             return tempData;
         })
         switch (item.id) {
+            case 'enableEdit':
+                polygonEditorRef.current.setEditEnabled(checked);
+                break;
             case 'allowNoChoise':
                 break;
             case 'manual':
@@ -207,6 +220,9 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             return tempData;
         })
         switch (item.id) {
+            case 'edit':
+                polygonEditorRef.current.setEditEnabled(checked);
+                break;
             case 'snap':
                 const snapAllOptions: SnapOptions = {
                     enabled: checked,
@@ -232,14 +248,18 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 polygonEditorRef.current.toggleSnap(snapAllOptions);
                 break;
             case 'midPoint':
-                polygonEditorRef.current.updateDragMidMarkerOptions({
-                    enabled: checked,
-                })
+                polygonEditorRef.current.updateEditOptions({
+                    dragMidMarkerOptions: {
+                        enabled: checked
+                    }
+                } as EditOptions)
                 break;
             case 'edgeMarker':
-                polygonEditorRef.current.updateDragLineMarkerOptions({
-                    enabled: checked,
-                })
+                polygonEditorRef.current.updateEditOptions({
+                    dragLineMarkerOptions: {
+                        enabled: checked
+                    }
+                } as EditOptions)
                 break;
 
             default:
@@ -290,6 +310,11 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 pane: 'markerPane'
             }
         }
+        const edit: EditOptions = {
+            enabled: true,
+            dragLineMarkerOptions: edgeMarkerConfig,
+            dragMidMarkerOptions: midPointMarkerConfig
+        };
         // // 先清理之前的绘制
         // clearCurrentDraw();
 
@@ -335,15 +360,14 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             case 'polygon_editor':
                 const polygonLayerEditor = new LeafletPolygonEditor(mapInstance, {
                     snap,
-                    dragLineMarkerOptions: edgeMarkerConfig,
-                    dragMidMarkerOptions: midPointMarkerConfig
+                    edit
                 });
                 saveEditorAndAddListener(polygonLayerEditor, true);
 
                 break;
             case 'rectangle_editor':
-                const rectangleLayerEditor = new LeafletRectangleEditor(mapInstance, { snap });
-                saveEditorAndAddListener(rectangleLayerEditor);
+                const rectangleLayerEditor = new LeafletRectangleEditor(mapInstance, { snap, edit });
+                saveEditorAndAddListener(rectangleLayerEditor, true);
                 break;
             case 'add':
                 const geometry: any = {
@@ -810,7 +834,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             } else if (status === PolygonEditorState.Editing) {
                 setCurrEditor(editor);
                 if (needSnapToobar) {
-                    polygonEditorRef.current = editor as LeafletPolygonEditor;
+                    polygonEditorRef.current = editor as (LeafletPolygonEditor | LeafletRectangleEditor);
                 }
             } else {
                 if (status === PolygonEditorState.Idle && currentTool && !['add', 'add_hole', 'add_hole_multi'].includes(currentTool)) {
@@ -992,7 +1016,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         }
         if (e.ctrlKey && e.key === 'z') {
             e.preventDefault();
-            const state = (currEditor as LeafletPolygonEditor).getCurrentState();
+            const state = (currEditor as (LeafletPolygonEditor | LeafletRectangleEditor)).getCurrentState();
             if (state === PolygonEditorState.Drawing) {
                 undoDraw();
             } else {

@@ -2,8 +2,6 @@ import * as L from 'leaflet';
 import { PolygonEditorState, type LeafletPolylineOptionsExpends, type MidpointPair, type SnapOptions } from '../types';
 import { booleanPointInPolygon, point } from '@turf/turf';
 import { BasePolygonEditor } from './BasePolygonEditor';
-import { buildMarkerIcon } from '../utils/commonUtils';
-
 export default class LeafletPolygonEditor extends BasePolygonEditor {
 
     private polygonLayer: L.Polygon | null = null;

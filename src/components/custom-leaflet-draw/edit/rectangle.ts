@@ -6,7 +6,7 @@
  * 4: 用户希望传入默认的空间geometry数据，那构造函数需要支持。
  * */
 import * as L from 'leaflet';
-import { PolygonEditorState, type LeafletPolylineOptionsExpends } from '../types';
+import { PolygonEditorState, type LeafletPolylineOptionsExpends, type SnapOptions } from '../types';
 import { booleanPointInPolygon, point } from '@turf/turf';
 import { BaseRectangleEditor } from './BaseRectangleEditor';
 
@@ -22,6 +22,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         fill: true, // no fill color means default fill color (gray for `dot` and `circle` markers, transparent for `plus` and `star`)
     };
     private tempCoords: L.LatLng[] = [];
+    private lastMoveCoord: L.LatLng | null = null; // 存储鼠标移动的最后一个点的坐标信息
 
     /** 创建一个矩形编辑类
      *
@@ -65,6 +66,10 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         this.rectangleLayer = L.rectangle(coords, polylineOptions);
         this.rectangleLayer.addTo(this.map);
         this.initPolygonEvent();
+        // 设置吸附源（排除当前图层） 
+        if (this.IsEnableSnap()) {
+            this.setSnapSources([this.rectangleLayer]);
+        }
     }
 
     /** 实例化矩形图层事件
@@ -120,12 +125,26 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         // 绘制时的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
             if (this.tempCoords.length === 0) {
-                this.tempCoords.push(e.latlng)
+                let point = e.latlng;
+                if (this.IsEnableSnap()) {
+                    const { snappedLatLng } = this.applySnapWithTarget(e.latlng);
+                    point = snappedLatLng;
+                }
+                this.tempCoords.push(point);
             } else {
-                const finalCoords = [this.tempCoords[0], e.latlng];
+                // 添加吸附处理
+                let point = e.latlng;
+                if (this.IsEnableSnap()) {
+                    const { snappedLatLng } = this.applySnapWithTarget(e.latlng);
+                    point = snappedLatLng;
+                }
+                const finalCoords = [this.tempCoords[0], point];
                 this.renderLayer(finalCoords);
                 this.tempCoords = []; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
+                this.lastMoveCoord = null; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
                 this.reset();
+                // 移除（吸附后）可能存在的高亮
+                this.clearSnapHighlights();
                 // 设置为空闲状态，并发出状态通知- 61 + 
                 this.updateAndNotifyStateChange(PolygonEditorState.Idle);
             }
@@ -149,17 +168,8 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         // 判断用户是否点击到了面上，是的话，就开始编辑模式
         const turfPoint = point([clickedLatLng.lng, clickedLatLng.lat]);
         const isInside = booleanPointInPolygon(turfPoint, polygonGeoJSON);
-        if (isInside) {
-            if (this.currentState !== PolygonEditorState.Editing) {
-                // 1：禁用双击地图放大功能
-                this.map.doubleClickZoom.disable();
-                // 2：状态变更，并发出状态通知
-                this.updateAndNotifyStateChange(PolygonEditorState.Editing);
-                // 3: 设置当前激活态是本实例，因为事件监听和激活态实例是关联的，只有激活的实例才处理事件
-                this.isActive()
-                // 4: 进入编辑模式
-                this.enterEditMode();
-            }
+        if (isInside && this.currentState !== PolygonEditorState.Editing) {
+            this.startEdit();
         } else {
             this.commitEdit();
         }
@@ -177,15 +187,19 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         // 关键：只有激活的实例才处理事件
         if (!this.isActive()) return;
         if (this.currentState === PolygonEditorState.Drawing) {
+            this.lastMoveCoord = e.latlng;
+            if (this.IsEnableSnap()) {
+                const { snappedLatLng } = this.applySnapWithTarget(e.latlng);
+                this.lastMoveCoord = snappedLatLng;
+            }
             // 1：一个点也没有时，我们移动事件，也什么也不做。
             if (!this.tempCoords.length) return;
-            const lastMoveEndPoint = e.latlng;
             // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。
             if (this.tempCoords.length > 0) {
-                this.tempCoords = [this.tempCoords[0], lastMoveEndPoint]
+                const movedPathCoords = [...this.tempCoords, this.lastMoveCoord];
+                // 实时渲染
+                this.renderLayer(movedPathCoords);
             }
-            // 实时渲染
-            this.renderLayer(this.tempCoords);
         }
         // 编辑时的逻辑
         if (this.currentState === PolygonEditorState.Editing) {
@@ -300,6 +314,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         // 使用用户默认设置的样式，而不是我自定义的！
         this.rectangleLayer?.setStyle({ ...(this.rectangleLayer.options as any).defaultStyle, layerVisible: true });
     }
+
     /** 控制图层隐藏
      *
     *
@@ -322,7 +337,6 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         }
     }
 
-
     /** 设置图层显隐
      *
      *
@@ -336,7 +350,6 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
             this.hide();
         }
     }
-
 
     /** 获取图层显隐
      *
@@ -375,7 +388,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         this.offMapEvent(this.map);
         this.reset();
         // #endregion
-        
+
         // #region5：清除类自身绑定的相关事件
         this.clearAllStateListeners();
         // 设置为空闲状态，并发出状态通知
@@ -419,6 +432,29 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
 
     // #endregion
 
+    // #region 绘制用到的工具函数
+
+    public undoDraw(): boolean {
+        if (this.currentState !== PolygonEditorState.Drawing)
+            return false;
+
+        if (this.tempCoords.length > 0) {
+            // 移除最后一个点
+            this.tempCoords.pop();
+            this.lastMoveCoord = null;
+
+            if (this.tempCoords.length === 0) {
+                // 构建无效点，等待用户重绘
+                this.renderLayerFromCoords([[181, 181], [182, 182]]);
+                return true;
+            }
+
+            return false;
+        }
+
+        return false;
+    }
+    // #endregion
 
     // #region 编辑用到的工具函数
 
@@ -449,9 +485,10 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         // 清空重做栈
         this.redoStack = [];
 
-        // ✅ 设置吸附源（排除当前图层） 
-        const otherIndices = this.collectAllOtherGeometryIndices(this.map, this.rectangleLayer);
-        this.snapController?.setGeometrySources(otherIndices);
+        // 设置吸附源（排除当前图层） 
+        if (this.IsEnableSnap()) {
+            this.setSnapSources([this.rectangleLayer]);
+        }
 
         // 渲染每个顶点为可拖动 marker
         this.reBuildMarker(coords)
@@ -476,7 +513,35 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         this.vertexMarkers = [];
     }
 
+    /**
+     * 检查是否可以进入编辑模式
+     * @private
+     */
+    private canEnterEditMode(): boolean {
+        // 基础检查
+        if (!this.editOptions.enabled) return false;
+        if (!this.rectangleLayer) return false;
+        if (this.currentState === PolygonEditorState.Editing) return false;
+        if (!this.isVisible) return false;
 
+        return true;
+    }
+
+    /**
+     * 进入编辑模式
+     * @public
+     */
+    public startEdit(): void {
+        if (!this.canEnterEditMode()) return;
+        // 1：禁用双击地图放大功能
+        this.map.doubleClickZoom.disable();
+        // 2：状态变更，并发出状态通知
+        this.updateAndNotifyStateChange(PolygonEditorState.Editing);
+        // 3: 设置当前激活态是本实例，因为事件监听和激活态实例是关联的，只有激活的实例才处理事件
+        this.isActive()
+        // 4: 进入编辑模式
+        this.enterEditMode();
+    }
 
     /** 动态生成marker图标(天地图应该是构建的点图层+marker图层两个)
      *
@@ -670,6 +735,21 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         return false;
     }
 
+    /** 是否开启了吸附操作
+     *
+     *
+     * @private
+     * @return {*}  {boolean}
+     * @memberof LeafletPolygonEditor
+     */
+    private IsEnableSnap(): boolean {
+        const snapOptions = this.getSnapOptions();
+        if (snapOptions && snapOptions.enabled && this.snapController) {
+            return true;
+        }
+        return false;
+    }
+
     /** 转换【矩形】的geojson-经纬度坐标
      *
      *
@@ -692,6 +772,23 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
             return [[south, west], [north, east]];
         } else {
             throw new Error('不支持的 geometry 类型: ' + geometry.type);
+        }
+    }
+
+    // #endregion
+
+    // #region 吸附函数
+
+    /**
+     * 快捷方法：动态切换吸附功能
+     */
+    public toggleSnap(options: SnapOptions): void {
+        this.updateSnapOptions(options);
+        // 如果正在编辑，需要更新吸附源
+        if (this.currentState === PolygonEditorState.Editing) {
+            if (this.IsEnableSnap()) {
+                this.setSnapSources([this.rectangleLayer!]);
+            }
         }
     }
 
