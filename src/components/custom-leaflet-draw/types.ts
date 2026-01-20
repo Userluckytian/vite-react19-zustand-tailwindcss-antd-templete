@@ -26,9 +26,18 @@ export interface SnapHighlightLayerOptions {
     edgeStyle?: L.PolylineOptions;
 }
 
+// 编辑配置属性信息(规则，如果启用编辑，必然渲染顶点！但是中间点和拖动边的marker不一定渲染)
+export type EditOptions = {
+    enabled: boolean; // 是否启用编辑功能
+    vertexsMarkerStyle?: L.MarkerOptions, // 顶点marker的样式信息
+    dragLineMarkerOptions?: DragMarkerOptions; // 拖动边的marker的属性信息
+    dragMidMarkerOptions?: DragMarkerOptions; // 拖动中点的marker属性信息
+}
+
 export type DragMarkerOptions = {
     enabled: boolean; // 是否启用拖拽线功能
     dragMarkerStyle?: L.MarkerOptions; // 拖动边的样式
+    positionRatio?: number; // 中点位置比例（0-1，默认 0.3）
 }
 
 // 吸附结果
@@ -74,17 +83,6 @@ export type MidpointPair = {
     edge: L.Marker | null;
 };
 
-// 中点初始化的配置信息（仅库内部使用）
-export interface MidPointInitOptions {
-    midPointEnable?: boolean;
-    midPointDefaultMarkerOptions?: L.MarkerOptions;
-    midPointPositionRatio?: number;
-    edgeEnable?: boolean;
-    edgeDefaultMarkerOptions?: L.MarkerOptions;
-    edgePositionRatio?: number;
-    showOnHover?: boolean; // 暂时没有使用
-}
-
 
 
 /* 拓展leaflet-绘制面、线属性（用于存放用户自定义的属性内容）  */
@@ -92,8 +90,7 @@ export interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
     origin?: any; // 可以存放源信息
     defaultStyle?: any; // 存放（用户自己想要设置的）图层的默认样式信息
     snap?: SnapOptions;  // 吸附配置信息
-    dragLineMarkerOptions?: DragMarkerOptions; // 拖动边属性信息
-    dragMidMarkerOptions?: DragMarkerOptions; // 拖动中点marker属性信息
+    edit?: EditOptions; // 编辑信息
     [key: string]: unknown
 }
 
