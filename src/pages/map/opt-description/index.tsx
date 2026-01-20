@@ -70,7 +70,7 @@ const FunctionPanel = () => {
                                     <li>⑤：【Choose result on finish】完成后，由用户来选择要保留的部分。（✔）</li>
                                 </ul>
                             </li>
-                            <li className="completed">🌀【顶点吸附】
+                            <li className="completed">✔【顶点吸附】
                                 （结果仅在控制台输出）
                                 <ul className='text-amber-600'>
                                     <li>①：拖动面时，不进行吸附行为（✔）</li>
