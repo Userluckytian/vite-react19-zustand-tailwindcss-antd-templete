@@ -158,6 +158,7 @@ export default class LeafletRectangle {
             this.rectangleLayer = null;
         }
         this.reset();
+        this.clearAllStateListeners();
     }
 
     /** 关闭地图事件监听

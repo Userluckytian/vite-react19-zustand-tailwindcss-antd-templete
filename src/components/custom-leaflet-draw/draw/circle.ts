@@ -20,7 +20,7 @@ export default class LeafletCircle {
         fillOpacity: 0.3, // 设置填充透明度
     };
     private center: L.LatLng | null = null;
-    private radius: number | null = null;
+    private radius: number = 0;
     private tempCoords: L.LatLng[] = [];
 
     // 1：我们需要记录当前状态是处于绘制状态--见：currentState变量
@@ -146,7 +146,7 @@ export default class LeafletCircle {
      * @memberof LeafletCircle
      */
     public geojson() {
-        if (this.circleLayer) {
+        if (this.circleLayer && this.center) {
             // 发出消息(圆需要自己定制吐出的结构)
             const lnglat = [this.center.lng, this.center.lat];
             const options: any = { steps: 64, units: 'kilometers', properties: { type: 'circle' } };
@@ -168,6 +168,7 @@ export default class LeafletCircle {
             this.circleLayer = null;
         }
         this.reset();
+        this.clearAllStateListeners();
     }
 
     /** 关闭地图事件监听

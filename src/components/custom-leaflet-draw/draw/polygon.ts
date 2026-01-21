@@ -116,7 +116,7 @@ export default class LeafletPolygon {
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
         if (!this.tempCoords.length) return;
-        const lastMoveEndPoint: L.LatLngExpression = [e.latlng.lat, e.latlng.lng];
+        const lastMoveEndPoint: number[] = [e.latlng.lat, e.latlng.lng];
         // 1：一个点也没有时，我们移动事件，也什么也不做。
         // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。
         if (this.tempCoords.length === 1) {
@@ -189,7 +189,7 @@ export default class LeafletPolygon {
      * @param {number} precision - 精度（小数位数），默认6位
      * @returns {Array} 去重后的坐标数组
      */
-    private deduplicateCoordinates(coordinates, precision = 6) {
+    private deduplicateCoordinates(coordinates: number[][], precision = 6) {
         if (!Array.isArray(coordinates) || coordinates.length === 0) {
             return [];
         }
