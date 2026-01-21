@@ -168,6 +168,7 @@ export default class LeafletPolygon {
             this.polygonLayer = null;
         }
         this.reset();
+        this.clearAllStateListeners();
     }
 
     /** 关闭地图事件监听
