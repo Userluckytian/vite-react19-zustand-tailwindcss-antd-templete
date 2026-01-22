@@ -326,12 +326,12 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 saveEditorAndAddListener(markerPoint);
                 break;
             case 'line':
-                const lineLayer = new LeafletPolyline(mapInstance);
-                saveEditorAndAddListener(lineLayer);
+                const lineLayer = new LeafletPolyline(mapInstance, { validation: { allowSelfIntersect: false } });
+                saveEditorAndAddListener(lineLayer, true);
                 break;
             case 'polygon':
-                const polygonLayer = new LeafletPolygon(mapInstance);
-                saveEditorAndAddListener(polygonLayer);
+                const polygonLayer = new LeafletPolygon(mapInstance, { validation: { allowSelfIntersect: false } });
+                saveEditorAndAddListener(polygonLayer, true);
                 break;
             case 'circle':
                 const circleLayer = new LeafletCircle(mapInstance);
@@ -596,7 +596,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 const polygonEditor = new LeafletPolygonEditor(mapInstance!, {}, geometry);
                 const polygonEditor2 = new LeafletPolygonEditor(mapInstance!, {}, polygonGeom);
                 const polygonEditor3 = new LeafletPolygonEditor(mapInstance!, {}, polyGeom);
-                saveEditorAndAddListener(polygonEditor, false, 'add');
+                saveEditorAndAddListener(polygonEditor, false, true, 'add');
 
                 const polyGeomline: any = {
                     "type": "LineString",
@@ -676,7 +676,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     ]
                 };
                 const holePolygonEditor = new LeafletPolygonEditor(mapInstance!, {}, hole_geometry);
-                saveEditorAndAddListener(holePolygonEditor, false, 'add_hole');
+                saveEditorAndAddListener(holePolygonEditor, false, true, 'add_hole');
                 break;
             case 'add_hole_multi':
                 const hole_multi_geometry: any = {
@@ -779,7 +779,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     ]
                 };
                 const holeMultiPolygonEditor = new LeafletPolygonEditor(mapInstance!, {}, hole_multi_geometry);
-                saveEditorAndAddListener(holeMultiPolygonEditor, false, 'add_hole_multi');
+                saveEditorAndAddListener(holeMultiPolygonEditor, false, true, 'add_hole_multi');
                 break;
             case 'delete':
                 // 销毁图层
@@ -800,7 +800,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
      *
      * @param {leafletGeoEditorInstance} editor
      */
-    const saveEditorAndAddListener = (editor: leafletGeoEditorInstance, needSnapToobar: boolean = false, toolId?: string) => {
+    const saveEditorAndAddListener = (editor: leafletGeoEditorInstance, needSnapToobar: boolean = false, immediateNotify:boolean = false, toolId?: string) => {
         setDrawLayers((pre: any[]) => [...pre, editor]);
         // 对于有默认 geometry 的工具，立即触发绘制结果回调
         if (props.drawGeoJsonResult && toolId && ['add', 'add_hole', 'add_hole_multi'].includes(toolId)) {
@@ -829,9 +829,10 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         // 添加监听逻辑
         editor.onStateChange((status: PolygonEditorState) => {
             const currentTool = currSelToolRef.current;
-            if (status === PolygonEditorState.Drawing) {
-                setCurrEditor(editor);
-            } else if (status === PolygonEditorState.Editing) {
+            // if (status === PolygonEditorState.Drawing) {
+            //     setCurrEditor(editor);
+            // } else 
+                if (status === PolygonEditorState.Editing) {
                 setCurrEditor(editor);
                 if (needSnapToobar) {
                     polygonEditorRef.current = editor as (LeafletPolygonEditor | LeafletRectangleEditor);
@@ -871,7 +872,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 }
                 setCurrEditor(null);
             }
-        }, { immediateNotify: true })
+        }, { immediateNotify })
     }
 
     // #region 绘制工具条事件

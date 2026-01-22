@@ -33,6 +33,10 @@ export type EditOptions = {
     dragLineMarkerOptions?: DragMarkerOptions; // 拖动边的marker的属性信息
     dragMidMarkerOptions?: DragMarkerOptions; // 拖动中点的marker属性信息
 }
+// 编辑配置属性信息(规则，如果启用编辑，必然渲染顶点！但是中间点和拖动边的marker不一定渲染)
+export type ValidationOptions = {
+    allowSelfIntersect?: boolean; // 是否允许自相交
+}
 
 export type DragMarkerOptions = {
     enabled: boolean; // 是否启用拖拽线功能
@@ -86,11 +90,12 @@ export type MidpointPair = {
 
 
 /* 拓展leaflet-绘制面、线属性（用于存放用户自定义的属性内容）  */
-export interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
+export interface LeafletToolsOptions {
     origin?: any; // 可以存放源信息
-    defaultStyle?: any; // 存放（用户自己想要设置的）图层的默认样式信息
+    defaultStyle?: L.PolylineOptions; // 存放（用户自己想要设置的）图层的默认样式信息
     snap?: SnapOptions;  // 吸附配置信息
     edit?: EditOptions; // 编辑信息
+    validation?: ValidationOptions;   // 几何有效性校验（之前考虑放到topo里。但是topo一般是自身和其他几何的相互关系。而自相交是和自身，所以我考虑区分开）
     [key: string]: unknown
 }
 
