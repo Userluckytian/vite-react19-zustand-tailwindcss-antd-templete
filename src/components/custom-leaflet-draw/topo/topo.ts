@@ -58,8 +58,6 @@ export class LeafletTopology {
           pickLayer.remove();
           this.selectedLayers.splice(findLayerIdx, 1);
         } else {
-          console.log('待添加的新图层：', layer);
-          
           // 基于选中的图层的空间信息，添加对应的高亮图层
           this.addHighLightLayerByPickLayerGeom(layer);
         }
