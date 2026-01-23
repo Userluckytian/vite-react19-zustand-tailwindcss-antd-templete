@@ -2,16 +2,27 @@
  * 因此：本组件不会吐出任何数据。
  * 1 ：绘制状态时，外部ui可能要展示取消按钮，所以需要给外部提供当前是否是处于绘制状态，即需要添加一个事件回调机制，外部监听状态的改变进行响应的ui调整
  * */
-import { area, center, polygon } from '@turf/turf';
+import { area, center, kinks, polygon } from '@turf/turf';
 import * as L from 'leaflet';
-import { PolygonEditorState } from '../types';
+import { PolygonEditorState, type LeafletToolsOptions, type ValidationOptions } from '../types';
 
-type areaOptions = {
+export type areaOptions = {
     precision?: number;
-    lang: 'en' | 'zh';
+    lang?: 'en' | 'zh';
+    polygonStyle?: L.PolylineOptions; // 存放（用户自己想要设置的）图层的默认样式信息
+    validErrorPolygonStyle?: L.PolylineOptions; // 校验失败时的样式
+    validation?: ValidationOptions;
+    markerStyle?: areaMarker; // 存放（测量结果的）marker 
 }
 
-type FormattedArea = {
+export type areaMarker = {
+    containerClassName: string, // dot和label是内部内容，这个是包裹它俩的
+    dotClassName: string,
+    labelClassName: string,
+}
+
+
+export type FormattedArea = {
     val: number;
     unit: string;
 }
@@ -36,25 +47,52 @@ const UNIT_MAP = {
 export default class LeafletArea {
     private map: L.Map;
     private polygonLayer: L.Polygon | null = null;
-    // 图层初始化时
-    private drawLayerStyle = {
-        color: 'red', // 设置边线颜色
-        fillColor: "red", // 设置填充颜色
-        fillOpacity: 0.3, // 设置填充透明度
-    };
     // marker图层
-    private markerLayer: L.Marker = null;
+    private markerLayer: L.Marker | null = null;
     private tempCoords: number[][] = [];
-    private measureOptions: areaOptions;
+    private measureOptions: areaOptions = {
+        precision: 2,
+        lang: 'zh',
+        polygonStyle: {
+            color: '#008BFF', // 设置边线颜色
+            fillColor: "#008BFF", // 设置填充颜色
+            fillOpacity: 0.3, // 设置填充透明度
+        },
+        validErrorPolygonStyle: {
+            color: 'red', // 设置边线颜色
+            fillColor: "red", // 设置填充颜色
+            fillOpacity: 0.3, // 设置填充透明度
+        },
+        markerStyle: {
+            containerClassName: '',
+            dotClassName: '',
+            labelClassName: ''
+        }
+    };
+    private static markerStyle = {
+        containerStyle: "width: 10px;height: 10px; text-align: center; position: relative;",
+        dotStyle: "width: 10px;height: 10px;border-radius: 50%;background: #ffffff;border: solid 2px #008BFF; position: absolute;left: 1px;top: 1px;",
+        labelStyle: "width: max-content; padding: 3px; font-weight: bold; border: solid 1px #008BFF; background: #ffffff;  position: absolute; left: 10px; top: 10px;",
+    }
 
     // 1：我们需要记录当前状态是处于绘制状态--见：currentState变量
     private currentState: PolygonEditorState = PolygonEditorState.Idle; // 默认空闲状态
     // 2：我们需要一个数组，存储全部的监听事件，然后在状态改变时，触发所有这些事件的监听回调！
     private stateListeners: ((state: PolygonEditorState) => void)[] = [];
 
-    constructor(map: L.Map, measureOptions: areaOptions = { precision: 2, lang: 'zh' }, options: L.PolylineOptions = {}) {
+    // 添加校验配置
+    private validationOptions: ValidationOptions = {
+        allowSelfIntersect: true,  // 默认允许自相交
+    };
+
+
+    constructor(map: L.Map, measureOptions: areaOptions = {}) {
         this.map = map;
-        this.measureOptions = measureOptions;
+        // 合并用户配置和默认配置
+        this.measureOptions = {
+            ...this.measureOptions,
+            ...measureOptions,
+        };
         if (this.map) {
             // 初始化时，设置绘制状态为true，且发出状态通知
             this.updateAndNotifyStateChange(PolygonEditorState.Drawing);
@@ -62,18 +100,24 @@ export default class LeafletArea {
             this.map.getContainer().style.cursor = 'crosshair';
             // 禁用双击地图放大功能
             this.map.doubleClickZoom.disable();
-            this.initLayers(options);
+            // 初始化校验自身的相关配置信息
+            if (measureOptions.validation) {
+                this.validationOptions = {
+                    ...this.validationOptions,
+                    ...measureOptions.validation
+                }
+            }
+            this.initLayers();
             this.initMapEvent(this.map);
         }
     }
 
     // 初始化图层
-    private initLayers(options: L.PolylineOptions) {
+    private initLayers() {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[[-90, -180], [-90, -180], [-90, -180], [-90, -180]]坐标，也就是页面的左下角
         const polygonOptions: L.PolylineOptions = {
             pane: 'overlayPane',
-            ...this.drawLayerStyle,
-            ...options
+            ...this.measureOptions?.polygonStyle,
         };
         this.polygonLayer = L.polygon([[181, 181], [181, 181], [181, 181], [181, 181]], polygonOptions);
         this.polygonLayer.addTo(this.map);
@@ -101,7 +145,13 @@ export default class LeafletArea {
      * @memberof LeafletArea
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
-        this.tempCoords.push([e.latlng.lat, e.latlng.lng])
+        // 尝试添加新点
+        const newPoint = [e.latlng.lat, e.latlng.lng];
+        const testCoords = [...this.tempCoords, newPoint, this.tempCoords[0]];
+        // 实时校验并改变样式
+        const isValid = this.isValidPolygon(testCoords);
+        // 通过校验，则添加点
+        isValid && this.tempCoords.push(newPoint);
     }
     /**  地图双击事件，用于设置点的位置
      *
@@ -112,10 +162,18 @@ export default class LeafletArea {
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
         if (this.polygonLayer) {
+            const lastCoord = [e.latlng.lat, e.latlng.lng];
             // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
-            const finalCoords = this.deduplicateCoordinates(this.tempCoords);
-            this.renderLayer([...finalCoords, finalCoords[0]]);
-            this.reset();
+            const ringCoords = [...this.tempCoords, lastCoord, this.tempCoords[0]]
+            const finalCoords = this.deduplicateCoordinates(ringCoords);
+            if (this.isValidPolygon(finalCoords)) {
+                this.renderLayer(finalCoords);
+                this.reset();
+            } else {
+                // 校验失败，保持绘制状态
+                console.warn('折线无效，请继续绘制或调整');
+                // 不执行 reset()，让用户继续调整
+            }
         }
     }
     /** 状态重置
@@ -144,17 +202,19 @@ export default class LeafletArea {
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
         if (!this.tempCoords.length) return;
-        const lastMoveEndPoint: L.LatLngExpression = [e.latlng.lat, e.latlng.lng];
+        const lastMoveEndPoint: number[] = [e.latlng.lat, e.latlng.lng];
+        let tempMovedCoords = this.tempCoords;
         // 1：一个点也没有时，我们移动事件，也什么也不做。
         // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。
-        if (this.tempCoords.length === 1) {
-            this.tempCoords = [this.tempCoords[0], lastMoveEndPoint]
+        if (tempMovedCoords.length === 1) {
+            tempMovedCoords = [tempMovedCoords[0], lastMoveEndPoint]
         }
         // 3：有两个及以上的点时，我们删掉在只有一个点时，塞入的最后移动的那个点，也就是前一个if语句中塞入的那个点，然后添加此刻移动结束的点。
-        const fixedPoints = this.tempCoords.slice(0, this.tempCoords.length - 1); // 除最后一个点外的所有点
-        this.tempCoords = [...fixedPoints, lastMoveEndPoint];
+        tempMovedCoords = [...tempMovedCoords, lastMoveEndPoint];
+        // 实时校验并改变样式
+        const isValid = this.isValidPolygon([...tempMovedCoords, this.tempCoords[0]]);
         // 实时渲染
-        this.renderLayer(this.tempCoords);
+        this.renderLayer(tempMovedCoords, isValid);
     }
 
     /** 渲染图层
@@ -164,19 +224,20 @@ export default class LeafletArea {
      * @param { [][]} coords
      * @memberof LeafletArea
      */
-    private renderLayer(coords: number[][]) {
+    private renderLayer(coords: number[][], valid: boolean = true) {
         if (this.polygonLayer) {
+            this.polygonLayer.setStyle(valid ? this.measureOptions?.polygonStyle! : this.measureOptions?.validErrorPolygonStyle!);
             this.polygonLayer.setLatLngs(coords as any);
         } else {
             throw new Error('图层不存在，无法渲染');
         }
 
         // 无论鼠标移动，还是双击结束绘制，这个事件都会触发，所以我索性直接在这个组件中计算面积信息了，这样就不用考虑在鼠标移动事件和双击事件中写2遍了。
-        if (coords.length > 2) {
-            if (this.markerLayer) {
-                this.markerLayer.remove();
-                this.markerLayer = null;
-            }
+        if (this.markerLayer) {
+            this.markerLayer.remove();
+            this.markerLayer = null;
+        }
+        if (valid && coords.length > 2) {
             // 这里因为mousemove的缘故，我不能确定提供的坐标点的数量是否包含了“结束点”：也就是结束点和第一个点要相同，索性，我再添加一遍
             const polygonCoords: any = [...coords, coords[0]];
             const turfPolygon = polygon([polygonCoords]);
@@ -247,15 +308,15 @@ export default class LeafletArea {
      */
     private measureMarkerIcon(area: FormattedArea): L.DivIcon {
         return L.divIcon({
-            className: 'measure-area-marker',
-            html: `<div style="width: 10px;height: 10px; text-align: center; position: relative;">
-                            <!-- 构建小圆点 -->
-                            <div style="width: 10px;height: 10px;border-radius: 50%;background: #ffffff;border: solid 2px red; position: absolute;left: 1px;top: 1px;"></div>
-                            <!-- 下面的内容展示文字 -->
-                            <div style="width: max-content; padding: 3px; border: solid 1px red; background: #ffffff;  position: absolute; left: 10px; top: 10px;">
-                                ${area.val} ${area.unit}
-                            </div>
-                        </div>`
+            className: this.measureOptions.markerStyle?.containerClassName ? this.measureOptions.markerStyle?.containerClassName : 'measure-area-marker',
+            html: `<div ${this.measureOptions.markerStyle?.containerClassName ? (`class=${this.measureOptions.markerStyle?.containerClassName}`) : (`style="${LeafletArea.markerStyle.containerStyle}"`)}>
+                        <!-- 构建小圆点 -->
+                        <div ${this.measureOptions.markerStyle?.dotClassName ? (`class=${this.measureOptions.markerStyle?.dotClassName}`) : (`style="${LeafletArea.markerStyle.dotStyle}"`)}></div>
+                        <!-- 下面的内容展示文字 -->
+                        <div ${this.measureOptions.markerStyle?.labelClassName ? (`class=${this.measureOptions.markerStyle?.labelClassName}`) : (`style="${LeafletArea.markerStyle.labelStyle}"`)}>
+                            ${area.val} ${area.unit}
+                        </div>
+                    </div>`
         });
     }
 
@@ -265,7 +326,7 @@ export default class LeafletArea {
      * @param {number} precision - 精度（小数位数），默认6位
      * @returns {Array} 去重后的坐标数组
      */
-    private deduplicateCoordinates(coordinates, precision = 6) {
+    private deduplicateCoordinates(coordinates: string | any[], precision = 6) {
         if (!Array.isArray(coordinates) || coordinates.length === 0) {
             return [];
         }
@@ -298,7 +359,7 @@ export default class LeafletArea {
      * @param {number} squareMeters - 输入的平方米数值
      * @returns {FormattedArea} 格式化后的面积对象
      */
-    private formatArea(squareMeters, options: areaOptions): FormattedArea {
+    private formatArea(squareMeters: number, options: areaOptions): FormattedArea {
         const { lang = 'zh', precision = 2 } = options;
         const units = UNIT_MAP[lang];
 
@@ -381,5 +442,68 @@ export default class LeafletArea {
         this.stateListeners.forEach(fn => fn(this.currentState));
     }
     // #endregion
+
+
+    // #region 几何图形的有效性校验
+
+    /** 更新几何校验的内容项
+     * 
+     *
+     * @param {ValidationOptions} rules
+     * @memberof LeafletPolyline
+     */
+    public setValidationRules(rules: ValidationOptions): void {
+        this.validationOptions = { ...this.validationOptions, ...rules };
+    }
+
+    /** 校验线图层的有效性
+     *
+     *
+     * @private
+     * @param {L.LatLng[]} coords
+     * @return {*}  {boolean}
+     * @memberof LeafletRectangle
+     */
+    private isValidPolygon(coords: number[][]): boolean {
+
+        // 1. 检查自相交（根据配置）
+        if (this.validationOptions.allowSelfIntersect === false) {
+            if (this.hasSelfIntersection(coords)) {
+                return false;
+            }
+        }
+
+        // 2. 其他校验规则可以在这里添加...
+
+        return true;
+
+    }
+
+    /** 自相交检测（使用 turf.kinks）
+     *
+     *
+     * @private
+     * @param {number[][]} coords
+     * @return {*}  {boolean} true=有自相交，false=无自相交
+     * @memberof LeafletPolyline
+     */
+    private hasSelfIntersection(coords: number[][]): boolean {
+
+        if (coords.length < 4) return false;
+
+        try {
+            // 2. 转换为GeoJSON格式 [lng, lat] ✅ 这个转换是必要的！
+            const geoJsonCoords = coords.map(coord => [coord[1], coord[0]]);
+            const turfPolygon = polygon([geoJsonCoords]);
+            const intersections = kinks(turfPolygon);
+
+            return intersections.features.length > 0;
+        } catch (error) {
+            console.warn('自相交检测失败:', error);
+            return false;
+        }
+    }
+    // #endregion
+
 
 }
