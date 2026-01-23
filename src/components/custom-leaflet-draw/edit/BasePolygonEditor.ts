@@ -1,5 +1,5 @@
 import * as L from "leaflet";
-import { PolygonEditorState, type DragMarkerOptions, type EditOptions, type MidpointPair, type SnapOptions } from "../types";
+import { PolygonEditorState, type BaseEditOptions, type DragMarkerOptions, type EditOptionsExpends, type MidpointPair, type SnapOptions } from "../types";
 import { BaseEditor } from "./BaseEditor";
 import { buildMarkerIcon } from "../utils/commonUtils";
 
@@ -11,7 +11,7 @@ export abstract class BasePolygonEditor extends BaseEditor {
     protected redoStack: number[][][][][] = []; // 重做记录，存储快照
 
     // 中点配置（在多边形基类中定义）
-    protected editOptions: EditOptions = {
+    protected polygonEditOptions: EditOptionsExpends = {
         // 顶点属性信息
         enabled: true,
         vertexsMarkerStyle: {
@@ -53,10 +53,10 @@ export abstract class BasePolygonEditor extends BaseEditor {
         }
     };
 
-    constructor(map: L.Map, options: { snap?: SnapOptions, edit?: EditOptions }) {
+    constructor(map: L.Map, options: { snap?: SnapOptions, edit?: EditOptionsExpends }) {
         super(map, { snap: options?.snap });
         // 编辑点marker的配置信息初始化
-        this.initEditOptions(options?.edit);
+        this.initPolygonEditOptions(options?.edit);
     }
 
     // #region 编辑点marker的配置信息
@@ -69,26 +69,34 @@ export abstract class BasePolygonEditor extends BaseEditor {
      * @param {DragMarkerOptions} [dragLineMarkerOptions] // 边线拖拽标记配置信息
      * @memberof BasePolygonEditor
      */
-    private initEditOptions(edit?: EditOptions): void {
-        if (!edit) return;
-        const { enabled, vertexsMarkerStyle, dragMidMarkerOptions, dragLineMarkerOptions } = edit;
+    private initPolygonEditOptions(options?: EditOptionsExpends): void {
+        if (!options) {
+            this.polygonEditOptions = this.initBaseEditOptions();
+        } else {
+            const { enabled, vertexsMarkerStyle, dragMidMarkerOptions, dragLineMarkerOptions } = options;
+            const BaseEditorConfig = this.initBaseEditOptions({
+                enabled,
+                vertexsMarkerStyle,
+            })
 
-        const userConfig: EditOptions = {
-            enabled: enabled ?? this.editOptions.enabled,
-            vertexsMarkerStyle: vertexsMarkerStyle ?? this.editOptions.vertexsMarkerStyle,
-            // 中点
-            dragMidMarkerOptions: dragMidMarkerOptions
-                ? { ...this.editOptions.dragMidMarkerOptions, ...dragMidMarkerOptions }
-                : this.editOptions.dragMidMarkerOptions,
-            // 拖动线的marker
-            dragLineMarkerOptions: dragLineMarkerOptions
-                ? { ...this.editOptions.dragLineMarkerOptions, ...dragLineMarkerOptions } : this.editOptions.dragLineMarkerOptions,
-        };
-        // 强制设置可拖动
-        userConfig.dragMidMarkerOptions!.dragMarkerStyle!.draggable = true;
-        userConfig.dragLineMarkerOptions!.dragMarkerStyle!.draggable = true;
-        // save
-        this.editOptions = userConfig;
+            const userConfig: EditOptionsExpends = {
+                enabled: BaseEditorConfig.enabled ?? this.polygonEditOptions.enabled,
+                vertexsMarkerStyle: BaseEditorConfig.vertexsMarkerStyle ?? this.polygonEditOptions.vertexsMarkerStyle,
+                // 中点
+                dragMidMarkerOptions: dragMidMarkerOptions
+                    ? { ...this.polygonEditOptions.dragMidMarkerOptions, ...dragMidMarkerOptions }
+                    : this.polygonEditOptions.dragMidMarkerOptions,
+                // 拖动线的marker
+                dragLineMarkerOptions: dragLineMarkerOptions
+                    ? { ...this.polygonEditOptions.dragLineMarkerOptions, ...dragLineMarkerOptions } : this.polygonEditOptions.dragLineMarkerOptions,
+            };
+            // 强制设置可拖动
+            userConfig.dragMidMarkerOptions!.dragMarkerStyle!.draggable = true;
+            userConfig.dragLineMarkerOptions!.dragMarkerStyle!.draggable = true;
+            // save
+            this.polygonEditOptions = userConfig;
+        }
+
     }
 
     /** 插入中间点坐标
@@ -99,8 +107,8 @@ export abstract class BasePolygonEditor extends BaseEditor {
      * @memberof LeafletEditPolygon
      */
     protected insertMidpointMarkers(skipMarker?: L.Marker): void {
-        const isEnabledMidPointsMarker = this.editOptions.dragMidMarkerOptions!.enabled;
-        const isEnabledEdgeMarker = this.editOptions.dragLineMarkerOptions!.enabled;
+        const isEnabledMidPointsMarker = this.polygonEditOptions.dragMidMarkerOptions!.enabled;
+        const isEnabledEdgeMarker = this.polygonEditOptions.dragLineMarkerOptions!.enabled;
         const disableRenderMarker = (!isEnabledMidPointsMarker && !isEnabledEdgeMarker);
         if (disableRenderMarker || this.currentState !== PolygonEditorState.Editing) return;
 
@@ -120,9 +128,9 @@ export abstract class BasePolygonEditor extends BaseEditor {
                     // ✅ 跳过当前边包含 skipMarker 的情况
                     if (skipMarker && (skipMarker === p1 || skipMarker === p2 || (skipMarker as any).pairRef === p1 || (skipMarker as any).pairRef === p2)) { continue; }
 
-                    const insertMidpoint = isEnabledMidPointsMarker ? this.createInsertMidpointMarker(p1, p2, polygonIndex, ringIndex, nextIndex, this.editOptions.dragMidMarkerOptions!.positionRatio!) : null
+                    const insertMidpoint = isEnabledMidPointsMarker ? this.createInsertMidpointMarker(p1, p2, polygonIndex, ringIndex, nextIndex, this.polygonEditOptions.dragMidMarkerOptions!.positionRatio!) : null
                     // 插入边控制点（用于拖动边） 
-                    const edgeDragMarker = isEnabledEdgeMarker ? this.createEdgeDragMarker(p1, p2, polygonIndex, ringIndex, this.editOptions.dragLineMarkerOptions!.positionRatio!) : null;
+                    const edgeDragMarker = isEnabledEdgeMarker ? this.createEdgeDragMarker(p1, p2, polygonIndex, ringIndex, this.polygonEditOptions.dragLineMarkerOptions!.positionRatio!) : null;
 
                     ringMidpoints.push({ insert: insertMidpoint, edge: edgeDragMarker });
                     // 附加：互相引用 （虽然写的晚，但是一般都会在【createInsertMidpointMarker、createEdgeDragMarker】中绑定的dragstart事件之前完成）
@@ -148,8 +156,8 @@ export abstract class BasePolygonEditor extends BaseEditor {
      * @memberof LeafletEditPolygon
      */
     protected updateMidpoints(skipMarker?: L.Marker): void {
-        const isEnabledMidPointsMarker = this.editOptions.dragMidMarkerOptions!.enabled;
-        const isEnabledEdgeMarker = this.editOptions.dragLineMarkerOptions!.enabled;
+        const isEnabledMidPointsMarker = this.polygonEditOptions.dragMidMarkerOptions!.enabled;
+        const isEnabledEdgeMarker = this.polygonEditOptions.dragLineMarkerOptions!.enabled;
         const disableRenderMarker = (!isEnabledMidPointsMarker && !isEnabledEdgeMarker);
         // 新增：检查是否启用中点功能
         if (disableRenderMarker) {
@@ -184,7 +192,7 @@ export abstract class BasePolygonEditor extends BaseEditor {
      * 更新编辑配置
      * @param options 编辑配置
      */
-    public updateEditOptions(options: EditOptions): void {
+    public updateEditOptions(options: EditOptionsExpends): void {
         // 深度合并配置
         this.mergeEditOptions(options);
 
@@ -199,17 +207,17 @@ export abstract class BasePolygonEditor extends BaseEditor {
      * 获取是否启用编辑
      */
     public getEditEnabled(): boolean {
-        return this.editOptions.enabled;
+        return this.polygonEditOptions.enabled;
     }
     /**
      * 设置是否启用编辑
      * @param enabled 是否启用
      */
     public setEditEnabled(enabled: boolean): void {
-        const oldEnabled = this.editOptions.enabled;
+        const oldEnabled = this.polygonEditOptions.enabled;
 
         if (oldEnabled !== enabled) {
-            this.editOptions.enabled = enabled;
+            this.polygonEditOptions.enabled = enabled;
 
             // 如果从启用变为禁用，且正在编辑，强制退出编辑模式
             if (oldEnabled && !enabled && this.currentState === PolygonEditorState.Editing) {
@@ -228,27 +236,27 @@ export abstract class BasePolygonEditor extends BaseEditor {
      * 深度合并编辑配置
      * @private
      */
-    private mergeEditOptions(options: EditOptions): void {
-        this.editOptions = {
-            enabled: options?.enabled ?? this.editOptions.enabled,
-            vertexsMarkerStyle: options?.vertexsMarkerStyle ? { ...this.editOptions.vertexsMarkerStyle, ...options?.vertexsMarkerStyle } : this.editOptions.vertexsMarkerStyle,
+    private mergeEditOptions(options: EditOptionsExpends): void {
+        this.polygonEditOptions = {
+            enabled: options?.enabled ?? this.polygonEditOptions.enabled,
+            vertexsMarkerStyle: options?.vertexsMarkerStyle ? { ...this.polygonEditOptions.vertexsMarkerStyle, ...options?.vertexsMarkerStyle } : this.polygonEditOptions.vertexsMarkerStyle,
             // 中点
             dragMidMarkerOptions: options?.dragMidMarkerOptions
-                ? { ...this.editOptions.dragMidMarkerOptions, ...options?.dragMidMarkerOptions }
-                : this.editOptions.dragMidMarkerOptions,
+                ? { ...this.polygonEditOptions.dragMidMarkerOptions, ...options?.dragMidMarkerOptions }
+                : this.polygonEditOptions.dragMidMarkerOptions,
             // 拖动线的marker
             dragLineMarkerOptions: options?.dragLineMarkerOptions
-                ? { ...this.editOptions.dragLineMarkerOptions, ...options?.dragLineMarkerOptions } : this.editOptions.dragLineMarkerOptions,
+                ? { ...this.polygonEditOptions.dragLineMarkerOptions, ...options?.dragLineMarkerOptions } : this.polygonEditOptions.dragLineMarkerOptions,
         }
 
         // 1：更新中点和拖动线marker在线上的位置：
-        const isEnabledMidPointsMarker = this.editOptions.dragMidMarkerOptions!.enabled;
-        const isEnabledEdgeMarker = this.editOptions.dragLineMarkerOptions!.enabled;
-        this.editOptions.dragMidMarkerOptions!.positionRatio = (isEnabledMidPointsMarker && isEnabledEdgeMarker) ? 0.3 : 0.5;
-        this.editOptions.dragLineMarkerOptions!.positionRatio = (isEnabledMidPointsMarker && isEnabledEdgeMarker) ? 0.6 : 0.5;
+        const isEnabledMidPointsMarker = this.polygonEditOptions.dragMidMarkerOptions!.enabled;
+        const isEnabledEdgeMarker = this.polygonEditOptions.dragLineMarkerOptions!.enabled;
+        this.polygonEditOptions.dragMidMarkerOptions!.positionRatio = (isEnabledMidPointsMarker && isEnabledEdgeMarker) ? 0.3 : 0.5;
+        this.polygonEditOptions.dragLineMarkerOptions!.positionRatio = (isEnabledMidPointsMarker && isEnabledEdgeMarker) ? 0.6 : 0.5;
         // 2：强制设置可拖动
-        this.editOptions.dragMidMarkerOptions!.dragMarkerStyle!.draggable = true;
-        this.editOptions.dragLineMarkerOptions!.dragMarkerStyle!.draggable = true;
+        this.polygonEditOptions.dragMidMarkerOptions!.dragMarkerStyle!.draggable = true;
+        this.polygonEditOptions.dragLineMarkerOptions!.dragMarkerStyle!.draggable = true;
     }
 
     // 抽象方法，子类实现具体的中点创建逻辑

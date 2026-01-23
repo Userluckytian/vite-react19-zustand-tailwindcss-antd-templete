@@ -519,7 +519,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      */
     private canEnterEditMode(): boolean {
         // 基础检查
-        if (!this.editOptions.enabled) return false;
+        if (!this.rectEditConfig?.enabled) return false;
         if (!this.rectangleLayer) return false;
         if (this.currentState === PolygonEditorState.Editing) return false;
         if (!this.isVisible) return false;

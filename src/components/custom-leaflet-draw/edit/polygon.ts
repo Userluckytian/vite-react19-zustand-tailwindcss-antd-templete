@@ -489,7 +489,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      */
     private canEnterEditMode(): boolean {
         // 基础检查
-        if (!this.editOptions.enabled) return false;
+        if (!this.polygonEditOptions.enabled) return false;
         if (!this.polygonLayer) return false;
         if (this.currentState === PolygonEditorState.Editing) return false;
         if (!this.isVisible) return false;
@@ -602,7 +602,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
     ): L.Marker {
         const midPoint = this.getFractionalPointOnEdge(p1.getLatLng(), p2.getLatLng(), positionRadio);
 
-        const marker = L.marker(midPoint, this.editOptions.dragMidMarkerOptions!.dragMarkerStyle).addTo(this.map);
+        const marker = L.marker(midPoint, this.polygonEditOptions.dragMidMarkerOptions!.dragMarkerStyle).addTo(this.map);
 
         // 开始拖动时，移除线拖动的marker
         marker.on('dragstart', () => {
@@ -656,7 +656,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             this.map.removeLayer(marker);
 
             // 2. 创建新的顶点 marker
-            const newMarker = L.marker(latlng, this.editOptions.vertexsMarkerStyle).addTo(this.map);
+            const newMarker = L.marker(latlng, this.polygonEditOptions.vertexsMarkerStyle).addTo(this.map);
 
             // 3. 插入到顶点数组
             this.vertexMarkers[polygonIndex][ringIndex].splice(insertIndex, 0, newMarker);
@@ -723,7 +723,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         positionRadio: number
     ): L.Marker {
         const midDragPoint = this.getFractionalPointOnEdge(p1.getLatLng(), p2.getLatLng(), positionRadio);
-        const marker = L.marker(midDragPoint, this.editOptions.dragLineMarkerOptions!.dragMarkerStyle).addTo(this.map);
+        const marker = L.marker(midDragPoint, this.polygonEditOptions.dragLineMarkerOptions!.dragMarkerStyle).addTo(this.map);
         let lastLatLng: L.LatLng | null = null;
 
         marker.on('dragstart', () => {
@@ -798,7 +798,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
                 ring.forEach((coord, pointIndex) => {
                     const latlng = L.latLng(coord[0], coord[1]);
 
-                    const marker = L.marker(latlng, this.editOptions.vertexsMarkerStyle).addTo(this.map);
+                    const marker = L.marker(latlng, this.polygonEditOptions.vertexsMarkerStyle).addTo(this.map);
 
                     // 拖动时更新图形
                     marker.on('drag', () => {

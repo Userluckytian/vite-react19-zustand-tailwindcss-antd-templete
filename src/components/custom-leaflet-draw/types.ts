@@ -27,9 +27,13 @@ export interface SnapHighlightLayerOptions {
 }
 
 // 编辑配置属性信息(规则，如果启用编辑，必然渲染顶点！但是中间点和拖动边的marker不一定渲染)
-export type EditOptions = {
-    enabled: boolean; // 是否启用编辑功能
-    vertexsMarkerStyle?: L.MarkerOptions, // 顶点marker的样式信息
+// 基础编辑配置（所有编辑器都有的）
+export interface BaseEditOptions {
+    enabled: boolean;
+    vertexsMarkerStyle?: L.MarkerOptions;
+}
+
+export interface EditOptionsExpends extends BaseEditOptions  {
     dragLineMarkerOptions?: DragMarkerOptions; // 拖动边的marker的属性信息
     dragMidMarkerOptions?: DragMarkerOptions; // 拖动中点的marker属性信息
 }
@@ -93,7 +97,7 @@ export type MidpointPair = {
 export interface LeafletToolsOptions {
     defaultStyle?: LeafletPolylineOptions; // 存放（用户自己想要设置的）图层的默认样式信息
     snap?: SnapOptions;  // 吸附配置信息
-    edit?: EditOptions; // 编辑信息
+    edit?: EditOptionsExpends; // 编辑信息
     validation?: ValidationOptions;   // 几何有效性校验（之前考虑放到topo里。但是topo一般是自身和其他几何的相互关系。而自相交是和自身，所以我考虑区分开）
 }
 

@@ -1,6 +1,7 @@
 import * as L from "leaflet";
-import { PolygonEditorState, type EditorListenerConfigs, type GeometryIndex, type SnapHighlightLayerOptions, type SnapMode, type SnapOptions, type SnapResult } from "../types";
+import { PolygonEditorState, type BaseEditOptions, type EditOptionsExpends, type EditorListenerConfigs, type GeometryIndex, type SnapHighlightLayerOptions, type SnapMode, type SnapOptions, type SnapResult } from "../types";
 import { SnapController } from "../utils/SnapController";
+import { buildMarkerIcon } from "../utils/commonUtils";
 
 // BaseEditor.ts - 基础形状编辑器
 export abstract class BaseEditor {
@@ -37,6 +38,17 @@ export abstract class BaseEditor {
             dashArray: '4,2',
             pane: 'mapPane'  // 过高的pane会影响绘制时双击结束的操作，会导致无法触发双击事件。
         }
+    };
+
+    // 编辑时的顶点配置
+    protected baseEditOptions: BaseEditOptions = {
+        // 顶点属性信息
+        enabled: true,
+        vertexsMarkerStyle: {
+            icon: buildMarkerIcon(),
+            draggable: true,
+            pane: 'markerPane'
+        },
     };
 
 
@@ -395,7 +407,7 @@ export abstract class BaseEditor {
      */
     protected clearSnapHighlights() {
         // 清除上一次的高亮图层
-        if(this.snapHighlightLayer){
+        if (this.snapHighlightLayer) {
             this.snapHighlightLayer.clearLayers();
         }
         this.highlightCircleMarker = null;
@@ -418,7 +430,35 @@ export abstract class BaseEditor {
 
     // #endregion
 
-    // #region 渲染行为
+    // #region 编辑行为
+
+    /** 初始化编辑点marker的配置信息
+     *
+     *
+     * @protected
+     * @memberof BaseEditor
+     */
+    protected initBaseEditOptions(options?: BaseEditOptions): BaseEditOptions {
+        if (options) {
+            const userConfig: BaseEditOptions = {
+                enabled: options?.enabled ?? this.baseEditOptions.enabled,
+                vertexsMarkerStyle: options?.vertexsMarkerStyle
+                    ? { ...this.baseEditOptions.vertexsMarkerStyle, ...options.vertexsMarkerStyle }
+                    : this.baseEditOptions.vertexsMarkerStyle
+            };
+            // save
+            this.baseEditOptions = userConfig;
+        }
+        return { ...this.baseEditOptions };
+    }
+
+    /** 更新编辑配置
+      *
+      *
+      * @abstract
+      * @memberof BaseEditor
+      */
+    public abstract updateEditOptions(options: BaseEditOptions): void;
 
     /** 退出编辑模式
      *
@@ -524,4 +564,5 @@ export abstract class BaseEditor {
 
 
     // #endregion
+
 }

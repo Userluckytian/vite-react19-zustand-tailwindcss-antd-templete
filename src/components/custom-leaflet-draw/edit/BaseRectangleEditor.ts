@@ -1,4 +1,4 @@
-import { PolygonEditorState, type EditOptions, type SnapOptions } from "../types";
+import { PolygonEditorState, type BaseEditOptions, type SnapOptions } from "../types";
 import { buildMarkerIcon } from "../utils/commonUtils";
 import { BaseEditor } from "./BaseEditor";
 
@@ -9,45 +9,13 @@ export abstract class BaseRectangleEditor extends BaseEditor {
     protected historyStack: number[][][] = []; // 历史记录，存储快照
     protected redoStack: number[][][] = []; // 重做记录，存储快照
 
-    // 中点配置（在矩形基类中定义）
-    protected editOptions: EditOptions = {
-        // 顶点属性信息
-        enabled: true,
-        vertexsMarkerStyle: {
-            icon: buildMarkerIcon(),
-            draggable: true,
-            pane: 'markerPane'
-        },
-    };
+    protected rectEditConfig: BaseEditOptions | null = null;
 
-    constructor(map: L.Map, options: { snap?: SnapOptions, edit?: EditOptions }) {
+    constructor(map: L.Map, options: { snap?: SnapOptions, edit?: BaseEditOptions }) {
         super(map, { snap: options?.snap });
         // 编辑点marker的配置信息初始化
-        this.initEditOptions(options?.edit);
+        this.rectEditConfig = this.initBaseEditOptions(options?.edit);
     }
-
-    // #region 编辑点marker的配置信息
-
-    /** 初始化编辑点marker的配置信息
-     *
-     *
-     * @private
-     * @param {DragMarkerOptions} [dragMidMarkerOptions] // 中点拖拽标记配置信息
-     * @param {DragMarkerOptions} [dragLineMarkerOptions] // 边线拖拽标记配置信息
-     * @memberof BasePolygonEditor
-     */
-    private initEditOptions(edit?: EditOptions): void {
-        if (!edit) return;
-        const { enabled, vertexsMarkerStyle, dragMidMarkerOptions, dragLineMarkerOptions } = edit;
-
-        const userConfig: EditOptions = {
-            enabled: enabled ?? this.editOptions.enabled,
-            vertexsMarkerStyle: vertexsMarkerStyle ?? this.editOptions.vertexsMarkerStyle,
-        };
-        // save
-        this.editOptions = userConfig;
-    }
-    // #endregion
 
 
     // #region 操作行为
@@ -139,7 +107,7 @@ export abstract class BaseRectangleEditor extends BaseEditor {
      * 更新编辑配置
      * @param options 编辑配置
      */
-    public updateEditOptions(options: EditOptions): void {
+    public updateEditOptions(options: BaseEditOptions): void {
         // 深度合并配置
         this.mergeEditOptions(options);
 
@@ -154,7 +122,7 @@ export abstract class BaseRectangleEditor extends BaseEditor {
      * 获取是否启用编辑
      */
     public getEditEnabled(): boolean {
-        return this.editOptions.enabled;
+        return this.rectEditConfig!.enabled;
     }
 
     /**
@@ -162,10 +130,10 @@ export abstract class BaseRectangleEditor extends BaseEditor {
      * @param enabled 是否启用
      */
     public setEditEnabled(enabled: boolean): void {
-        const oldEnabled = this.editOptions.enabled;
+        const oldEnabled = this.rectEditConfig?.enabled;
 
         if (oldEnabled !== enabled) {
-            this.editOptions.enabled = enabled;
+            this.rectEditConfig!.enabled = enabled;
 
             // 如果从启用变为禁用，且正在编辑，强制退出编辑模式
             if (oldEnabled && !enabled && this.currentState === PolygonEditorState.Editing) {
@@ -184,10 +152,10 @@ export abstract class BaseRectangleEditor extends BaseEditor {
      * 深度合并编辑配置
      * @private
      */
-    private mergeEditOptions(options: EditOptions): void {
-        this.editOptions = {
-            enabled: options?.enabled ?? this.editOptions.enabled,
-            vertexsMarkerStyle: options?.vertexsMarkerStyle ? { ...this.editOptions.vertexsMarkerStyle, ...options?.vertexsMarkerStyle } : this.editOptions.vertexsMarkerStyle,
+    private mergeEditOptions(options: BaseEditOptions): void {
+        this.rectEditConfig = {
+            enabled: options?.enabled ?? this.rectEditConfig!.enabled,
+            vertexsMarkerStyle: options?.vertexsMarkerStyle ? { ...this.rectEditConfig!.vertexsMarkerStyle, ...options?.vertexsMarkerStyle } : this.rectEditConfig!.vertexsMarkerStyle,
         }
     }
     // #endregion
