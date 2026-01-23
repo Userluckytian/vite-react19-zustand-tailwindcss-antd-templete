@@ -51,7 +51,6 @@ export class LeafletTopology {
       // console.log('realPickedLayer', realPickedLayer);
       realPickedLayer.forEach(layer => {
         const pickerLayerId = layer._leaflet_id;
-        // console.log('this.selectedLayers', this.selectedLayers);
         const findLayerIdx = this.selectedLayers.findIndex((layer: any) => layer?.options && layer?.options?.linkLayerId === pickerLayerId);
         if (findLayerIdx !== -1) {
           const pickLayer = this.selectedLayers[findLayerIdx];
@@ -59,6 +58,8 @@ export class LeafletTopology {
           pickLayer.remove();
           this.selectedLayers.splice(findLayerIdx, 1);
         } else {
+          console.log('待添加的新图层：', layer);
+          
           // 基于选中的图层的空间信息，添加对应的高亮图层
           this.addHighLightLayerByPickLayerGeom(layer);
         }
@@ -232,9 +233,8 @@ export class LeafletTopology {
     };
     const highlightLayer = L.geoJSON(layerGeom, {
       style: highlightStyle,
-      // ['linkLayerId' as any]: layer._leaflet_id, // 添加自定义属性
+      ['linkLayerId' as any]: layer._leaflet_id, // 添加自定义属性
     });
-    (highlightLayer as any).options.linkLayerId = layer._leaflet_id;
     this.selectedLayers.push(highlightLayer);
     this.map && this.map.addLayer(highlightLayer);
   }
