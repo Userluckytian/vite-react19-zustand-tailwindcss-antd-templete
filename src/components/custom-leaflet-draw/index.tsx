@@ -11,7 +11,7 @@ import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import LeafletEditPolygon from './simpleEdit/polygon';
-import { PolygonEditorState, type DragMarkerOptions, type EditOptions, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
+import { PolygonEditorState, type DragMarkerOptions, type EditOptionsExpends, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
 import LeafletEditRectangle from './simpleEdit/rectangle';
 import { LeafletTopology } from './topo/topo';
 import LeafletRectangleEditor from './edit/rectangle';
@@ -252,14 +252,14 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     dragMidMarkerOptions: {
                         enabled: checked
                     }
-                } as EditOptions)
+                } as EditOptionsExpends)
                 break;
             case 'edgeMarker':
                 polygonEditorRef.current.updateEditOptions({
                     dragLineMarkerOptions: {
                         enabled: checked
                     }
-                } as EditOptions)
+                } as EditOptionsExpends)
                 break;
 
             default:
@@ -310,7 +310,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 pane: 'markerPane'
             }
         }
-        const edit: EditOptions = {
+        const edit: EditOptionsExpends = {
             enabled: true,
             dragLineMarkerOptions: edgeMarkerConfig,
             dragMidMarkerOptions: midPointMarkerConfig
