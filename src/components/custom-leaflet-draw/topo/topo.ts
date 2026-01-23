@@ -107,7 +107,7 @@ export class LeafletTopology {
     }
     // 第二步： 执行绘制操作，并添加监听事件
     const drawReshapeLineFlag = 'reshapeLine';
-    this.drawLineLayer = new LeafletPolyline(this.map, { drawFlag: drawReshapeLineFlag });
+    this.drawLineLayer = new LeafletPolyline(this.map, { defaultStyle: { drawFlag: drawReshapeLineFlag } });
     // 添加绘制完毕后，重新调整状态为topo状态
     this.drawLineListener = (status: PolygonEditorState) => {
       if (status === PolygonEditorState.Idle) {
