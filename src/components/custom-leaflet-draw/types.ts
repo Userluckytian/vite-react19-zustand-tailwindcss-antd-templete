@@ -91,14 +91,16 @@ export type MidpointPair = {
 
 /* 拓展leaflet-绘制面、线属性（用于存放用户自定义的属性内容）  */
 export interface LeafletToolsOptions {
-    origin?: any; // 可以存放源信息
-    defaultStyle?: L.PolylineOptions; // 存放（用户自己想要设置的）图层的默认样式信息
+    defaultStyle?: LeafletPolylineOptions; // 存放（用户自己想要设置的）图层的默认样式信息
     snap?: SnapOptions;  // 吸附配置信息
     edit?: EditOptions; // 编辑信息
     validation?: ValidationOptions;   // 几何有效性校验（之前考虑放到topo里。但是topo一般是自身和其他几何的相互关系。而自相交是和自身，所以我考虑区分开）
-    [key: string]: unknown
 }
 
+export interface LeafletPolylineOptions extends L.PolylineOptions {
+    origin?: any; // 可以存放源信息
+    [key: string]: unknown
+}
 
 // #region 拓扑内容
 /* topo操作执行合并(union)后返回的结果 */
