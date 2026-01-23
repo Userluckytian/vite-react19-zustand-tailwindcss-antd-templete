@@ -346,7 +346,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 saveEditorAndAddListener(distanceLayer);
                 break;
             case 'measure_area':
-                const areaLayer = new LeafletArea(mapInstance);
+                const areaLayer = new LeafletArea(mapInstance, { precision: 2, lang: 'zh', validation: { allowSelfIntersect: false } });
                 saveEditorAndAddListener(areaLayer);
                 break;
             case 'edit_polygon':
@@ -800,7 +800,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
      *
      * @param {leafletGeoEditorInstance} editor
      */
-    const saveEditorAndAddListener = (editor: leafletGeoEditorInstance, needSnapToobar: boolean = false, immediateNotify:boolean = false, toolId?: string) => {
+    const saveEditorAndAddListener = (editor: leafletGeoEditorInstance, needSnapToobar: boolean = false, immediateNotify: boolean = false, toolId?: string) => {
         setDrawLayers((pre: any[]) => [...pre, editor]);
         // 对于有默认 geometry 的工具，立即触发绘制结果回调
         if (props.drawGeoJsonResult && toolId && ['add', 'add_hole', 'add_hole_multi'].includes(toolId)) {
@@ -832,7 +832,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             // if (status === PolygonEditorState.Drawing) {
             //     setCurrEditor(editor);
             // } else 
-                if (status === PolygonEditorState.Editing) {
+            if (status === PolygonEditorState.Editing) {
                 setCurrEditor(editor);
                 if (needSnapToobar) {
                     polygonEditorRef.current = editor as (LeafletPolygonEditor | LeafletRectangleEditor);
