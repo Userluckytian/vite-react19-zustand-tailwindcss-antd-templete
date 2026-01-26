@@ -84,6 +84,24 @@ $tip-pane-width: 340px;
     }
   }
 }
+// 其他属性工具条
+.leaflet-other-toolbar {
+  width: 340px;
+  top: 170px;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 10px;
+  .top {
+    display: flex;
+  }
+  .bottom {
+    .other-item {
+      display: flex;
+      gap: 0px 10px;
+      margin-bottom: 5px;
+    }
+  }
+}
 
 .edit-config-toolbar {
   width: 340px;

@@ -164,11 +164,6 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     ]);
     const [editConfigBar, setEditConfigBar] = useState<any[]>([
         {
-            id: 'edit',
-            label: '编辑',
-            enable: true
-        },
-        {
             id: 'snap',
             label: '吸附',
             enable: true
@@ -181,6 +176,13 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         {
             id: 'edgeMarker',
             label: '渲染拖动线marker',
+            enable: true
+        },
+    ]);
+    const [someConfigBar, setSomeConfigBar] = useState<any[]>([
+        {
+            id: 'valid',
+            label: '允许自相交',
             enable: true
         },
     ]);
@@ -203,6 +205,24 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             case 'allowNoChoise':
                 break;
             case 'manual':
+                break;
+
+            default:
+                break;
+        }
+
+    }
+    // 改变other属性的选项
+    const changeOtherBarOptions = (item: any, checked: boolean) => {
+        item.enable = !item.enable;
+        setSomeConfigBar((pre: any) => {
+            const tempData = JSON.parse(JSON.stringify(pre));
+            const itemIdx = someConfigBar.findIndex((it: any) => it.id === item.id);
+            itemIdx > -1 && (tempData[itemIdx] = item);
+            return tempData;
+        })
+        switch (item.id) {
+            case 'valid':
                 break;
 
             default:
@@ -316,7 +336,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             dragMidMarkerOptions: midPointMarkerConfig
         };
         const validation: ValidationOptions = {
-            allowSelfIntersect: false,
+            allowSelfIntersect: someConfigBar.find((it: any) => it.id === 'valid').enable,
         };
         // // 先清理之前的绘制
         // clearCurrentDraw();
@@ -1127,6 +1147,29 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                                 )
                             })
                         }
+                    </div>
+                </div>
+            }
+            {/* 其他属性工具条 */}
+            {true
+                &&
+                <div className="leaflet-other-toolbar leaflet-bar">
+                    <div className='top'>
+                        <div>其他属性工具条：</div>
+                    <div className='bottom'>
+                        {
+                            someConfigBar.map((ite: any, index: number) => {
+                                return (
+                                    <div className='other-item' key={'SCEML-' + index}>
+                                        <div className='label'>{ite.label}</div>
+                                        <div className='switch-btn'>
+                                            <Switch checkedChildren="开" unCheckedChildren="关" value={ite.enable} onChange={(e) => { changeOtherBarOptions(ite, e) }} />
+                                        </div>
+                                    </div>
+                                )
+                            })
+                        }
+                    </div>
                     </div>
                 </div>
             }

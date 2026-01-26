@@ -80,13 +80,22 @@ const FunctionPanel = () => {
                                     <li>⑤：若可吸附，高亮目标线（✔）</li>
                                 </ul>
                             </li>
-                            <li className="pending">【绘制线、面、可编辑面 增加校验属性配置（allowSelfInteIntection）】</li>
+                            <li className="completed">✔【增加自相交校验】
+                                <ul className='text-amber-600'>
+                                    <li>①：支持的绘制工具：<CustomIcon type='icon-biaoxian_1' title="标线" />、 <CustomIcon type='icon-biaomian_0' title="标面"/>、<CustomIcon type='icon-cemian_0'  title="测面"/>、 <CustomIcon type='icon-huizhiduobianxing1' title="绘制多边形" />（✔）</li>
+                                    <li>②：如何使用：先点击”其他属性工具条“上的自相交开关，再进行绘制行为（✔）</li>
+                                    <li>③：视觉反馈：不允许自相交时，绘制的图形，若发生了自相交，图形会变为红色，双击事件无法结束绘制（✔）</li>
+                                    <li>④：tip：绘制过程中，切换自相交，校验机制不会生效(因为未处理)。本工具是支持的（<code>editorInstance.setValidationOptions({`{allowSelfIntersect: false / true}`})</code>）（✔）</li>
+                                </ul>
+                                
+                            </li>
                             <li className="pending">【magic魔棒选择要素工具】</li>
                         </ul>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 };
 
