@@ -99,6 +99,7 @@ export interface LeafletToolsOptions {
     snap?: SnapOptions;  // 吸附配置信息
     edit?: EditOptionsExpends; // 编辑信息
     validation?: ValidationOptions;   // 几何有效性校验（之前考虑放到topo里。但是topo一般是自身和其他几何的相互关系。而自相交是和自身，所以我考虑区分开）
+    validErrorPolygonStyle?: L.PolylineOptions; // 校验失败时的样式
 }
 
 export interface LeafletPolylineOptions extends L.PolylineOptions {
