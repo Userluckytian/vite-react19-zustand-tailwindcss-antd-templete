@@ -66,7 +66,7 @@ const FunctionPanel = () => {
                                     <li>①：支持线、面的重塑处理。（✔）</li>
                                     <li>②：【Allow reshaping without a selection】允许无选择重塑。（✔）</li>
                                     <li>③：【Show Preview】实时预览reshape效果，便于判断结果是否符合预期。（目前：不支持）</li>
-                                    <li>④：【Reshape with single intersection】仅限线要素，允许单一交叉点重塑。（✔）</li>
+                                    <li>④：【Reshape with single interseIntection】仅限线要素，允许单一交叉点重塑。（✔）</li>
                                     <li>⑤：【Choose result on finish】完成后，由用户来选择要保留的部分。（✔）</li>
                                 </ul>
                             </li>
@@ -80,6 +80,7 @@ const FunctionPanel = () => {
                                     <li>⑤：若可吸附，高亮目标线（✔）</li>
                                 </ul>
                             </li>
+                            <li className="pending">【绘制线、面、可编辑面 增加校验属性配置（allowSelfInteIntection）】</li>
                             <li className="pending">【magic魔棒选择要素工具】</li>
                         </ul>
                     </div>

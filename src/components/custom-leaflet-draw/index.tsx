@@ -11,7 +11,7 @@ import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import LeafletEditPolygon from './simpleEdit/polygon';
-import { PolygonEditorState, type DragMarkerOptions, type EditOptionsExpends, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
+import { PolygonEditorState, type DragMarkerOptions, type EditOptionsExpends, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult, type ValidationOptions } from './types';
 import LeafletEditRectangle from './simpleEdit/rectangle';
 import { LeafletTopology } from './topo/topo';
 import LeafletRectangleEditor from './edit/rectangle';
@@ -315,6 +315,9 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             dragLineMarkerOptions: edgeMarkerConfig,
             dragMidMarkerOptions: midPointMarkerConfig
         };
+        const validation: ValidationOptions = {
+            allowSelfIntersect: false,
+        };
         // // 先清理之前的绘制
         // clearCurrentDraw();
 
@@ -326,11 +329,11 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 saveEditorAndAddListener(markerPoint);
                 break;
             case 'line':
-                const lineLayer = new LeafletPolyline(mapInstance, { validation: { allowSelfIntersect: false } });
+                const lineLayer = new LeafletPolyline(mapInstance, { validation });
                 saveEditorAndAddListener(lineLayer, true);
                 break;
             case 'polygon':
-                const polygonLayer = new LeafletPolygon(mapInstance, { validation: { allowSelfIntersect: false } });
+                const polygonLayer = new LeafletPolygon(mapInstance, { validation });
                 saveEditorAndAddListener(polygonLayer, true);
                 break;
             case 'circle':
@@ -360,7 +363,8 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             case 'polygon_editor':
                 const polygonLayerEditor = new LeafletPolygonEditor(mapInstance, {
                     snap,
-                    edit
+                    edit,
+                    validation,
                 });
                 saveEditorAndAddListener(polygonLayerEditor, true);
 
