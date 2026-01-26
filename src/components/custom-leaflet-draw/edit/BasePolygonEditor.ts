@@ -1,5 +1,5 @@
 import * as L from "leaflet";
-import { PolygonEditorState, type BaseEditOptions, type DragMarkerOptions, type EditOptionsExpends, type MidpointPair, type SnapOptions } from "../types";
+import { PolygonEditorState, type EditOptionsExpends, type MidpointPair, type SnapOptions, type ValidationOptions } from "../types";
 import { BaseEditor } from "./BaseEditor";
 import { buildMarkerIcon } from "../utils/commonUtils";
 
@@ -53,8 +53,8 @@ export abstract class BasePolygonEditor extends BaseEditor {
         }
     };
 
-    constructor(map: L.Map, options: { snap?: SnapOptions, edit?: EditOptionsExpends }) {
-        super(map, { snap: options?.snap });
+    constructor(map: L.Map, options: { snap?: SnapOptions, edit?: EditOptionsExpends, validation?: ValidationOptions }) {
+        super(map, { snap: options?.snap, validation: options?.validation });
         // 编辑点marker的配置信息初始化
         this.initPolygonEditOptions(options?.edit);
     }

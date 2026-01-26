@@ -1,5 +1,7 @@
-import { PolygonEditorState, type BaseEditOptions, type SnapOptions } from "../types";
-import { buildMarkerIcon } from "../utils/commonUtils";
+import * as L from 'leaflet';
+import { bboxPolygon, booleanValid } from '@turf/turf';
+import type { BBox } from 'geojson';
+import { PolygonEditorState, type BaseEditOptions, type SnapOptions, type ValidationOptions } from "../types";
 import { BaseEditor } from "./BaseEditor";
 
 // BaseRectangleEditor.ts - 矩形基类
@@ -11,8 +13,8 @@ export abstract class BaseRectangleEditor extends BaseEditor {
 
     protected rectEditConfig: BaseEditOptions | null = null;
 
-    constructor(map: L.Map, options: { snap?: SnapOptions, edit?: BaseEditOptions }) {
-        super(map, { snap: options?.snap });
+    constructor(map: L.Map, options: { snap?: SnapOptions, edit?: BaseEditOptions, validation?: ValidationOptions }) {
+        super(map, { snap: options?.snap, validation: options?.validation });
         // 编辑点marker的配置信息初始化
         this.rectEditConfig = this.initBaseEditOptions(options?.edit);
     }
@@ -174,4 +176,42 @@ export abstract class BaseRectangleEditor extends BaseEditor {
 
     // #endregion
 
+    // #region 校验矩形有效性
+    /** 使用 turf.booleanValid 校验矩形有效性
+     *
+     *
+     * @private
+     * @param {L.LatLng[]} coords
+     * @return {*}  {boolean}
+     * @memberof LeafletRectangle
+     */
+    protected isValidRectangle(coords: L.LatLng[]): boolean {
+        if (coords.length < 2) return false;
+
+        const point1 = coords[0];
+        const point2 = coords[1];
+
+        // 快速检查：距离是否过小
+        if (point1.distanceTo(point2) < 0.1) {
+            return false;
+        }
+
+        try {
+            // 使用 turf 进行专业校验
+            const bounds = L.latLngBounds(coords);
+            const bbox: BBox = [
+                bounds.getWest(),
+                bounds.getSouth(),
+                bounds.getEast(),
+                bounds.getNorth()
+            ];
+
+            const rectanglePolygon = bboxPolygon(bbox);
+            return booleanValid(rectanglePolygon);
+
+        } catch (error) {
+            return false;
+        }
+    }
+    // #endregion
 }

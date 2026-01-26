@@ -8,11 +8,21 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
     // 图层初始化时
     private drawLayerStyle = {
         weight: 2,
-        color: 'red', // 设置边线颜色
-        fillColor: "red", // 设置填充颜色
+        color: '#008BFF', // 设置边线颜色
+        fillColor: "#008BFF", // 设置填充颜色
         fillOpacity: 0.3, // 设置填充透明度
         fill: true, // no fill color means default fill color (gray for `dot` and `circle` markers, transparent for `plus` and `star`)
     };
+
+    // 图层无效时的样式
+    private errorDrawLayerStyle = {
+        weight: 2,
+        color: 'red', // 设置边线颜色
+        fillColor: "red", // 设置填充颜色
+        fillOpacity: 0.3, // 设置填充透明度
+        fill: true,
+    };
+
     private tempCoords: number[][] = [];
     private lastMoveCoord: number[] = []; // 存储鼠标移动的最后一个点的坐标信息
 
@@ -28,6 +38,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         super(map, {
             snap: options?.snap,
             edit: options?.edit,
+            validation: options?.validation,
         });
         if (this.map) {
 
@@ -40,7 +51,8 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             this.map.getContainer().style.cursor = existGeometry ? 'grab' : 'crosshair';
             // 不需要设置十字光标和禁用双击放大
             existGeometry ? this.map.doubleClickZoom.enable() : this.map.doubleClickZoom.disable();
-            this.drawLayerStyle = {...this.drawLayerStyle, ...options?.defaultStyle};
+            this.drawLayerStyle = { ...this.drawLayerStyle, ...options?.defaultStyle };
+            this.errorDrawLayerStyle = { ...this.errorDrawLayerStyle, ...options?.validErrorPolygonStyle };
             this.initLayers(existGeometry ? defaultGeometry : undefined);
             this.initMapEvent(this.map);
         }
@@ -150,7 +162,15 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
                 const { snappedLatLng } = this.applySnapWithTarget(e.latlng);
                 waitingAddCoord = [snappedLatLng.lat, snappedLatLng.lng];
             }
-            this.tempCoords.push(waitingAddCoord)
+            const testCoords = [...this.tempCoords, waitingAddCoord, this.tempCoords[0]];
+            // 实时校验并改变样式
+            const isValid = this.isValidPolygon(testCoords);
+            if (isValid) {
+                // 通过校验，则添加点
+                this.tempCoords.push(waitingAddCoord);
+                // 同时记录最后一个点，用于后续撤回操作行为
+                this.lastMoveCoord = waitingAddCoord;
+            }
             return;
         }
     }
@@ -167,19 +187,16 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         if (!this.polygonLayer) throw new Error('面图层实例化失败，无法完成图层创建，请重试');
         // 情况1： 正在绘制状态时，绘制的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
+            const lastCoord = [e.latlng.lat, e.latlng.lng];
             // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
-            const finalCoords = this.deduplicateCoordinates(this.tempCoords);
-            // 渲染单个面：[[面坐标]]
-            const renderCoords = [[...finalCoords, finalCoords[0]]];
-            this.renderLayer([renderCoords]);
-            this.tempCoords = []; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
-            this.lastMoveCoord = []; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
-            this.reset();
-            // 移除（吸附后）可能存在的高亮
-            this.clearSnapHighlights();
-            // 设置为空闲状态，并发出状态通知
-            this.updateAndNotifyStateChange(PolygonEditorState.Idle);
-            return;
+            const ringCoords = [...this.tempCoords, lastCoord, this.tempCoords[0]];
+            const finalCoords: number[][] = this.deduplicateCoordinates(ringCoords);
+            if (this.isValidPolygon(finalCoords)) {
+                this.finishedDraw(finalCoords);
+            } else {
+                // 校验失败，保持绘制状态
+                throw new Error('绘制面无效，请继续绘制或调整');
+            }
         } else {
             // 情况 2：已绘制完成后的后续双击事件的逻辑均走这个
             const clickedLatLng = e.latlng;
@@ -206,16 +223,21 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         if (!this.isActive()) return;
         // 逻辑1： 绘制时的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
-            this.lastMoveCoord = [e.latlng.lat, e.latlng.lng];
+            let lastMoveEndPoint = [e.latlng.lat, e.latlng.lng];
+            let tempMovedCoords = this.tempCoords;
+            // 
             if (this.IsEnableSnap()) {
                 const { snappedLatLng } = this.applySnapWithTarget(e.latlng);
-                this.lastMoveCoord = [snappedLatLng.lat, snappedLatLng.lng];
+                lastMoveEndPoint = [snappedLatLng.lat, snappedLatLng.lng];
             }
-            // 上面提供了吸附能力，但是如果坐标数组中没有点，原则上，鼠标移动事件不应该执行任何操作。
-            if (!this.tempCoords.length) return;
-            const movedPathCoords = [...this.tempCoords, this.lastMoveCoord];
+            // 1：如果坐标数组中没有点，什么也不做（只提供吸附能力）。
+            if (!tempMovedCoords.length) return;
+            // 2：构建临时坐标点数组。
+            tempMovedCoords = [...tempMovedCoords, lastMoveEndPoint];
+            // 校验事件
+            let layerIsValid = this.isValidPolygon([...tempMovedCoords, this.tempCoords[0]]);
             // 实时渲染, 包装成 [面][环][点] 结构
-            this.renderLayer([[movedPathCoords]]);
+            this.renderLayer([[tempMovedCoords]], layerIsValid);
             return;
         }
         // 逻辑2：编辑状态下的逻辑（编辑状态下如果分多个逻辑，需要定义新的变量用于区分。但这些都是在编辑状态下才会执行）
@@ -286,7 +308,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @param { [][]} coords
      * @memberof LeafletEditPolygon
      */
-    private renderLayer(coords: number[][][][]): void {
+    private renderLayer(coords: number[][][][], valid: boolean = true): void {
         if (!this.polygonLayer) {
             throw new Error('图层不存在，无法渲染');
         }
@@ -295,8 +317,26 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
                 ring.map(([lat, lng]) => L.latLng(lat, lng))
             )
         );
-
+        this.polygonLayer.setStyle(valid ? this.drawLayerStyle : this.errorDrawLayerStyle);
         this.polygonLayer.setLatLngs(latlngs as any);
+    }
+
+    /** 完成绘制（结束绘制）
+     *
+     *
+     * @private
+     * @param {number[][][][]} finalCoords
+     * @memberof LeafletPolygonEditor
+     */
+    private finishedDraw(finalCoords: number[][]): void {
+        this.renderLayer([[finalCoords]]);
+        this.tempCoords = []; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
+        this.lastMoveCoord = []; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
+        this.reset();
+        // 移除（吸附后）可能存在的高亮
+        this.clearSnapHighlights();
+        // 设置为空闲状态，并发出状态通知
+        this.updateAndNotifyStateChange(PolygonEditorState.Idle);
     }
 
 

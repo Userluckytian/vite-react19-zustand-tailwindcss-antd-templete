@@ -1,7 +1,8 @@
 import * as L from "leaflet";
-import { PolygonEditorState, type BaseEditOptions, type EditOptionsExpends, type EditorListenerConfigs, type GeometryIndex, type SnapHighlightLayerOptions, type SnapMode, type SnapOptions, type SnapResult } from "../types";
+import { PolygonEditorState, type BaseEditOptions, type EditOptionsExpends, type EditorListenerConfigs, type GeometryIndex, type SnapHighlightLayerOptions, type SnapMode, type SnapOptions, type SnapResult, type ValidationOptions } from "../types";
 import { SnapController } from "../utils/SnapController";
 import { buildMarkerIcon } from "../utils/commonUtils";
+import { kinks, polygon } from "@turf/turf";
 
 // BaseEditor.ts - 基础形状编辑器
 export abstract class BaseEditor {
@@ -52,9 +53,18 @@ export abstract class BaseEditor {
     };
 
 
-    constructor(map: L.Map, options: { snap?: SnapOptions }) {
+    // 添加校验配置
+    protected validationOptions: ValidationOptions = {};
+
+
+    constructor(map: L.Map, options: { snap?: SnapOptions, validation?: ValidationOptions }) {
         if (!map) throw new Error('传入的地图对象异常，请先确保地图对象已实例完成。');
         this.map = map;
+        // 校验规则
+        this.validationOptions = {
+            ...options?.validation
+        };
+
         // 初始化吸附控制器 
         this.snapHighlightLayer = L.layerGroup().addTo(map);
         this.initSnap(map, options?.snap);
@@ -563,6 +573,77 @@ export abstract class BaseEditor {
 
 
 
+    // #endregion
+
+
+    // #region 几何图形的有效性校验
+
+    /** 更新几何校验的内容项
+     * 
+     *
+     * @param {ValidationOptions} rules
+     * @memberof LeafletPolyline
+     */
+    public setValidationOptions(rules: ValidationOptions): void {
+        this.validationOptions = { ...this.validationOptions, ...rules };
+    }
+    /** 获取几何校验的内容项
+     * 
+     *
+     * @param {ValidationOptions} rules
+     * @memberof LeafletPolyline
+     */
+    public getValidationOptions(): ValidationOptions {
+        return this.validationOptions;
+    }
+
+    /** 校验面图层的有效性
+     *
+     *
+     * @private
+     * @param {L.LatLng[]} coords
+     * @return {*}  {boolean}
+     * @memberof LeafletRectangle
+     */
+    public isValidPolygon(coords: number[][]): boolean {
+
+        // 1. 检查自相交（根据配置）
+        if (this.validationOptions?.allowSelfIntersect === false) {
+            if (this.hasSelfIntersection(coords)) {
+                return false;
+            }
+        }
+
+        // 2. 其他校验规则可以在这里添加...
+
+        return true;
+
+    }
+
+    /** 自相交检测（使用 turf.kinks）
+     *
+     *
+     * @private
+     * @param {number[][]} coords
+     * @return {*}  {boolean} true=有自相交，false=无自相交
+     * @memberof LeafletPolyline
+     */
+    private hasSelfIntersection(coords: number[][]): boolean {
+
+        if (coords.length < 4) return false;
+
+        try {
+            // 2. 转换为GeoJSON格式 [lng, lat] ✅ 这个转换是必要的！
+            const geoJsonCoords = coords.map(coord => [coord[1], coord[0]]);
+            const turfPolygon = polygon([geoJsonCoords]);
+            const intersections = kinks(turfPolygon);
+
+            return intersections.features.length > 0;
+        } catch (error) {
+            console.warn('自相交检测失败:', error);
+            return false;
+        }
+    }
     // #endregion
 
 }

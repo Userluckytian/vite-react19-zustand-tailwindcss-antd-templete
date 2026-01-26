@@ -16,10 +16,19 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
     // 图层初始化时
     private drawLayerStyle = {
         weight: 2,
+        color: '#008BFF', // 设置边线颜色
+        fillColor: "#008BFF", // 设置填充颜色
+        fillOpacity: 0.3, // 设置填充透明度
+        fill: true, // no fill color means default fill color (gray for `dot` and `circle` markers, transparent for `plus` and `star`)
+    };
+
+    // 图层无效时的样式
+    private errorDrawLayerStyle = {
+        weight: 2,
         color: 'red', // 设置边线颜色
         fillColor: "red", // 设置填充颜色
         fillOpacity: 0.3, // 设置填充透明度
-        fill: true, // no fill color means default fill color (gray for `dot` and `circle` markers, transparent for `plus` and `star`)
+        fill: true,
     };
     private tempCoords: L.LatLng[] = [];
     private lastMoveCoord: L.LatLng | null = null; // 存储鼠标移动的最后一个点的坐标信息
@@ -32,7 +41,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      * @memberof LeafletEditPolygon
      */
     constructor(map: L.Map, options: LeafletToolsOptions = {}, defaultGeometry?: GeoJSON.Geometry) {
-        super(map, { snap: options?.snap });
+        super(map, { snap: options?.snap, validation: options?.validation, });
         if (this.map) {
             // 创建时激活
             this.activate();
@@ -105,7 +114,8 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         // 绘制操作会用到这俩
         map.on('click', this.mapClickEvent);
         map.on('mousemove', this.mapMouseMoveEvent);
-        // 编辑操作会用到双击事件
+        // -----分割线--------
+        // [编辑操作]会用到双击事件
         map.on('dblclick', this.mapDblClickEvent);
         // 拖动面用的这个
         map.on('mouseup', this.mapMouseUpEvent);
@@ -139,14 +149,15 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
                     point = snappedLatLng;
                 }
                 const finalCoords = [this.tempCoords[0], point];
-                this.renderLayer(finalCoords);
-                this.tempCoords = []; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
-                this.lastMoveCoord = null; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
-                this.reset();
-                // 移除（吸附后）可能存在的高亮
-                this.clearSnapHighlights();
-                // 设置为空闲状态，并发出状态通知- 61 + 
-                this.updateAndNotifyStateChange(PolygonEditorState.Idle);
+                const isValid = this.isValidRectangle(finalCoords);
+                if (isValid) {
+                    // 校验通过，完成绘制
+                    this.finishedDraw(finalCoords)
+                } else {
+                    // 校验失败，保持绘制状态（不执行reset）
+                    throw new Error('绘制的矩形无效，请调整');
+                    // 用户可以继续移动鼠标调整
+                }
             }
         }
     }
@@ -197,8 +208,9 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
             // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。
             if (this.tempCoords.length > 0) {
                 const movedPathCoords = [...this.tempCoords, this.lastMoveCoord];
+                const isValid = this.isValidRectangle(movedPathCoords);
                 // 实时渲染
-                this.renderLayer(movedPathCoords);
+                this.renderLayer(movedPathCoords, isValid);
             }
         }
         // 编辑时的逻辑
@@ -253,8 +265,9 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      * @param { [][]} coords
      * @memberof LeafletEditRectangle
      */
-    private renderLayer(coords: L.LatLng[]) {
+    private renderLayer(coords: L.LatLng[], valid: boolean = true) {
         if (this.rectangleLayer) {
+            this.rectangleLayer.setStyle(valid ? this.drawLayerStyle : this.errorDrawLayerStyle)
             const bounds = L.latLngBounds(coords);
             this.rectangleLayer.setBounds(bounds);
         } else {
@@ -275,6 +288,24 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         // 将 number[][] 转换为 L.LatLng[]
         const latlngs = coords.map(coord => L.latLng(coord[0], coord[1]));
         this.renderLayer(latlngs);
+    }
+
+    /** 完成绘制
+     *
+     *
+     * @private
+     * @param {L.LatLng[]} finalCoords
+     * @memberof LeafletRectangleEditor
+     */
+    private finishedDraw(finalCoords: L.LatLng[]): void {
+        this.renderLayer(finalCoords);
+        this.tempCoords = []; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
+        this.lastMoveCoord = null; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
+        this.reset();
+        // 移除（吸附后）可能存在的高亮
+        this.clearSnapHighlights();
+        // 设置为空闲状态，并发出状态通知- 61 + 
+        this.updateAndNotifyStateChange(PolygonEditorState.Idle);
     }
 
     /** 返回图层的空间信息 
