@@ -1,10 +1,11 @@
 /* 本组件，设计初衷是用作测量面积的工具的。
  * 因此：本组件不会吐出任何数据。
  * 1 ：绘制状态时，外部ui可能要展示取消按钮，所以需要给外部提供当前是否是处于绘制状态，即需要添加一个事件回调机制，外部监听状态的改变进行响应的ui调整
+ * 2 ：除了部分类型需要引入之外，本组件所有内容均在组件内容，可以直接搬运
  * */
 import { area, center, kinks, polygon } from '@turf/turf';
 import * as L from 'leaflet';
-import { PolygonEditorState, type LeafletToolsOptions, type ValidationOptions } from '../types';
+import { PolygonEditorState, type ValidationOptions } from '../types';
 
 export type areaOptions = {
     precision?: number;
@@ -171,7 +172,7 @@ export default class LeafletArea {
                 this.reset();
             } else {
                 // 校验失败，保持绘制状态
-                console.warn('折线无效，请继续绘制或调整');
+                throw new Error('绘制面无效，请继续绘制或调整');
                 // 不执行 reset()，让用户继续调整
             }
         }
