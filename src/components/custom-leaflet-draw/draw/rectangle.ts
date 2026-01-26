@@ -91,7 +91,7 @@ export default class LeafletRectangle {
                 this.reset();
             } else {
                 // 校验失败，保持绘制状态（不执行reset）
-                console.warn('绘制的圆形无效，请调整半径大小');
+                console.warn('绘制的矩形无效，请调整');
                 // 用户可以继续移动鼠标调整
             }
         }
@@ -127,7 +127,7 @@ export default class LeafletRectangle {
         // 1：一个点也没有时，我们移动事件，也什么也不做。
         if (!this.tempCoords.length) return;
         const lastMoveEndPoint = e.latlng;
-        // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。
+        // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。（这个判断没意义，可以去掉）
         if (this.tempCoords.length > 0) {
             this.tempCoords = [this.tempCoords[0], lastMoveEndPoint]
             const isValid = this.isValidRectangle(this.tempCoords);

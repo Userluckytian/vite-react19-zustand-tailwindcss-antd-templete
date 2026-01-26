@@ -98,7 +98,7 @@ export default class LeafletCircle {
                 this.reset();
             } else {
                 // 校验失败，保持绘制状态（不执行reset）
-                console.warn('绘制的圆形无效，请调整半径大小');
+                throw new Error('绘制的圆形无效，请调整半径大小');
                 // 用户可以继续移动鼠标调整
             }
         }

@@ -118,7 +118,7 @@ export default class LeafletPolygon {
                 this.reset();
             } else {
                 // 校验失败，保持绘制状态
-                console.warn('折线无效，请继续绘制或调整');
+                throw new Error('绘制的面无效，请继续绘制或调整');
                 // 不执行 reset()，让用户继续调整
             }
         }
@@ -152,11 +152,7 @@ export default class LeafletPolygon {
         const lastMoveEndPoint: number[] = [e.latlng.lat, e.latlng.lng];
         let tempMovedCoords = this.tempCoords;
         // 1：一个点也没有时，我们移动事件，也什么也不做。
-        // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。
-        if (tempMovedCoords.length === 1) {
-            tempMovedCoords = [tempMovedCoords[0], lastMoveEndPoint]
-        }
-        // 3：有两个及以上的点时，我们删掉在只有一个点时，塞入的最后移动的那个点，也就是前一个if语句中塞入的那个点，然后添加此刻移动结束的点。
+        // 2：塞入的最后移动的那个点。
         tempMovedCoords = [...tempMovedCoords, lastMoveEndPoint];
         // 实时校验并改变样式
         const isValid = this.isValidPolygon([...tempMovedCoords, this.tempCoords[0]]);
