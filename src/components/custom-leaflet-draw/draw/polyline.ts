@@ -109,14 +109,15 @@ export default class LeafletPolyline {
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
         if (this.lineLayer) {
+            const lastCoord = [e.latlng.lat, e.latlng.lng];
             // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
-            const finalCoords = this.deduplicateCoordinates(this.tempCoords);
+            const finalCoords = this.deduplicateCoordinates([...this.tempCoords, lastCoord]);
             if (this.isValidPolyline(finalCoords)) {
                 this.renderLayer(finalCoords);
                 this.reset();
             } else {
                 // 校验失败，保持绘制状态
-                console.warn('折线无效，请继续绘制或调整');
+                throw new Error('绘制的折线无效，请继续绘制或调整');
                 // 不执行 reset()，让用户继续调整
             }
         }
@@ -149,20 +150,14 @@ export default class LeafletPolyline {
      * @memberof LeafletPolyLine
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
+        // 1：一个点也没有时，我们移动事件，也什么也不做。
         if (!this.tempCoords.length) return;
         const lastMoveEndPoint: number[] = [e.latlng.lat, e.latlng.lng];
-        // 1：一个点也没有时，我们移动事件，也什么也不做。
-        // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。
-        if (this.tempCoords.length === 1) {
-            this.tempCoords = [this.tempCoords[0], lastMoveEndPoint]
-        }
-        // 3：有两个及以上的点时，我们删掉在只有一个点时，塞入的最后移动的那个点，也就是前一个if语句中塞入的那个点，然后添加此刻移动结束的点。
-        const fixedPoints = this.tempCoords.slice(0, this.tempCoords.length - 1); // 除最后一个点外的所有点
-        this.tempCoords = [...fixedPoints, lastMoveEndPoint];
+        const tempRenderCoords = [...this.tempCoords, lastMoveEndPoint];
         // 实时校验并改变样式
-        const isValid = this.isValidPolyline(this.tempCoords);
+        const isValid = this.isValidPolyline(tempRenderCoords);
         // 实时渲染
-        this.renderLayer(this.tempCoords, isValid);
+        this.renderLayer(tempRenderCoords, isValid);
     }
 
     /** 渲染图层
