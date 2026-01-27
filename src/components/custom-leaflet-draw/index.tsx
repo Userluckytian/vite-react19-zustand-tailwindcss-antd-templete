@@ -1077,6 +1077,27 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         }
     }, [mapInstance])
 
+    // async function chatWithOllama(message: string) {
+    //     const response = await fetch("/api/chat", {
+    //         method: "POST",
+    //         headers: { "Content-Type": "application/json" },
+    //         body: JSON.stringify({
+    //             model: "deepseek-r1:1.5b", // 或 'qwen:7b', 'mistral' 等
+    //             messages: [{ role: "user", content: message }],
+    //             stream: false,
+    //         }),
+    //     });
+    //     const data = await response.json();
+    //     return data.message.content;
+    // }
+
+    // useEffect(() => {
+    //     const getResopnse = async () => {
+    //         const reply = await chatWithOllama("你好");
+    //         console.log("reply", reply);
+    //     };
+    //     getResopnse();
+    // }, []);
 
     return (
         <>
@@ -1156,20 +1177,20 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 <div className="leaflet-other-toolbar leaflet-bar">
                     <div className='top'>
                         <div>其他属性工具条：</div>
-                    <div className='bottom'>
-                        {
-                            someConfigBar.map((ite: any, index: number) => {
-                                return (
-                                    <div className='other-item' key={'SCEML-' + index}>
-                                        <div className='label'>{ite.label}</div>
-                                        <div className='switch-btn'>
-                                            <Switch checkedChildren="开" unCheckedChildren="关" value={ite.enable} onChange={(e) => { changeOtherBarOptions(ite, e) }} />
+                        <div className='bottom'>
+                            {
+                                someConfigBar.map((ite: any, index: number) => {
+                                    return (
+                                        <div className='other-item' key={'SCEML-' + index}>
+                                            <div className='label'>{ite.label}</div>
+                                            <div className='switch-btn'>
+                                                <Switch checkedChildren="开" unCheckedChildren="关" value={ite.enable} onChange={(e) => { changeOtherBarOptions(ite, e) }} />
+                                            </div>
                                         </div>
-                                    </div>
-                                )
-                            })
-                        }
-                    </div>
+                                    )
+                                })
+                            }
+                        </div>
                     </div>
                 </div>
             }
