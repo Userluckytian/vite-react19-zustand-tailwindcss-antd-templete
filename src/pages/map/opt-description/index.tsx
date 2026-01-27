@@ -58,6 +58,7 @@ const FunctionPanel = () => {
                     <h3 className='text-xl font-bold mb-2'>功能模块3：图形拓扑功能</h3>
                     <div className="function-section">
                         <ul className="function-list">
+                            {/* <li className="completed">✔ 【增强】用户在topo选择图层时，库内部会禁止一些影响用户选择的editor监听事件，清除或者退出选择时，自动恢复这些事件监听</li> */}
                             <li className="completed">✔ 【裁剪-clip】选择一个或者多个图层，绘制一条穿过它们的折线，拆分图层（结果仅在控制台输出）</li>
                             <li className="completed">✔ 【合并-union】选择多个图层，点击合并按钮，实现图层的合并操作（结果仅在控制台输出）</li>
                             <li className="completed">✔ 【整形要素工具： Reshape Feature】参见： <a href="https://pro.arcgis.com/en/pro-app/latest/help/editing/reshape-a-feature.htm?utm_source=copilot.com" target="Reshape-Feature-page">Reshape a line or polygon feature</a>
