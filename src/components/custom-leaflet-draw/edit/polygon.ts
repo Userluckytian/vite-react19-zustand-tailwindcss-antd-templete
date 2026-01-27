@@ -2,6 +2,7 @@ import * as L from 'leaflet';
 import { PolygonEditorState, type LeafletToolsOptions, type MidpointPair, type SnapOptions } from '../types';
 import { booleanPointInPolygon, point } from '@turf/turf';
 import { BasePolygonEditor } from './BasePolygonEditor';
+import { LeafletTopology } from '../topo/topo';
 export default class LeafletPolygonEditor extends BasePolygonEditor {
 
     private polygonLayer: L.Polygon | null = null;
@@ -958,6 +959,11 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         // 如果是绘制操作，则直接跳过判断，后面的逻辑是给编辑操作准备的
         if (this.currentState === PolygonEditorState.Drawing) return true;
         if (!this.isVisible) return false;
+        // 🔒 检查是否处于topo选择状态，如果是则不进入编辑模式
+        if (LeafletTopology.isPicking(this.map)) {
+            // topo正在选择图层，不处理双击编辑事件
+            return false;
+        }
         const clickIsSelf = this.isClickOnMyLayer(e);
         // 已经激活的实例，确保点击在自己的图层上
         if (this.isActive()) {
