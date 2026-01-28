@@ -20,7 +20,6 @@ import "leaflet/dist/leaflet.css";
 interface MapPreviewProps {
   outputMapView?: (map: L.Map) => void;
 }
-
 interface BaseLayerConfig {
   name: "地图" | "地球" | "地形";
   option: string;
@@ -38,7 +37,6 @@ interface CurrentBaseLayers {
   type: string | null;
   layers: L.TileLayer[];
 }
-
 interface DrawLayer {
   id: string;
   name: string;
