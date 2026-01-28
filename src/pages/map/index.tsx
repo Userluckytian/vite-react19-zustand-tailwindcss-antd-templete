@@ -325,6 +325,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
       center: (baseMapSetting?.center as L.LatLngExpression) || defaultCenter,
       maxZoom: 18,
       minZoom: 4,
+      doubleClickZoom: false,
       attributionControl: false,
       zoomControl: false,
     });
