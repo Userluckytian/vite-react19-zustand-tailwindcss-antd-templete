@@ -42,8 +42,8 @@ export default class LeafletCircle {
             this.updateAndNotifyStateChange(PolygonEditorState.Drawing);
             // 鼠标手势设置为十字
             this.map.getContainer().style.cursor = 'crosshair';
-            // 禁用双击地图放大功能
-            this.map.doubleClickZoom.disable();
+            // 禁用双击地图放大功能（先考虑让用户自己去写，里面不再控制）
+            // this.map.doubleClickZoom.disable();
             // 使用用户传入的样式覆盖默认样式
             this.drawLayerStyle = { ...this.drawLayerStyle, ...options };
             this.initLayers();
@@ -158,8 +158,8 @@ export default class LeafletCircle {
         // 设置完毕就关闭地图事件监听
         this.offMapEvent(this.map);
         this.map.getContainer().style.cursor = 'grab';
-        // 恢复双击地图放大事件
-        this.map.doubleClickZoom.enable();
+        // 恢复双击地图放大事件（先考虑让用户自己去写，里面不再控制）
+        // this.map.doubleClickZoom.enable();
         // 设置为空闲状态，并发出状态通知
         this.updateAndNotifyStateChange(PolygonEditorState.Idle);
     }

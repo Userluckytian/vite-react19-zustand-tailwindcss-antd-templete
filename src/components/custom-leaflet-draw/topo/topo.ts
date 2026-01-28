@@ -239,12 +239,12 @@ export class LeafletTopology {
   }
 
   private disableMapOpt() {
-    // 1：禁用双击地图放大功能
-    this.map && this.map.doubleClickZoom.disable();
+    // 1：禁用双击地图放大功能（先考虑让用户自己去写，里面不再控制）
+    // this.map && this.map.doubleClickZoom.disable();
   }
   private enableMapOpt() {
-    // 1：恢复双击地图放大功能
-    this.map && this.map.doubleClickZoom.enable();
+    // 1：恢复双击地图放大功能（先考虑让用户自己去写，里面不再控制）
+    // this.map && this.map.doubleClickZoom.enable();
   }
   /** 
    * 清理状态和事件

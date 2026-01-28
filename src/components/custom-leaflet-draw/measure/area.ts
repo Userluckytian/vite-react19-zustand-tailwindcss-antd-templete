@@ -99,8 +99,8 @@ export default class LeafletArea {
             this.updateAndNotifyStateChange(PolygonEditorState.Drawing);
             // 鼠标手势设置为十字
             this.map.getContainer().style.cursor = 'crosshair';
-            // 禁用双击地图放大功能
-            this.map.doubleClickZoom.disable();
+            // 禁用双击地图放大功能（先考虑让用户自己去写，里面不再控制）
+            // this.map.doubleClickZoom.disable();
             // 初始化校验自身的相关配置信息
             if (measureOptions.validation) {
                 this.validationOptions = {
@@ -189,8 +189,8 @@ export default class LeafletArea {
         // 设置完毕就关闭地图事件监听
         this.offMapEvent(this.map);
         this.map.getContainer().style.cursor = 'grab';
-        // 恢复双击地图放大事件
-        this.map.doubleClickZoom.enable();
+        // 恢复双击地图放大事件（先考虑让用户自己去写，里面不再控制）
+        // this.map.doubleClickZoom.enable();
         // 初始化时，设置绘制状态为true，且发出状态通知
         this.updateAndNotifyStateChange(PolygonEditorState.Idle);
     }
