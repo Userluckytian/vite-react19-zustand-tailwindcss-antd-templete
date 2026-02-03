@@ -27,7 +27,7 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 1000, // 大于1000k才警告
     sourcemap: process.env.NODE_ENV !== 'production', // 非生产环境开启
-    minify: true,
+    minify: 'terser',
     terserOptions: {
       compress: {
         // 生产环境时移除console和debugger
@@ -67,6 +67,20 @@ export default defineConfig({
     }),
     tailwindcss(),
   ],
+  // 优化构建性能
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'antd',
+      'leaflet',
+      'dayjs',
+      'axios',
+      'crypto-js',
+      'zustand',
+      'react-router'
+    ],
+  },
   css: {
     preprocessorOptions: {
       scss: {
