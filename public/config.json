@@ -25,19 +25,10 @@
     "minZoom": 4,
     "zoom": 4,
     "maxZoom": 22,
-    "center": [
-      39.9,
-      105.38
-    ],
+    "center": [39.9, 105.38],
     "maxBounds": [
-      [
-        -90,
-        -180
-      ],
-      [
-        90,
-        180
-      ]
+      [-90, -180],
+      [90, 180]
     ]
   },
   "HOME_BASE_MAPS": [
@@ -106,6 +97,20 @@
     {
       "label": "L5A3",
       "value": "L5A3"
+    }
+  ],
+  "tileUrl":"http://10.17.17.243/dmaptiles",
+  "tk": "3e9b06efa6c5413c9127b3f989881c80",
+  "baseMapList": [
+    {
+      "mapUrl": "http://36.110.12.229:9015/usmaps?service=WMTS&version=1.0.0&request=GetTile&tk=53a6c3d4-4821-418d-8403-27213bac20c6&Layer&Style=1&Format=image/png&TileMatrixSet=l&TileMatrix={z}&TileRow={y}&TileCol={x}",
+      "center": [30.5984, 114.3118],
+      "zoom": 6,
+      "maxZoom": 18,
+      "type": "4326",
+      "id": "imagesky4326",
+      "name": "天地图WMTS影像(4326)",
+      "checked": true
     }
   ]
 }

@@ -43,6 +43,9 @@ const frontRouteConfig = [
             },
             { path: "map", element: LazyLoadComp(lazy(() => import("@/pages/map"))) },
             {
+                path:'rollup',element: LazyLoadComp(lazy(() => import("@/pages/rollup")))
+            },
+             {
                 path:'satellite',element: LazyLoadComp(lazy(() => import("@/pages/satellite")))
             },
             { path: "demoOne", element: LazyLoadComp(lazy(() => import("@/pages/demos/demo1"))) },
