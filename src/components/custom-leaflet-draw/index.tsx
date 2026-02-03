@@ -11,7 +11,7 @@ import LeafletRectangle from './draw/rectangle';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import LeafletEditPolygon from './simpleEdit/polygon';
-import { PolygonEditorState, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from './types';
+import { PolygonEditorState, type DragMarkerOptions, type EditOptionsExpends, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult, type ValidationOptions } from './types';
 import LeafletEditRectangle from './simpleEdit/rectangle';
 import { LeafletTopology } from './topo/topo';
 import LeafletRectangleEditor from './edit/rectangle';
@@ -142,10 +142,15 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     const currSelToolRef = useRef<string | null>(null); // 使用 ref 存储最新的工具类型
     const [currSelTool, setCurrSelTool] = useState<string | null>(null); // 当前使用的【绘制条上的绘制工具】
     const [drawLayers, setDrawLayers] = useState<any[]>([]); // 存放绘制的图层
-    const [currEditLayer, setCurrEditLayer] = useState<any>(null); // 当前编辑的图层【我们设置的是一次仅可编辑一个图层】
+    const [currEditor, setCurrEditor] = useState<any>(null); // 当前编辑的图层【我们设置的是一次仅可编辑一个图层】
     const [topologyInstance, setTopologyInstance] = useState<any>(null);
 
     const [reshapeBar, setReshapeBar] = useState<any[]>([
+        // {
+        //     id: 'enableEdit',
+        //     label: '重新打开编辑功能',
+        //     visible: false
+        // },
         {
             id: 'allowNoChoise',
             label: '允许无选择重塑',
@@ -157,6 +162,32 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             visible: false
         }
     ]);
+    const [editConfigBar, setEditConfigBar] = useState<any[]>([
+        {
+            id: 'snap',
+            label: '吸附',
+            enable: true
+        },
+        {
+            id: 'midPoint',
+            label: '渲染中点marker',
+            enable: true
+        },
+        {
+            id: 'edgeMarker',
+            label: '渲染拖动线marker',
+            enable: true
+        },
+    ]);
+    const [someConfigBar, setSomeConfigBar] = useState<any[]>([
+        {
+            id: 'valid',
+            label: '允许自相交',
+            enable: true
+        },
+    ]);
+
+    const polygonEditorRef = useRef<LeafletPolygonEditor | LeafletRectangleEditor | null>(null);
 
     // 改变reshapeBar的选项
     const changeReshapeBarOptions = (item: any, checked: boolean) => {
@@ -168,6 +199,9 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             return tempData;
         })
         switch (item.id) {
+            case 'enableEdit':
+                polygonEditorRef.current.setEditEnabled(checked);
+                break;
             case 'allowNoChoise':
                 break;
             case 'manual':
@@ -177,6 +211,80 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 break;
         }
 
+    }
+    // 改变other属性的选项
+    const changeOtherBarOptions = (item: any, checked: boolean) => {
+        item.enable = !item.enable;
+        setSomeConfigBar((pre: any) => {
+            const tempData = JSON.parse(JSON.stringify(pre));
+            const itemIdx = someConfigBar.findIndex((it: any) => it.id === item.id);
+            itemIdx > -1 && (tempData[itemIdx] = item);
+            return tempData;
+        })
+        switch (item.id) {
+            case 'valid':
+                break;
+
+            default:
+                break;
+        }
+
+    }
+    // 改变EditConfigBar的选项
+    const changeEditConfigBarOptions = (item: any, checked: boolean) => {
+        item.enable = !item.enable;
+        setEditConfigBar((pre: any) => {
+            const tempData = JSON.parse(JSON.stringify(pre));
+            const itemIdx = editConfigBar.findIndex((it: any) => it.id === item.id);
+            itemIdx > -1 && (tempData[itemIdx] = item);
+            return tempData;
+        })
+        switch (item.id) {
+            case 'edit':
+                polygonEditorRef.current.setEditEnabled(checked);
+                break;
+            case 'snap':
+                const snapAllOptions: SnapOptions = {
+                    enabled: checked,
+                    modes: ['edge', 'vertex'],
+                    tolerance: 8,
+                    highlight: {
+                        enabled: true,
+                        pointStyle: {
+                            radius: 15,
+                            color: '#00ff00',
+                            weight: 2,
+                            fillOpacity: 0.8,
+                            pane: 'mapPane'
+                        },
+                        edgeStyle: {
+                            color: '#00ff00',
+                            weight: 5,
+                            dashArray: '4,2',
+                            pane: 'mapPane'
+                        }
+                    }
+                };
+                polygonEditorRef.current.toggleSnap(snapAllOptions);
+                break;
+            case 'midPoint':
+                polygonEditorRef.current.updateEditOptions({
+                    dragMidMarkerOptions: {
+                        enabled: checked
+                    }
+                } as EditOptionsExpends)
+                break;
+            case 'edgeMarker':
+                polygonEditorRef.current.updateEditOptions({
+                    dragLineMarkerOptions: {
+                        enabled: checked
+                    }
+                } as EditOptionsExpends)
+                break;
+
+            default:
+                break;
+        }
     }
 
 
@@ -199,6 +307,37 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
             enabled: true,
             modes: ['edge', 'vertex']
         };
+        // 顶点渲染参数
+        const midPointMarkerConfig: DragMarkerOptions = {
+            enabled: true,
+            dragMarkerStyle: {
+                icon: L.divIcon({
+                    className: 'polygon-midpoint-insert',
+                    html: `<div style="border-radius:50%;background:#fff;border:2px solid #f00;width:14px;height:14px"></div>`,
+                    iconSize: [14, 14]
+                }),
+                pane: 'markerPane'
+            }
+        }
+        const edgeMarkerConfig: DragMarkerOptions = {
+            enabled: true,
+            dragMarkerStyle: {
+                icon: L.divIcon({
+                    className: 'polygon-midpoint-insert',
+                    html: `<div style="border-radius:50%;background:#fff;border:2px solid #0f0;width:14px;height:14px"></div>`,
+                    iconSize: [14, 14]
+                }),
+                pane: 'markerPane'
+            }
+        }
+        const edit: EditOptionsExpends = {
+            enabled: true,
+            dragLineMarkerOptions: edgeMarkerConfig,
+            dragMidMarkerOptions: midPointMarkerConfig
+        };
+        const validation: ValidationOptions = {
+            allowSelfIntersect: someConfigBar.find((it: any) => it.id === 'valid').enable,
+        };
         // // 先清理之前的绘制
         // clearCurrentDraw();
 
@@ -210,12 +349,12 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 saveEditorAndAddListener(markerPoint);
                 break;
             case 'line':
-                const lineLayer = new LeafletPolyline(mapInstance);
-                saveEditorAndAddListener(lineLayer);
+                const lineLayer = new LeafletPolyline(mapInstance, { validation });
+                saveEditorAndAddListener(lineLayer, true);
                 break;
             case 'polygon':
-                const polygonLayer = new LeafletPolygon(mapInstance);
-                saveEditorAndAddListener(polygonLayer);
+                const polygonLayer = new LeafletPolygon(mapInstance, { validation });
+                saveEditorAndAddListener(polygonLayer, true);
                 break;
             case 'circle':
                 const circleLayer = new LeafletCircle(mapInstance);
@@ -230,7 +369,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 saveEditorAndAddListener(distanceLayer);
                 break;
             case 'measure_area':
-                const areaLayer = new LeafletArea(mapInstance);
+                const areaLayer = new LeafletArea(mapInstance, { precision: 2, lang: 'zh', validation: { allowSelfIntersect: false } });
                 saveEditorAndAddListener(areaLayer);
                 break;
             case 'edit_polygon':
@@ -242,12 +381,17 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 saveEditorAndAddListener(editRectangleLayer);
                 break;
             case 'polygon_editor':
-                const polygonLayerEditor = new LeafletPolygonEditor(mapInstance, { snap });
-                saveEditorAndAddListener(polygonLayerEditor);
+                const polygonLayerEditor = new LeafletPolygonEditor(mapInstance, {
+                    snap,
+                    edit,
+                    validation,
+                });
+                saveEditorAndAddListener(polygonLayerEditor, true);
+
                 break;
             case 'rectangle_editor':
-                const rectangleLayerEditor = new LeafletRectangleEditor(mapInstance, { snap });
-                saveEditorAndAddListener(rectangleLayerEditor);
+                const rectangleLayerEditor = new LeafletRectangleEditor(mapInstance, { snap, edit });
+                saveEditorAndAddListener(rectangleLayerEditor, true);
                 break;
             case 'add':
                 const geometry: any = {
@@ -476,7 +620,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 const polygonEditor = new LeafletPolygonEditor(mapInstance!, {}, geometry);
                 const polygonEditor2 = new LeafletPolygonEditor(mapInstance!, {}, polygonGeom);
                 const polygonEditor3 = new LeafletPolygonEditor(mapInstance!, {}, polyGeom);
-                saveEditorAndAddListener(polygonEditor, 'add');
+                saveEditorAndAddListener(polygonEditor, false, true, 'add');
 
                 const polyGeomline: any = {
                     "type": "LineString",
@@ -556,7 +700,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     ]
                 };
                 const holePolygonEditor = new LeafletPolygonEditor(mapInstance!, {}, hole_geometry);
-                saveEditorAndAddListener(holePolygonEditor, 'add_hole');
+                saveEditorAndAddListener(holePolygonEditor, false, true, 'add_hole');
                 break;
             case 'add_hole_multi':
                 const hole_multi_geometry: any = {
@@ -659,14 +803,14 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     ]
                 };
                 const holeMultiPolygonEditor = new LeafletPolygonEditor(mapInstance!, {}, hole_multi_geometry);
-                saveEditorAndAddListener(holeMultiPolygonEditor, 'add_hole_multi');
+                saveEditorAndAddListener(holeMultiPolygonEditor, false, true, 'add_hole_multi');
                 break;
             case 'delete':
                 // 销毁图层
                 clearAllIfExist();
                 // 关闭工具条
-                if (currEditLayer) {
-                    setCurrEditLayer(null);
+                if (currEditor) {
+                    setCurrEditor(null);
                 }
                 break;
 
@@ -680,7 +824,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
      *
      * @param {leafletGeoEditorInstance} editor
      */
-    const saveEditorAndAddListener = (editor: leafletGeoEditorInstance, toolId?: string) => {
+    const saveEditorAndAddListener = (editor: leafletGeoEditorInstance, needSnapToobar: boolean = false, immediateNotify: boolean = false, toolId?: string) => {
         setDrawLayers((pre: any[]) => [...pre, editor]);
         // 对于有默认 geometry 的工具，立即触发绘制结果回调
         if (props.drawGeoJsonResult && toolId && ['add', 'add_hole', 'add_hole_multi'].includes(toolId)) {
@@ -709,8 +853,14 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         // 添加监听逻辑
         editor.onStateChange((status: PolygonEditorState) => {
             const currentTool = currSelToolRef.current;
+            // if (status === PolygonEditorState.Drawing) {
+            //     setCurrEditor(editor);
+            // } else 
             if (status === PolygonEditorState.Editing) {
-                setCurrEditLayer(editor);
+                setCurrEditor(editor);
+                if (needSnapToobar) {
+                    polygonEditorRef.current = editor as (LeafletPolygonEditor | LeafletRectangleEditor);
+                }
             } else {
                 if (status === PolygonEditorState.Idle && currentTool && !['add', 'add_hole', 'add_hole_multi'].includes(currentTool)) {
                     // 绘制完成，尝试获取绘制的图层数据
@@ -744,9 +894,9 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                         console.error('获取绘制结果失败:', error);
                     }
                 }
-                setCurrEditLayer(null);
+                setCurrEditor(null);
             }
-        })
+        }, { immediateNotify })
     }
 
     // #region 绘制工具条事件
@@ -774,20 +924,25 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
     // #endregion
 
     // #region 编辑工具条事件
-    const undoEdit = () => {
-        currEditLayer && currEditLayer.undoEdit();
+    const undoDraw = () => {
+        currEditor && currEditor.undoDraw();
+    }
+    // #endregion
 
+    // #region 编辑工具条事件
+    const undoEdit = () => {
+        currEditor && currEditor.undoEdit();
     }
     const redoEdit = () => {
-        currEditLayer && currEditLayer.redoEdit();
+        currEditor && currEditor.redoEdit();
     }
     // 重置到最初状态
     const resetToInitial = () => {
-        currEditLayer && currEditLayer.resetToInitial();
+        currEditor && currEditor.resetToInitial();
     }
     // 完成编辑
     const saveEdit = () => {
-        currEditLayer && currEditLayer.commitEdit();
+        currEditor && currEditor.commitEdit();
     }
     // #endregion
 
@@ -886,7 +1041,12 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         }
         if (e.ctrlKey && e.key === 'z') {
             e.preventDefault();
-            undoEdit();
+            const state = (currEditor as (LeafletPolygonEditor | LeafletRectangleEditor)).getCurrentState();
+            if (state === PolygonEditorState.Drawing) {
+                undoDraw();
+            } else {
+                undoEdit();
+            }
         }
         if (e.ctrlKey && e.key === 's') {
             e.preventDefault();
@@ -905,7 +1065,8 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         }
-    }, [currEditLayer])
+    }, [currEditor])
+
     useEffect(() => {
         if (mapInstance) {
             const topology = LeafletTopology.getInstance(mapInstance);
@@ -916,6 +1077,27 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
         }
     }, [mapInstance])
 
+    // async function chatWithOllama(message: string) {
+    //     const response = await fetch("/api/chat", {
+    //         method: "POST",
+    //         headers: { "Content-Type": "application/json" },
+    //         body: JSON.stringify({
+    //             model: "deepseek-r1:1.5b", // 或 'qwen:7b', 'mistral' 等
+    //             messages: [{ role: "user", content: message }],
+    //             stream: false,
+    //         }),
+    //     });
+    //     const data = await response.json();
+    //     return data.message.content;
+    // }
+
+    // useEffect(() => {
+    //     const getResopnse = async () => {
+    //         const reply = await chatWithOllama("你好");
+    //         console.log("reply", reply);
+    //     };
+    //     getResopnse();
+    // }, []);
 
     return (
         <>
@@ -942,7 +1124,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 ))}
             </div>
             {/* 编辑工具条 */}
-            {currEditLayer
+            {currEditor
                 &&
                 <div className="leaflet-edit-toolbar leaflet-bar">
                     <div>编辑工具条：</div>
@@ -953,7 +1135,7 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                 </div>
             }
             {/* 拓扑工具条(俩条件：1：地图上存在图层 2：不是编辑模式时。才展示拓扑工具条) */}
-            {!currEditLayer
+            {!currEditor
                 &&
                 <div className="leaflet-topology-toolbar leaflet-bar">
                     <div>拓扑工具条：</div>
@@ -963,8 +1145,8 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                     <div className='topology-tool-item item-bar' onClick={() => clearTopo()}>🔄 清除</div>
                 </div>
             }
-            {/* 整形要素工具条：（开关在topo工具条上，） */}
-            {!currEditLayer
+            {/* 整形要素工具条 */}
+            {!currEditor
                 &&
                 <div className="leaflet-reshape-toolbar leaflet-bar">
                     <div className='top'>
@@ -980,6 +1162,49 @@ export default function CustomLeafLetDraw(props: CustomLeafLetDrawProps) {
                                     <div className='reshape-item' key={'SCEML-' + index}>
                                         <div className='switch-btn'>
                                             <Switch checkedChildren="开" unCheckedChildren="关" value={ite.visible} onChange={(e) => { changeReshapeBarOptions(ite, e) }} />
+                                        </div>
+                                        <div className='label'>{ite.label}</div>
+                                    </div>
+                                )
+                            })
+                        }
+                    </div>
+                </div>
+            }
+            {/* 其他属性工具条 */}
+            {true
+                &&
+                <div className="leaflet-other-toolbar leaflet-bar">
+                    <div className='top'>
+                        <div>其他属性工具条：</div>
+                        <div className='bottom'>
+                            {
+                                someConfigBar.map((ite: any, index: number) => {
+                                    return (
+                                        <div className='other-item' key={'SCEML-' + index}>
+                                            <div className='label'>{ite.label}</div>
+                                            <div className='switch-btn'>
+                                                <Switch checkedChildren="开" unCheckedChildren="关" value={ite.enable} onChange={(e) => { changeOtherBarOptions(ite, e) }} />
+                                            </div>
+                                        </div>
+                                    )
+                                })
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+            {/* 编辑配置工具 */}
+            {currEditor
+                &&
+                <div className="edit-config-toolbar leaflet-bar">
+                    <div className='edit-config-content'>
+                        {
+                            editConfigBar.map((ite: any, index: number) => {
+                                return (
+                                    <div className='edit-config-item' key={'ECTLB-' + index}>
+                                        <div className='switch-btn'>
+                                            <Switch checkedChildren="开" unCheckedChildren="关" value={ite.enable} onChange={(e) => { changeEditConfigBarOptions(ite, e) }} />
                                         </div>
                                         <div className='label'>{ite.label}</div>
                                     </div>

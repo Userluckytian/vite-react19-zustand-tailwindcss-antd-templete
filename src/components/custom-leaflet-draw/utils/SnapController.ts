@@ -42,6 +42,23 @@ export class SnapController {
         this.map = map;
     }
 
+    /** 获取阈值
+     *
+     * @memberof SnapController
+     */
+    public getTolerance() {
+       return this.tolerance;
+    }
+
+    /** 获取吸附模式
+     *
+     *
+     * @memberof SnapController
+     */
+    public getModes() {
+       return this.modes;
+    }
+    
     /** 设置阈值
      *
      *

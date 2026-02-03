@@ -219,8 +219,8 @@ export abstract class SimpleBaseEditor {
      */
     public reset() {
         this.map.getContainer().style.cursor = 'grab';
-        // 恢复双击地图放大事件
-        this.map.doubleClickZoom.enable();
+        // 恢复双击地图放大事件（先考虑让用户自己去写，里面不再控制）
+        // this.map.doubleClickZoom.enable();
     }
     // #endregion
 

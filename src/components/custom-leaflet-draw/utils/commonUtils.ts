@@ -115,34 +115,54 @@ export function queryLayerOnClick(map: L.Map, e: L.LeafletMouseEvent) {
  * @returns 与之相交的图层数组
  */
 export function queryLayersIntersectingGeometry(
-  map: L.Map,
-  geometry: GeoJSON.Feature | L.Polyline | L.Polygon
+    map: L.Map,
+    geometry: GeoJSON.Feature | L.Polyline | L.Polygon
 ): any[] {
-  const selectList: any[] = [];
+    const selectList: any[] = [];
 
-  // 转换为标准 GeoJSON Feature
-  const inputFeature: GeoJSON.Feature =
-    geometry instanceof L.Polyline || geometry instanceof L.Polygon
-      ? geometry.toGeoJSON() as any
-      : geometry;
+    // 转换为标准 GeoJSON Feature
+    const inputFeature: GeoJSON.Feature =
+        geometry instanceof L.Polyline || geometry instanceof L.Polygon
+            ? geometry.toGeoJSON() as any
+            : geometry;
 
-  map.eachLayer((layer: any) => {
-    if (!layer.toGeoJSON) return;
+    map.eachLayer((layer: any) => {
+        if (!layer.toGeoJSON) return;
 
-    const feature = layer.toGeoJSON();
-    if (feature.type === 'FeatureCollection') return;
+        const feature = layer.toGeoJSON();
+        if (feature.type === 'FeatureCollection') return;
 
-    const layerFeature = turfFeature(feature.geometry);
-    
-    // 判断是否相交
-    if (booleanIntersects(inputFeature, layerFeature)) {
-        selectList.push(layer);
-    }
-  });
+        const layerFeature = turfFeature(feature.geometry);
 
-  return selectList;
+        // 判断是否相交
+        if (booleanIntersects(inputFeature, layerFeature)) {
+            selectList.push(layer);
+        }
+    });
+
+    return selectList;
 }
 
+
+/** 动态生成marker图标(天地图应该是构建的点图层+marker图层两个)
+ *
+ *
+ * @private
+ * @param {string} [iconStyle="border-radius: 50%;background: #ffffff;border: solid 3px red;"]
+ * @param {L.PointExpression} [iconSize=[20, 20]]
+ * @param {L.DivIconOptions} [options]
+ * @return {*}  {L.DivIcon}
+ * @memberof LeafletEditPolygon
+ */
+export function buildMarkerIcon(iconStyle = "border-radius: 50%;background: #ffffff;border: solid 3px red;", iconSize: number[] = [20, 20], options?: L.DivIconOptions): L.DivIcon {
+    let defaultIconStyle = `width:${iconSize[0]}px; height: ${iconSize[1]}px;`
+    return L.divIcon({
+        className: 'edit-polygon-marker',
+        html: `<div style="${iconStyle + defaultIconStyle}"></div>`,
+        iconSize: iconSize as L.PointExpression,
+        ...options
+    });
+}
 
 
 // #region 不需要暴露出去的函数集合

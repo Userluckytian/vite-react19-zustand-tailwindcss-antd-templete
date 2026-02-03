@@ -44,6 +44,8 @@ const FunctionPanel = () => {
                             </ol>
                         </div>
                         <ul className="function-list">
+                            <li className="completed">✔ 【绘制时撤销已经绘制的点的最后一个点】</li>
+                            <li className="completed">✔ 【绘制时吸附已经存在的图层】</li>
                             <li className="completed">✔ 【编辑点】拖动顶点，以及右键实现顶点移除</li>
                             <li className="completed">✔ 【中点插入】拖动线上的红色marker，实现添加新的点</li>
                             <li className="completed">✔ 【拖动边】拖动线上的蓝色marker，实现拖动边功能</li>
@@ -56,6 +58,7 @@ const FunctionPanel = () => {
                     <h3 className='text-xl font-bold mb-2'>功能模块3：图形拓扑功能</h3>
                     <div className="function-section">
                         <ul className="function-list">
+                            {/* <li className="completed">✔ 【增强】用户在topo选择图层时，库内部会禁止一些影响用户选择的editor监听事件，清除或者退出选择时，自动恢复这些事件监听</li> */}
                             <li className="completed">✔ 【裁剪-clip】选择一个或者多个图层，绘制一条穿过它们的折线，拆分图层（结果仅在控制台输出）</li>
                             <li className="completed">✔ 【合并-union】选择多个图层，点击合并按钮，实现图层的合并操作（结果仅在控制台输出）</li>
                             <li className="completed">✔ 【整形要素工具： Reshape Feature】参见： <a href="https://pro.arcgis.com/en/pro-app/latest/help/editing/reshape-a-feature.htm?utm_source=copilot.com" target="Reshape-Feature-page">Reshape a line or polygon feature</a>
@@ -64,11 +67,11 @@ const FunctionPanel = () => {
                                     <li>①：支持线、面的重塑处理。（✔）</li>
                                     <li>②：【Allow reshaping without a selection】允许无选择重塑。（✔）</li>
                                     <li>③：【Show Preview】实时预览reshape效果，便于判断结果是否符合预期。（目前：不支持）</li>
-                                    <li>④：【Reshape with single intersection】仅限线要素，允许单一交叉点重塑。（✔）</li>
+                                    <li>④：【Reshape with single interseIntection】仅限线要素，允许单一交叉点重塑。（✔）</li>
                                     <li>⑤：【Choose result on finish】完成后，由用户来选择要保留的部分。（✔）</li>
                                 </ul>
                             </li>
-                            <li className="completed">🌀【顶点吸附】
+                            <li className="completed">✔【顶点吸附】
                                 （结果仅在控制台输出）
                                 <ul className='text-amber-600'>
                                     <li>①：拖动面时，不进行吸附行为（✔）</li>
@@ -78,12 +81,22 @@ const FunctionPanel = () => {
                                     <li>⑤：若可吸附，高亮目标线（✔）</li>
                                 </ul>
                             </li>
+                            <li className="completed">✔【增加自相交校验】
+                                <ul className='text-amber-600'>
+                                    <li>①：支持的绘制工具：<CustomIcon type='icon-biaoxian_1' title="标线" />、 <CustomIcon type='icon-biaomian_0' title="标面"/>、<CustomIcon type='icon-cemian_0'  title="测面"/>、 <CustomIcon type='icon-huizhiduobianxing1' title="绘制多边形" />（✔）</li>
+                                    <li>②：如何使用：先点击”其他属性工具条“上的自相交开关，再进行绘制行为（✔）</li>
+                                    <li>③：视觉反馈：不允许自相交时，绘制的图形，若发生了自相交，图形会变为红色，双击事件无法结束绘制（✔）</li>
+                                    <li>④：tip：绘制过程中，切换自相交，校验机制不会生效(因为未处理)。本工具是支持的（<code>editorInstance.setValidationOptions({`{allowSelfIntersect: false / true}`})</code>）（✔）</li>
+                                </ul>
+                                
+                            </li>
                             <li className="pending">【magic魔棒选择要素工具】</li>
                         </ul>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 };
 

@@ -6,13 +6,21 @@
  * 综上：本组件不会吐出rectangleLayer对象，只提供上面说的2的功能：吐出坐标信息，以及3里的监听事件回调机制。
  * */
 import * as L from 'leaflet';
-import { PolygonEditorState, type LeafletPolylineOptionsExpends } from '../types';
+import { PolygonEditorState, type LeafletToolsOptions } from '../types';
+import { bboxPolygon, booleanValid } from '@turf/turf';
+import type { BBox } from 'geojson';
 export default class LeafletRectangle {
 
     private map: L.Map;
     private rectangleLayer: L.Rectangle | null = null;
     // 图层初始化时
     private drawLayerStyle = {
+        color: '#008BFF', // 设置边线颜色
+        fillColor: "#008BFF", // 设置填充颜色
+        fillOpacity: 0.3, // 设置填充透明度
+    };
+    // 图层无效时的样式
+    private errorDrawLayerStyle = {
         color: 'red', // 设置边线颜色
         fillColor: "red", // 设置填充颜色
         fillOpacity: 0.3, // 设置填充透明度
@@ -24,27 +32,28 @@ export default class LeafletRectangle {
     // 2：我们需要一个数组，存储全部的监听事件，然后在状态改变时，触发所有这些事件的监听回调！
     private stateListeners: ((state: PolygonEditorState) => void)[] = [];
 
-    constructor(map: L.Map, options: LeafletPolylineOptionsExpends = {}) {
+    constructor(map: L.Map, options: LeafletToolsOptions = {}) {
         this.map = map;
         if (this.map) {
             // 初始化时，设置绘制状态为true，且发出状态通知
             this.updateAndNotifyStateChange(PolygonEditorState.Drawing);
             // 鼠标手势设置为十字
             this.map.getContainer().style.cursor = 'crosshair';
-            // 禁用双击地图放大功能
-            this.map.doubleClickZoom.disable();
-            this.initLayers(options);
+            // 禁用双击地图放大功能（先考虑让用户自己去写，里面不再控制）
+            // this.map.doubleClickZoom.disable();
+            // 使用用户传入的样式覆盖默认样式
+            this.drawLayerStyle = { ...this.drawLayerStyle, ...options?.defaultStyle };
+            this.initLayers();
             this.initMapEvent(this.map);
         }
     }
 
     // 初始化图层
-    private initLayers(options: LeafletPolylineOptionsExpends) {
+    private initLayers() {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[[-90, -180], [-90, -180]]坐标，也就是页面的左下角
-        const polylineOptions: LeafletPolylineOptionsExpends = {
+        const polylineOptions: L.PolylineOptions = {
             pane: 'overlayPane',
             ...this.drawLayerStyle,
-            ...options
         };
         this.rectangleLayer = L.rectangle([[181, 181], [182, 182]], polylineOptions);
         this.rectangleLayer.addTo(this.map);
@@ -75,8 +84,16 @@ export default class LeafletRectangle {
             this.tempCoords.push(e.latlng)
         } else {
             const finalCoords = [this.tempCoords[0], e.latlng];
-            this.renderLayer(finalCoords);
-            this.reset();
+            const isValid = this.isValidRectangle(finalCoords);
+            if (isValid) {
+                // 校验通过，完成绘制
+                this.renderLayer(finalCoords);
+                this.reset();
+            } else {
+                // 校验失败，保持绘制状态（不执行reset）
+                console.warn('绘制的矩形无效，请调整');
+                // 用户可以继续移动鼠标调整
+            }
         }
     }
 
@@ -92,8 +109,8 @@ export default class LeafletRectangle {
         // 设置完毕就关闭地图事件监听
         this.offMapEvent(this.map);
         this.map.getContainer().style.cursor = 'grab';
-        // 恢复双击地图放大事件
-        this.map.doubleClickZoom.enable();
+        // 恢复双击地图放大事件（先考虑让用户自己去写，里面不再控制）
+        // this.map.doubleClickZoom.enable();
         // 设置为空闲状态，并发出状态通知
         this.updateAndNotifyStateChange(PolygonEditorState.Idle);
     }
@@ -110,12 +127,13 @@ export default class LeafletRectangle {
         // 1：一个点也没有时，我们移动事件，也什么也不做。
         if (!this.tempCoords.length) return;
         const lastMoveEndPoint = e.latlng;
-        // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。
+        // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。（这个判断没意义，可以去掉）
         if (this.tempCoords.length > 0) {
             this.tempCoords = [this.tempCoords[0], lastMoveEndPoint]
+            const isValid = this.isValidRectangle(this.tempCoords);
+            // 实时渲染
+            this.renderLayer(this.tempCoords, isValid);
         }
-        // 实时渲染
-        this.renderLayer(this.tempCoords);
     }
 
     /** 渲染图层
@@ -123,10 +141,12 @@ export default class LeafletRectangle {
      *
      * @private
      * @param { [][]} coords
+     * @param {boolean} valid 
      * @memberof LeafletRectangle
      */
-    private renderLayer(coords: L.LatLng[]) {
+    private renderLayer(coords: L.LatLng[], valid: boolean = true) {
         if (this.rectangleLayer) {
+            this.rectangleLayer.setStyle(valid ? this.drawLayerStyle : this.errorDrawLayerStyle)
             const bounds = L.latLngBounds(coords);
             this.rectangleLayer.setBounds(bounds);
         } else {
@@ -158,6 +178,7 @@ export default class LeafletRectangle {
             this.rectangleLayer = null;
         }
         this.reset();
+        this.clearAllStateListeners();
     }
 
     /** 关闭地图事件监听
@@ -216,5 +237,43 @@ export default class LeafletRectangle {
         this.currentState = status;
         this.stateListeners.forEach(fn => fn(this.currentState));
     }
+
+    /** 使用 turf.booleanValid 校验矩形有效性
+     *
+     *
+     * @private
+     * @param {L.LatLng[]} coords
+     * @return {*}  {boolean}
+     * @memberof LeafletRectangle
+     */
+    private isValidRectangle(coords: L.LatLng[]): boolean {
+        if (coords.length < 2) return false;
+
+        const point1 = coords[0];
+        const point2 = coords[1];
+
+        // 快速检查：距离是否过小
+        if (point1.distanceTo(point2) < 0.1) {
+            return false;
+        }
+
+        try {
+            // 使用 turf 进行专业校验
+            const bounds = L.latLngBounds(coords);
+            const bbox: BBox = [
+                bounds.getWest(),
+                bounds.getSouth(),
+                bounds.getEast(),
+                bounds.getNorth()
+            ];
+
+            const rectanglePolygon = bboxPolygon(bbox);
+            return booleanValid(rectanglePolygon);
+
+        } catch (error) {
+            return false;
+        }
+    }
+
     // #endregion
 }

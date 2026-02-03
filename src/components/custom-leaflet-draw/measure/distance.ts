@@ -5,25 +5,47 @@
 import { distance, type Units } from '@turf/turf';
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
-type distanceOptions = {
+export type distanceOptions = {
     units?: Units;
     precision?: number;
-    lang: 'en' | 'zh';
+    lang?: 'en' | 'zh';
+    drawLineStyle?: L.PolylineOptions; // 存放（用户自己想要设置的）图层的默认样式信息
+    markerStyle?: distanceMarker; // 存放（测量结果的）marker 
 }
-type FormattedDistance = {
+
+export type distanceMarker = {
+    containerClassName: string, // dot和label是内部内容，这个是包裹它俩的
+    dotClassName: string,
+    labelClassName: string,
+}
+
+export type FormattedDistance = {
     val: number;
     unit: string;
 }
 export default class LeafletDistance {
     private map: L.Map;
     private lineLayer: L.Polyline | null = null;
-    // 图层初始化时
-    private drawLayerStyle = {
-        color: 'red', // 设置边线颜色
-    };
     private tempCoords: number[][] = [];
     private markerArr: L.Marker[] = []; // 用于存放临时生成的marker弹窗
-    private measureOptions: distanceOptions;
+    private measureOptions: distanceOptions = {
+        units: 'meters',
+        precision: 2,
+        lang: 'zh',
+        drawLineStyle: {
+            color: '#008BFF'
+        },
+        markerStyle: {
+            containerClassName: '',
+            dotClassName: '',
+            labelClassName: ''
+        }
+    };
+    private static markerStyle = {
+        containerStyle: "width: 10px;height: 10px; text-align: center; position: relative;",
+        dotStyle: "width: 10px;height: 10px;border-radius: 50%;background: #ffffff;border: solid 2px #008BFF; position: absolute;left: 1px;top: 1px;",
+        labelStyle: "width: max-content; font-weight: bold; padding: 3px; border: solid 1px #008BFF; background: #ffffff;  position: absolute; left: 10px; top: 10px;",
+    }
     private totalDistance: number = 0;
 
     // 1：我们需要记录当前状态是处于绘制状态--见：currentState变量
@@ -40,28 +62,31 @@ export default class LeafletDistance {
      * @param {L.PolylineOptions} [options={}] 测量距离时的polyline样式，允许用户自定义
      * @memberof LeafletDistance
      */
-    constructor(map: L.Map, measureOptions: distanceOptions = { units: 'meters', precision: 2, lang: 'zh' }, options: L.PolylineOptions = {}) {
+    constructor(map: L.Map, measureOptions: distanceOptions = { lang: 'zh' }) {
         this.map = map;
-        this.measureOptions = measureOptions;
+        // 合并用户配置和默认配置
+        this.measureOptions = {
+            ...this.measureOptions,
+            ...measureOptions,
+        };
         if (this.map) {
             // 初始化时，设置绘制状态为true，且发出状态通知
             this.updateAndNotifyStateChange(PolygonEditorState.Drawing);
             this.totalDistance = 0;
             // 鼠标手势设置为十字
             this.map.getContainer().style.cursor = 'crosshair';
-            // 禁用双击地图放大功能
-            this.map.doubleClickZoom.disable();
-            this.initLayers(options);
+            // 禁用双击地图放大功能（先考虑让用户自己去写，里面不再控制）
+            // this.map.doubleClickZoom.disable();
+            this.initLayers();
             this.initMapEvent(this.map);
         }
     }
     // 初始化图层
-    private initLayers(options: L.PolylineOptions) {
+    private initLayers() {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[[-90, -180], [-90, -180]]坐标，也就是页面的左下角
         const polylineOptions: L.PolylineOptions = {
             pane: 'overlayPane',
-            ...this.drawLayerStyle,
-            ...options
+            ...this.measureOptions?.drawLineStyle,
         };
         this.lineLayer = L.polyline([[181, 181], [182, 182]], polylineOptions);
         this.lineLayer.addTo(this.map);
@@ -121,8 +146,8 @@ export default class LeafletDistance {
         // 设置完毕就关闭地图事件监听
         this.offMapEvent(this.map);
         this.map.getContainer().style.cursor = 'grab';
-        // 恢复双击地图放大事件
-        this.map.doubleClickZoom.enable();
+        // 恢复双击地图放大事件（先考虑让用户自己去写，里面不再控制）
+        // this.map.doubleClickZoom.enable();
         // 设置为空闲状态，并发出状态通知
         this.updateAndNotifyStateChange(PolygonEditorState.Idle);
     }
@@ -136,7 +161,7 @@ export default class LeafletDistance {
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
         if (!this.tempCoords.length) return;
-        const lastMoveEndPoint: L.LatLngExpression = [e.latlng.lat, e.latlng.lng];
+        const lastMoveEndPoint: number[] = [e.latlng.lat, e.latlng.lng];
         // 1：一个点也没有时，我们移动事件，也什么也不做。
         // 2：只有一个点时，我们只保留第一个点和此刻移动结束的点。
         if (this.tempCoords.length === 1) {
@@ -215,7 +240,7 @@ export default class LeafletDistance {
      * @param {number} precision - 精度（小数位数），默认6位
      * @returns {Array} 去重后的坐标数组
      */
-    private deduplicateCoordinates(coordinates, precision = 6) {
+    private deduplicateCoordinates(coordinates: string | any[], precision = 6) {
         if (!Array.isArray(coordinates) || coordinates.length === 0) {
             return [];
         }
@@ -248,7 +273,7 @@ export default class LeafletDistance {
      * @memberof LeafletDistance
      */
     private calcDistanceAndCreatePopup(coordinates: number[][]): void {
-        const finalCoords = this.deduplicateCoordinates(this.tempCoords);
+        const finalCoords = this.deduplicateCoordinates(coordinates);
         const waitingMeasure = finalCoords.slice(-2);
         if (waitingMeasure.length === 1) {
             const markerOptions: L.MarkerOptions = {
@@ -284,12 +309,12 @@ export default class LeafletDistance {
      */
     private measureMarkerIcon(distance: FormattedDistance | string): L.DivIcon {
         return L.divIcon({
-            className: 'measure-distance-marker',
-            html: `<div style="width: 10px;height: 10px; text-align: center; position: relative;">
+            className: this.measureOptions.markerStyle?.containerClassName ? this.measureOptions.markerStyle?.containerClassName : 'measure-distance-marker',
+            html: `<div ${this.measureOptions.markerStyle?.containerClassName ? (`class=${this.measureOptions.markerStyle?.containerClassName}`) : (`style="${LeafletDistance.markerStyle.containerStyle}"`)}>
                         <!-- 构建小圆点 -->
-                        <div style="width: 10px;height: 10px;border-radius: 50%;background: #ffffff;border: solid 2px red; position: absolute;left: 1px;top: 1px;"></div>
+                        <div ${this.measureOptions.markerStyle?.dotClassName ? (`class=${this.measureOptions.markerStyle?.dotClassName}`) : (`style="${LeafletDistance.markerStyle.dotStyle}"`)}></div>
                         <!-- 下面的内容展示文字 -->
-                        <div style="width: max-content; padding: 3px; border: solid 1px red; background: #ffffff;  position: absolute; left: 10px; top: 10px;">
+                        <div ${this.measureOptions.markerStyle?.labelClassName ? (`class=${this.measureOptions.markerStyle?.labelClassName}`) : (`style="${LeafletDistance.markerStyle.labelStyle}"`)}>
                             ${typeof distance === 'string' ? distance : `${distance.val} ${distance.unit}`}
                         </div>
                     </div>`
@@ -308,7 +333,7 @@ export default class LeafletDistance {
      * @returns 格式化后的距离对象
      */
     private formatDistance(value: number, options: distanceOptions): FormattedDistance {
-        const { lang = 'zh', precision = 2, units } = options;
+        const { lang = 'zh', precision = 2, units='meters' } = options;
 
         // 先统一处理同义词
         const normalizedUnit = this.normalizeUnit(units);

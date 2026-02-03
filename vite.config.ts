@@ -27,7 +27,7 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 1000, // 大于1000k才警告
     sourcemap: process.env.NODE_ENV !== 'production', // 非生产环境开启
-    minify: true,
+    minify: 'terser',
     terserOptions: {
       compress: {
         // 生产环境时移除console和debugger
@@ -67,6 +67,20 @@ export default defineConfig({
     }),
     tailwindcss(),
   ],
+  // 优化构建性能
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'antd',
+      'leaflet',
+      'dayjs',
+      'axios',
+      'crypto-js',
+      'zustand',
+      'react-router'
+    ],
+  },
   css: {
     preprocessorOptions: {
       scss: {
@@ -78,5 +92,35 @@ export default defineConfig({
   },
   define: {
     webConfig: JSON.stringify(webConfig)
+  },
+  server: {
+    host: true,
+    port: 3000,
+    proxy: {
+      '/api/chat': {
+        target: 'http://10.16.20.52:11434',
+        changeOrigin: true,
+        secure: false, // 如果是http，可以设为false
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            // 移除或修改可能引起问题的headers
+            proxyReq.removeHeader('Origin');
+            proxyReq.setHeader('referer', 'http://10.16.20.52:11434');
+            proxyReq.setHeader('host', '10.16.20.52:11434');
+
+            // from deepseek
+            // 你的解决方案有效是因为：
+            // 1. removeHeader('Origin') - 绕过CORS检查
+            // 2. 设置后端能接受的 referer 和 host
+
+          });
+        },
+        rewrite: (path) => {
+          console.log('代理路径:', path); // 查看实际代理的路径
+          return path;
+        },
+        // rewrite: (path) => path,
+      }
+    }
   }
 })

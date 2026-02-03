@@ -1,16 +1,331 @@
-import { PolygonEditorState, type MidpointPair, type SnapOptions } from "../types";
+import * as L from "leaflet";
+import { PolygonEditorState, type EditOptionsExpends, type MidpointPair, type SnapOptions, type ValidationOptions } from "../types";
 import { BaseEditor } from "./BaseEditor";
+import { buildMarkerIcon } from "../utils/commonUtils";
 
 // BasePolygonEditor.ts - 多边形基类
 export abstract class BasePolygonEditor extends BaseEditor {
     protected vertexMarkers: L.Marker[][][] = []; // 存储顶点标记的数组
-    protected midpointMarkers: MidpointPair[][][] = []; // 存储【线中点】标记的数组
+    protected midpointMarkers: MidpointPair[][][] = []; // 存储【线中点、拖动线marker】两种标记的数组
     protected historyStack: number[][][][][] = []; // 历史记录，存储快照
     protected redoStack: number[][][][][] = []; // 重做记录，存储快照
 
-    constructor(map: L.Map, options: { snap?: SnapOptions }) {
-        super(map, options);
+    // 中点配置（在多边形基类中定义）
+    protected polygonEditOptions: EditOptionsExpends = {
+        // 顶点属性信息
+        enabled: true,
+        vertexsMarkerStyle: {
+            icon: buildMarkerIcon(),
+            draggable: true,
+            pane: 'markerPane'
+        },
+        // 中点拖动属性信息
+        dragMidMarkerOptions: {
+            enabled: true,
+            dragMarkerStyle: {
+                // 多边形/线共用的默认中点样式
+                icon: buildMarkerIcon("border-radius: 50%; background: #ffffff80; border: solid 1px #f00;", [14, 14]),
+                // icon: L.divIcon({
+                //     className: 'polygon-midpoint-insert',
+                //     html: `<div style="border-radius:50%;background:#fff;border:2px solid #f00;width:14px;height:14px"></div>`,
+                //     iconSize: [14, 14]
+                // }),
+                draggable: true,
+                pane: 'markerPane'
+            },
+            positionRatio: 0.3
+        },
+        // 拖动边的marker属性信息
+        dragLineMarkerOptions: {
+            enabled: true,
+            dragMarkerStyle: {
+                // 多边形/线共用的默认边拖动样式
+                icon: buildMarkerIcon("border-radius: 50%; background: #007bff80; border: solid 1px #007bff;", [14, 14]),
+                // icon: L.divIcon({
+                //     className: 'polygon-midpoint-edge',
+                //     html: `<div style="border-radius:50%;background:#007bff;border:2px solid #007bff;width:12px;height:12px;opacity:0.7"></div>`,
+                //     iconSize: [12, 12]
+                // }),
+                draggable: true,
+                pane: 'markerPane'
+            },
+            positionRatio: 0.6
+        }
+    };
+
+    constructor(map: L.Map, options: { snap?: SnapOptions, edit?: EditOptionsExpends, validation?: ValidationOptions }) {
+        super(map, { snap: options?.snap, validation: options?.validation });
+        // 编辑点marker的配置信息初始化
+        this.initPolygonEditOptions(options?.edit);
     }
+
+    // #region 编辑点marker的配置信息
+
+    /** 初始化编辑点marker的配置信息
+     *
+     *
+     * @private
+     * @param {DragMarkerOptions} [dragMidMarkerOptions] // 中点拖拽标记配置信息
+     * @param {DragMarkerOptions} [dragLineMarkerOptions] // 边线拖拽标记配置信息
+     * @memberof BasePolygonEditor
+     */
+    private initPolygonEditOptions(options?: EditOptionsExpends): void {
+        if (!options) {
+            this.polygonEditOptions = this.initBaseEditOptions();
+        } else {
+            const { enabled, vertexsMarkerStyle, dragMidMarkerOptions, dragLineMarkerOptions } = options;
+            const BaseEditorConfig = this.initBaseEditOptions({
+                enabled,
+                vertexsMarkerStyle,
+            })
+
+            const userConfig: EditOptionsExpends = {
+                enabled: BaseEditorConfig.enabled ?? this.polygonEditOptions.enabled,
+                vertexsMarkerStyle: BaseEditorConfig.vertexsMarkerStyle ?? this.polygonEditOptions.vertexsMarkerStyle,
+                // 中点
+                dragMidMarkerOptions: dragMidMarkerOptions
+                    ? { ...this.polygonEditOptions.dragMidMarkerOptions, ...dragMidMarkerOptions }
+                    : this.polygonEditOptions.dragMidMarkerOptions,
+                // 拖动线的marker
+                dragLineMarkerOptions: dragLineMarkerOptions
+                    ? { ...this.polygonEditOptions.dragLineMarkerOptions, ...dragLineMarkerOptions } : this.polygonEditOptions.dragLineMarkerOptions,
+            };
+            // 强制设置可拖动
+            userConfig.dragMidMarkerOptions!.dragMarkerStyle!.draggable = true;
+            userConfig.dragLineMarkerOptions!.dragMarkerStyle!.draggable = true;
+            // save
+            this.polygonEditOptions = userConfig;
+        }
+
+    }
+
+    /** 插入中间点坐标
+     *
+     *
+     * @private
+     * @return {*}  {void}
+     * @memberof LeafletEditPolygon
+     */
+    protected insertMidpointMarkers(skipMarker?: L.Marker): void {
+        const isEnabledMidPointsMarker = this.polygonEditOptions.dragMidMarkerOptions!.enabled;
+        const isEnabledEdgeMarker = this.polygonEditOptions.dragLineMarkerOptions!.enabled;
+        const disableRenderMarker = (!isEnabledMidPointsMarker && !isEnabledEdgeMarker);
+        if (disableRenderMarker || this.currentState !== PolygonEditorState.Editing) return;
+
+        // 清除旧的中点标记（若数组中存在）
+        this.removeAllMidPointMarkers(skipMarker);
+
+        this.vertexMarkers.forEach((polygon, polygonIndex) => {
+            const polygonMidpoints: MidpointPair[][] = [];
+
+            polygon.forEach((ring, ringIndex) => {
+                const ringMidpoints: MidpointPair[] = [];
+
+                for (let i = 0; i < ring.length; i++) {
+                    const nextIndex = (i + 1) % ring.length;
+                    const p1 = ring[i];
+                    const p2 = ring[nextIndex];
+                    // ✅ 跳过当前边包含 skipMarker 的情况
+                    if (skipMarker && (skipMarker === p1 || skipMarker === p2 || (skipMarker as any).pairRef === p1 || (skipMarker as any).pairRef === p2)) { continue; }
+
+                    const insertMidpoint = isEnabledMidPointsMarker ? this.createInsertMidpointMarker(p1, p2, polygonIndex, ringIndex, nextIndex, this.polygonEditOptions.dragMidMarkerOptions!.positionRatio!) : null
+                    // 插入边控制点（用于拖动边） 
+                    const edgeDragMarker = isEnabledEdgeMarker ? this.createEdgeDragMarker(p1, p2, polygonIndex, ringIndex, this.polygonEditOptions.dragLineMarkerOptions!.positionRatio!) : null;
+
+                    ringMidpoints.push({ insert: insertMidpoint, edge: edgeDragMarker });
+                    // 附加：互相引用 （虽然写的晚，但是一般都会在【createInsertMidpointMarker、createEdgeDragMarker】中绑定的dragstart事件之前完成）
+                    if (insertMidpoint) {
+                        (insertMidpoint as any).pairRef = edgeDragMarker;
+                    }
+                    if (edgeDragMarker) {
+                        (edgeDragMarker as any).pairRef = insertMidpoint;
+                    }
+                }
+
+                polygonMidpoints.push(ringMidpoints);
+            });
+
+            this.midpointMarkers.push(polygonMidpoints);
+        });
+    }
+
+    /** 实时更新中线点的位置（传参意思：用户正在拖动的避免销毁和重新构建）
+     *
+     *
+     * @private
+     * @memberof LeafletEditPolygon
+     */
+    protected updateMidpoints(skipMarker?: L.Marker): void {
+        const isEnabledMidPointsMarker = this.polygonEditOptions.dragMidMarkerOptions!.enabled;
+        const isEnabledEdgeMarker = this.polygonEditOptions.dragLineMarkerOptions!.enabled;
+        const disableRenderMarker = (!isEnabledMidPointsMarker && !isEnabledEdgeMarker);
+        // 新增：检查是否启用中点功能
+        if (disableRenderMarker) {
+            // 如果已存在中点，需要清理
+            if (this.midpointMarkers.length > 0) {
+                this.removeAllMidPointMarkers();
+                this.midpointMarkers = [];
+            }
+            return;
+        }
+
+        // 清除旧的中点
+        this.removeAllMidPointMarkers(skipMarker);
+
+        // 重新插入
+        this.insertMidpointMarkers(skipMarker);
+    }
+
+    /**
+     * 获取当前标记的坐标（辅助方法）
+     * @private
+     */
+    private getCurrentMarkerCoords(): number[][][][] {
+        return this.vertexMarkers.map(polygon =>
+            polygon.map(ring =>
+                ring.map(marker => [marker.getLatLng().lat, marker.getLatLng().lng])
+            )
+        );
+    }
+
+    /**
+     * 更新编辑配置
+     * @param options 编辑配置
+     */
+    public updateEditOptions(options: EditOptionsExpends): void {
+        // 深度合并配置
+        this.mergeEditOptions(options);
+
+        // 如果正在编辑，需要重新渲染
+        if (this.currentState === PolygonEditorState.Editing) {
+            const currentCoords = this.getCurrentMarkerCoords();
+            this.reBuildMarkerAndRender(currentCoords);
+        }
+    }
+
+    /**
+     * 获取是否启用编辑
+     */
+    public getEditEnabled(): boolean {
+        return this.polygonEditOptions.enabled;
+    }
+    /**
+     * 设置是否启用编辑
+     * @param enabled 是否启用
+     */
+    public setEditEnabled(enabled: boolean): void {
+        const oldEnabled = this.polygonEditOptions.enabled;
+
+        if (oldEnabled !== enabled) {
+            this.polygonEditOptions.enabled = enabled;
+
+            // 如果从启用变为禁用，且正在编辑，强制退出编辑模式
+            if (oldEnabled && !enabled && this.currentState === PolygonEditorState.Editing) {
+                this.forceExitEditMode();
+            }
+
+            // // 如果从禁用变为启用，且当前是空闲状态，可以重新激活（可选）
+            // if (!oldEnabled && enabled && this.currentState === PolygonEditorState.Idle) {
+            //     // 这里可以根据需求决定是否自动进入编辑模式
+            //     console.log('编辑功能已启用，双击图形可进入编辑模式');
+            // }
+        }
+    }
+
+    /**
+     * 深度合并编辑配置
+     * @private
+     */
+    private mergeEditOptions(options: EditOptionsExpends): void {
+        this.polygonEditOptions = {
+            enabled: options?.enabled ?? this.polygonEditOptions.enabled,
+            vertexsMarkerStyle: options?.vertexsMarkerStyle ? { ...this.polygonEditOptions.vertexsMarkerStyle, ...options?.vertexsMarkerStyle } : this.polygonEditOptions.vertexsMarkerStyle,
+            // 中点
+            dragMidMarkerOptions: options?.dragMidMarkerOptions
+                ? { ...this.polygonEditOptions.dragMidMarkerOptions, ...options?.dragMidMarkerOptions }
+                : this.polygonEditOptions.dragMidMarkerOptions,
+            // 拖动线的marker
+            dragLineMarkerOptions: options?.dragLineMarkerOptions
+                ? { ...this.polygonEditOptions.dragLineMarkerOptions, ...options?.dragLineMarkerOptions } : this.polygonEditOptions.dragLineMarkerOptions,
+        }
+
+        // 1：更新中点和拖动线marker在线上的位置：
+        const isEnabledMidPointsMarker = this.polygonEditOptions.dragMidMarkerOptions!.enabled;
+        const isEnabledEdgeMarker = this.polygonEditOptions.dragLineMarkerOptions!.enabled;
+        this.polygonEditOptions.dragMidMarkerOptions!.positionRatio = (isEnabledMidPointsMarker && isEnabledEdgeMarker) ? 0.3 : 0.5;
+        this.polygonEditOptions.dragLineMarkerOptions!.positionRatio = (isEnabledMidPointsMarker && isEnabledEdgeMarker) ? 0.6 : 0.5;
+        // 2：强制设置可拖动
+        this.polygonEditOptions.dragMidMarkerOptions!.dragMarkerStyle!.draggable = true;
+        this.polygonEditOptions.dragLineMarkerOptions!.dragMarkerStyle!.draggable = true;
+    }
+
+    // 抽象方法，子类实现具体的中点创建逻辑
+    protected abstract createInsertMidpointMarker(
+        p1: L.Marker,
+        p2: L.Marker,
+        polygonIndex: number,
+        ringIndex: number,
+        insertIndex: number,
+        positionRadio: number
+    ): L.Marker | null;
+
+    protected abstract createEdgeDragMarker(
+        p1: L.Marker,
+        p2: L.Marker,
+        polygonIndex: number,
+        ringIndex: number,
+        positionRadio: number
+    ): L.Marker | null;
+
+    /**
+     * 获取边上某个比例位置的点（例如 1/3、2/3）
+     * @param p1 起点
+     * @param p2 终点
+     * @param ratio 比例（0~1），例如 1/3 = 0.333
+     * @returns L.LatLng
+     */
+    protected getFractionalPointOnEdge(p1: L.LatLng, p2: L.LatLng, ratio: number): L.LatLng {
+        const lat = p1.lat + (p2.lat - p1.lat) * ratio;
+        const lng = p1.lng + (p2.lng - p1.lng) * ratio;
+        return L.latLng(lat, lng);
+    }
+
+    /** 移除所有中点标记（若存在正在拖动的，则跳过）
+     *
+     *
+     * @memberof BasePolygonEditor
+     */
+    protected removeAllMidPointMarkers(skipMarker?: L.Marker) {
+        const newMidpoints: MidpointPair[] = [];
+
+        this.midpointMarkers.flat(2).forEach(pair => {
+
+            const keepInsert = pair.insert && pair.insert === skipMarker;
+            const keepEdge = pair.edge && pair.edge === skipMarker;
+
+            if (!keepInsert) {
+                if (pair.insert && this.map.hasLayer(pair.insert)) {
+                    this.map.removeLayer(pair.insert);
+                }
+            }
+
+            if (!keepEdge) {
+                if (pair.edge && this.map.hasLayer(pair.edge)) {
+                    this.map.removeLayer(pair.edge);
+                }
+            }
+
+            // 如果有任一 marker 被保留，就保留这个 pair
+            if (keepInsert || keepEdge) {
+                newMidpoints.push(pair);
+            }
+        });
+
+        // 重新组织为二维结构（可选）
+        this.midpointMarkers = newMidpoints.length > 0 ? [[[...newMidpoints]]] : [];
+    }
+
+    // #endregion
 
     // #region 操作行为
 
@@ -88,41 +403,9 @@ export abstract class BasePolygonEditor extends BaseEditor {
      */
     public reset() {
         this.map.getContainer().style.cursor = 'grab';
-        // 恢复双击地图放大事件
-        this.map.doubleClickZoom.enable();
+        // 恢复双击地图放大事件（先考虑让用户自己去写，里面不再控制）
+        // this.map.doubleClickZoom.enable();
     }
-
-    /** 移除所有中点标记（若存在正在拖动的，则跳过）
-     *
-     *
-     * @memberof BasePolygonEditor
-     */
-    public removeAllMidPointMarkers(skipMarker?: L.Marker) {
-        const newMidpoints: MidpointPair[] = [];
-
-        this.midpointMarkers.flat(2).forEach(pair => {
-            const keepInsert = pair.insert === skipMarker;
-            const keepEdge = pair.edge === skipMarker;
-
-            if (!keepInsert) {
-                this.map.removeLayer(pair.insert);
-            }
-
-            if (!keepEdge) {
-                this.map.removeLayer(pair.edge);
-            }
-
-            // 如果有任一 marker 被保留，就保留这个 pair
-            if (keepInsert || keepEdge) {
-                newMidpoints.push(pair);
-            }
-        });
-
-        // 重新组织为二维结构（可选）
-        this.midpointMarkers = newMidpoints.length > 0 ? [[[...newMidpoints]]] : [];
-    }
-
-
 
     // #endregion
 

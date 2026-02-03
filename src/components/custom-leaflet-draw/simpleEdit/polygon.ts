@@ -40,8 +40,8 @@ export default class LeafletEditPolygon extends SimpleBaseEditor {
             this.updateAndNotifyStateChange(existGeometry ? PolygonEditorState.Idle : PolygonEditorState.Drawing);
             // 鼠标手势设置为十字
             this.map.getContainer().style.cursor = existGeometry ? 'grab' : 'crosshair';
-            // 不需要设置十字光标和禁用双击放大
-            existGeometry ? this.map.doubleClickZoom.enable() : this.map.doubleClickZoom.disable();
+            // 不需要设置十字光标和禁用双击放大（先考虑让用户自己去写，里面不再控制）
+            // existGeometry ? this.map.doubleClickZoom.enable() : this.map.doubleClickZoom.disable();
             this.initLayers(options, existGeometry ? defaultGeometry : undefined);
             this.initMapEvent(this.map);
         }
@@ -148,8 +148,8 @@ export default class LeafletEditPolygon extends SimpleBaseEditor {
             const turfPoint = point([clickedLatLng.lng, clickedLatLng.lat]);
             const isInside = booleanPointInPolygon(turfPoint, polygonGeoJSON);
             if (isInside && this.currentState !== PolygonEditorState.Editing) {
-                // 1：禁用双击地图放大功能
-                this.map.doubleClickZoom.disable();
+                // 1：禁用双击地图放大功能（先考虑让用户自己去写，里面不再控制）
+                // this.map.doubleClickZoom.disable();
                 // 2：状态变更，并发出状态通知
                 this.updateAndNotifyStateChange(PolygonEditorState.Editing);
                 // 3: 设置当前激活态是本实例，因为事件监听和激活态实例是关联的，只有激活的实例才处理事件

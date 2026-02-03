@@ -1,17 +1,17 @@
 import * as L from 'leaflet';
 import { queryLayerOnClick, queryLayersIntersectingGeometry } from '../utils/commonUtils';
-import { union } from '@turf/turf';
 import LeafletPolyline from '../draw/polyline';
 import { PolygonEditorState, type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from '../types';
 import { clipSelectedLayersByLine, mergePolygon, reshapeSelectedLayersByLine } from '../utils/topoUtils';
 
 export class LeafletTopology {
   private static instance: LeafletTopology;
-  private map: L.Map;
+  private map: L.Map | null = null;
   drawLineLayer: LeafletPolyline | null = null;
   private selectedLayers: L.GeoJSON[] = [];
   private clickHandler: ((e: L.LeafletMouseEvent) => void) | null = null;
   private drawLineListener: ((status: PolygonEditorState) => void) | null = null;
+  private isPicking: boolean = false; // 是否处于选择图层状态（这个状态主要用于edit编辑器在编辑时，确保当前不是选择图层的状态，如果是选择图层的状态，则editor编辑器的事件应该禁止，不让其触发）
 
   constructor(map: L.Map) {
     this.map = map;
@@ -30,12 +30,16 @@ export class LeafletTopology {
    * @memberof LeafletTopology
    */
   public select() {
+    if (!this.map) {
+      throw new Error('未获取到map对象');
+    }
     this.cleanAll();
+    this.isPicking = true; // 设置选择状态
     this.map.getContainer().style.cursor = 'pointer';
     this.disableMapOpt();
 
     this.clickHandler = (e: L.LeafletMouseEvent) => {
-      const hits = queryLayerOnClick(this.map, e);
+      const hits = queryLayerOnClick(this.map!, e);
       // console.log('这里返回的是全部被选择的图层，其中我们高亮的图层携带有属性： options.linkLayerId，所以我们可以判断出，这是一个高亮图层，从而跳过处理', hits);
       /* 过滤条件1： layer的options属性中若包含linkLayerId属性，说明是topo的高亮图层，需要过滤掉
          过滤条件2： layer的options属性中layerVisible属性的值是false，说明是隐藏的图层，需要过滤掉
@@ -48,11 +52,10 @@ export class LeafletTopology {
       // console.log('realPickedLayer', realPickedLayer);
       realPickedLayer.forEach(layer => {
         const pickerLayerId = layer._leaflet_id;
-        // console.log('this.selectedLayers', this.selectedLayers);
         const findLayerIdx = this.selectedLayers.findIndex((layer: any) => layer?.options && layer?.options?.linkLayerId === pickerLayerId);
         if (findLayerIdx !== -1) {
           const pickLayer = this.selectedLayers[findLayerIdx];
-          this.map.removeLayer(pickLayer);
+          this.map!.removeLayer(pickLayer);
           pickLayer.remove();
           this.selectedLayers.splice(findLayerIdx, 1);
         } else {
@@ -89,6 +92,9 @@ export class LeafletTopology {
    * 执行整形要素工具操作 
    * */
   public reshapeFeature(options: ReshapeOptions, callback: (result: TopoReshapeFeatureResult) => void) {
+    if (!this.map) {
+      return;
+    }
     // todo: 不允许无选择时，若选择的图层数量为0个，则拒绝后续执行。
     if (!options.AllowReshapingWithoutSelection && this.selectedLayers.length === 0) {
       throw new Error('请先选择要执行整形操作的图层');
@@ -102,7 +108,7 @@ export class LeafletTopology {
     }
     // 第二步： 执行绘制操作，并添加监听事件
     const drawReshapeLineFlag = 'reshapeLine';
-    this.drawLineLayer = new LeafletPolyline(this.map, { drawFlag: drawReshapeLineFlag });
+    this.drawLineLayer = new LeafletPolyline(this.map, { defaultStyle: { drawFlag: drawReshapeLineFlag } });
     // 添加绘制完毕后，重新调整状态为topo状态
     this.drawLineListener = (status: PolygonEditorState) => {
       if (status === PolygonEditorState.Idle) {
@@ -111,11 +117,11 @@ export class LeafletTopology {
         // console.log('用户选择的图层：', this.selectedLayers);
         // console.log('地图对象', this.map);
         if (options.AllowReshapingWithoutSelection) {
-          const tempIntersectLayer = queryLayersIntersectingGeometry(this.map, geoJson);
+          const tempIntersectLayer = queryLayersIntersectingGeometry(this.map!, geoJson);
           this.selectedLayers = tempIntersectLayer.filter((it: L.Layer) => (it.options as any).drawFlag !== drawReshapeLineFlag);
         }
         // console.log('final-this.selectedLayers', this.selectedLayers);
-        
+
         const { doReshapeLayers, reshapedGeoms } = reshapeSelectedLayersByLine(geoJson, this.selectedLayers, options);
         // 行为1：正常输出
         // console.log('reshapedGeoms', reshapedGeoms, 'doReshapeLayers', doReshapeLayers);
@@ -151,6 +157,9 @@ export class LeafletTopology {
    * 执行线裁剪操作 
    * */
   public clipByLine(callback: (result: TopoClipResult) => void) {
+    if (!this.map) {
+      throw new Error('未获取到map对象');
+    }
     if (this.selectedLayers.length === 0) {
       throw new Error('请先选择要裁剪的图层');
     }
@@ -223,20 +232,19 @@ export class LeafletTopology {
     };
     const highlightLayer = L.geoJSON(layerGeom, {
       style: highlightStyle,
-      // ['linkLayerId' as any]: layer._leaflet_id, // 添加自定义属性
+      ['linkLayerId' as any]: layer._leaflet_id, // 添加自定义属性
     });
-    (highlightLayer as any).options.linkLayerId = layer._leaflet_id;
     this.selectedLayers.push(highlightLayer);
-    this.map.addLayer(highlightLayer);
+    this.map && this.map.addLayer(highlightLayer);
   }
 
   private disableMapOpt() {
-    // 1：禁用双击地图放大功能
-    this.map.doubleClickZoom.disable();
+    // 1：禁用双击地图放大功能（先考虑让用户自己去写，里面不再控制）
+    // this.map && this.map.doubleClickZoom.disable();
   }
   private enableMapOpt() {
-    // 1：恢复双击地图放大功能
-    this.map.doubleClickZoom.enable();
+    // 1：恢复双击地图放大功能（先考虑让用户自己去写，里面不再控制）
+    // this.map && this.map.doubleClickZoom.enable();
   }
   /** 
    * 清理状态和事件
@@ -247,21 +255,67 @@ export class LeafletTopology {
    * */
   public cleanAll() {
     if (this.clickHandler) {
-      this.map.off('click', this.clickHandler);
+      this.map && this.map.off('click', this.clickHandler);
       this.clickHandler = null;
     }
-    this.map.getContainer().style.cursor = 'default';
+    this.map && (this.map.getContainer().style.cursor = 'default');
     this.selectedLayers.forEach(layer => {
-      this.map.removeLayer(layer);
+      this.map!.removeLayer(layer);
       layer.remove();
     });
     // 如果绘制功能实例化了，则移除
     if (this.drawLineLayer) {
+      // 关闭监听函数
       this.drawLineListener && this.drawLineLayer.offStateChange(this.drawLineListener)
+      this.drawLineListener = null;
+      // 关闭图层监听
       this.drawLineLayer.destroy();
       this.drawLineLayer = null;
     }
     this.selectedLayers = [];
     this.enableMapOpt();
+    // 释放pick图层的锁（状态）
+    this.isPicking = false; //  退出选择状态（false）
+  }
+
+  /** 返回选择的全部图层
+   *
+   *
+   * @memberof LeafletTopology
+   */
+  public getSelectLayers() {
+    return this.selectedLayers;
+  }
+
+  /**
+   * 静态方法：检查指定地图是否处于选择图层状态
+   * @param map 地图实例
+   * @returns {boolean} 是否正在选择图层
+   */
+  public static isPicking(map: L.Map): boolean {
+    if (!LeafletTopology.instance || !LeafletTopology.instance.map) {
+      return false;
+    }
+    // 确保是同一个地图实例
+    if (LeafletTopology.instance.map !== map) {
+      return false;
+    }
+    return LeafletTopology.instance.isPicking;
+  }
+
+  /**
+     * 完全销毁单例实例
+     * 应在页面卸载或组件销毁时调用
+     */
+  public destroy(): void {
+    // 1. 清理所有状态和事件
+    this.cleanAll();
+
+    // 2. 移除对地图的引用
+    this.map = null;
+
+    // 3. 重置单例实例
+    (LeafletTopology as any).instance = null;
+
   }
 }

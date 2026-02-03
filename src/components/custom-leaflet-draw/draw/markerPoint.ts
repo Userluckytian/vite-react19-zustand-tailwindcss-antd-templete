@@ -108,6 +108,7 @@ export default class MarkerPoint {
             this.markerLayer = null;
         }
         this.reset();
+        this.clearAllStateListeners();
     }
 
     // #endregion
