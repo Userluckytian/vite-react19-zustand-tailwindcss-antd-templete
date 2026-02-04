@@ -56,12 +56,12 @@ class AxiosRequest {
       },
       (err: object) => err,
     );
-
     // 使用实例拦截器
     this.instance.interceptors.request.use(
       this.interceptorsObj?.requestInterceptors,
       this.interceptorsObj?.requestInterceptorsCatch,
     );
+    // 响应拦截（可以写多个）
     this.instance.interceptors.response.use(
       this.interceptorsObj?.responseInterceptors,
       this.interceptorsObj?.responseInterceptorsCatch,

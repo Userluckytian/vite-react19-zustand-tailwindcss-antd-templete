@@ -2,7 +2,7 @@
 import { request, type ServerResult } from '@/request/api';
 import { getLocalInfo } from '@/store/session-store/local';
 import { toFormData } from 'axios';
-import { header } from 'motion/react-client';
+
 // 数据类型
 export type BaseFormData = Record<string, unknown>
 export interface PaginationData {
@@ -77,7 +77,7 @@ export function updateArticle(id: string, data: BaseFormData) {
  * @param data - 请求数据
  */
 export function forgetPassword(data: object) {
-  return request.post('/forget-password', data);
+  return request.post('/forget-password', data, {});
 }
 
 /**

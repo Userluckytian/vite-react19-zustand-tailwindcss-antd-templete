@@ -1,4 +1,4 @@
-import axios, { AxiosError, type AxiosRequestConfig, type InternalAxiosRequestConfig } from "axios";
+import axios, { AxiosError, type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import { message } from "antd";
 import NProgress from "@/route/npprogress";
 
@@ -30,7 +30,7 @@ axiosInstance.interceptors.request.use(
 
 /** 响应拦截器 */
 axiosInstance.interceptors.response.use(
-  (res: any) => {
+  (res: AxiosResponse) => {
     checkAuth(res.data.status ? res.data.status : 200, res.data.message);
     return res.data;
   },
