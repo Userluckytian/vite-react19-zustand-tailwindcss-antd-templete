@@ -69,3 +69,8 @@ body {
 .read-the-docs {
   color: #888;
 }
+
+/* 修复leaflet-side-by-side的中间拖动按钮的样式 */
+.leaflet-sbs{
+  text-align: justify;
+}
