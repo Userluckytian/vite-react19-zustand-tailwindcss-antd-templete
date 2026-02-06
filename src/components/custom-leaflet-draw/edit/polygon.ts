@@ -36,6 +36,9 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @memberof LeafletEditPolygon
      */
     constructor(map: L.Map, options: LeafletToolsOptions = {}, defaultGeometry?: GeoJSON.Geometry) {
+        if (!map) {
+            throw new Error('地图实例不能为空');
+        }
         super(map, {
             snap: options?.snap,
             edit: options?.edit,
@@ -542,7 +545,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * 进入编辑模式
      * @public
      */
-    public startEdit(): void  {
+    public startEdit(): void {
         if (!this.canEnterEditMode()) return;
         // 1：禁用双击地图放大功能（先考虑让用户自己去写，里面不再控制）
         // this.map.doubleClickZoom.disable();
