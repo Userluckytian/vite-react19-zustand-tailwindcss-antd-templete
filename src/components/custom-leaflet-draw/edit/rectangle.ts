@@ -314,9 +314,9 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
      * @memberof LeafletEditRectangle
      */
-    public geojson() {
+    public geojson(precision?: number | false) {
         if (this.rectangleLayer) {
-            return this.rectangleLayer.toGeoJSON();
+            return this.rectangleLayer.toGeoJSON(precision);
         } else {
             throw new Error("未捕获到图层，无法获取到geojson数据");
         }
