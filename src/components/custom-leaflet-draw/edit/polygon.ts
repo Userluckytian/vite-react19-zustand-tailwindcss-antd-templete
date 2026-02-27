@@ -194,7 +194,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             const lastCoord = [e.latlng.lat, e.latlng.lng];
             // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
             const ringCoords = [...this.tempCoords, lastCoord, this.tempCoords[0]];
-            const finalCoords: number[][] = this.deduplicateCoordinates(ringCoords);
+            const finalCoords: number[][] = this.deduplicateCoordinates(ringCoords, 9);
             if (this.isValidPolygon(finalCoords)) {
                 this.finishedDraw(finalCoords);
             } else {
@@ -349,9 +349,9 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
      * @memberof LeafletEditPolygon
      */
-    public geojson() {
+    public geojson(precision?: number | false) {
         if (this.polygonLayer) {
-            return this.polygonLayer.toGeoJSON();
+            return this.polygonLayer.toGeoJSON(precision);
         } else {
             throw new Error("未捕获到图层，无法获取到geojson数据");
         }
