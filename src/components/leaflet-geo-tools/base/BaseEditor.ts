@@ -1,5 +1,9 @@
 import { buildMarkerIcon } from "@/components/custom-leaflet-draw/utils/commonUtils";
-import { EditorState, type BaseEditOptions, type EditorListenerConfigs } from "../types";
+import { EditorState, type BaseEditOptions, type EditorListenerConfigs, type GeometryIndex, type LeafletEditorOptions, type SnapHighlightLayerOptions, type SnapOptions, type SnapResult, type ValidationOptions } from "../types";
+import { SnapController } from "@/components/custom-leaflet-draw/utils/SnapController";
+import { kinks, polygon } from "@turf/turf";
+import * as L from "leaflet";
+
 
 /** 作为编辑器基类-提供通用部分
  *  1：图层管理
@@ -7,31 +11,22 @@ import { EditorState, type BaseEditOptions, type EditorListenerConfigs } from ".
 export abstract class BaseEditor<T extends L.Layer> {
     // 静态属性 - 所有编辑器实例共享同一个激活状态
     private static currentActiveEditor: BaseEditor<any> | null = null;
-    protected isDraggingPolygon = false; // 是否是拖动多边形
-    protected dragStartLatLng: L.LatLng | null = null; // 拖动多边形时，用户鼠标按下（mousedown）那一刻的坐标点，然后鼠标移动（mousemove）时，遍历全部的marker，做坐标偏移计算。
     protected isVisible = true; // 图层可见性
-    // 编辑时的顶点配置
-    protected baseEditOptions: BaseEditOptions = {
-        // 顶点属性信息
-        enabled: true,
-        vertexsMarkerStyle: {
-            icon: buildMarkerIcon(),
-            draggable: true,
-            pane: 'markerPane'
-        },
-    };
-
-    // #region 绘制图层需要的全部内容
 
     // 定义图层（先设置protected，后续需要再放开）
     protected layer: T;
+
+    protected map: L.Map; // 地图实例（编辑器本身是不需要的，奈何其他的都继承自它，索性直接在这里定义好了）
 
     // 当前状态
     protected currentState: EditorState = EditorState.Idle;
     // 状态监听器存储数组，比如来了多个监听函数，触发的时候，要遍历全部监听函数。
     protected stateListeners: ((state: EditorState) => void)[] = [];
 
-    constructor() { }
+    constructor(map: L.Map, options: LeafletEditorOptions) {
+        this.map = map;
+        this.initBaseEditOptions
+    }
 
     /** 创建图层对象
      * 
@@ -137,8 +132,6 @@ export abstract class BaseEditor<T extends L.Layer> {
         if (this.currentState === EditorState.Editing) {
             this.updateAndNotifyStateChange(EditorState.Idle);
         }
-        this.isDraggingPolygon = false;
-        this.dragStartLatLng = null;
     }
 
     // #endregion
@@ -214,7 +207,7 @@ export abstract class BaseEditor<T extends L.Layer> {
 
     // #endregion
 
-    // #region 编辑行为
+    // #region 编辑行为  
 
     /** 初始化编辑点marker的配置信息
      *
@@ -265,6 +258,430 @@ export abstract class BaseEditor<T extends L.Layer> {
         this.layerDestroy();
         // 第三步：销毁状态等
     }
+
+
+    // #region 吸附行为
+    /** 
+      * arcgis，
+      * 1：拖动面时，不进行吸附行为，
+      * 2：拖动点接近另一个点时，点被吸附到一起，
+      * 3：拖动一个点接近一条线时，点会被吸附到线上
+      * 4：拖动一条线接近另一条线时，会根据鼠标按下拖动的那个坐标去吸附目标线，而拖动的线会跟着跑，同步的图形也在变化
+     */
+
+    // 吸附
+    protected snapController?: SnapController; // 顶点吸附控制器
+    private snapHighlightLayer: L.LayerGroup | undefined; // 吸附时，高亮显示的图层组
+    private highlightCircleMarker: L.CircleMarker | null = null; // 吸附时，高亮显示的marker
+    private highlightEdgeLayer: L.Polyline | null = null; // 吸附时，高亮显示的边线
+
+    // 添加高亮配置属性
+    protected snapHighlightOptions: SnapHighlightLayerOptions = {
+        enabled: true,
+        pointStyle: {
+            radius: 15,
+            color: '#00ff00',
+            weight: 2,
+            fillOpacity: 0.8,
+            pane: 'mapPane'  // 过高的pane会影响绘制时双击结束的操作，会导致无法触发双击事件。
+        },
+        edgeStyle: {
+            color: '#00ff00',
+            weight: 5,
+            dashArray: '4,2',
+            pane: 'mapPane'  // 过高的pane会影响绘制时双击结束的操作，会导致无法触发双击事件。
+        }
+    };
+    /** 初始化吸附控制器
+     *
+     *
+     * @protected
+     * @param {L.Map} map
+     * @param {SnapOptions} [snap]
+     * @memberof BaseEditor
+     */
+    private initSnap(map: L.Map, snap?: SnapOptions) {
+        if (!snap?.enabled) return;
+
+        this.snapController = new SnapController(map);
+        this.snapController.setModes(snap?.modes ?? ['vertex']);
+        this.snapController.setTolerance(snap?.tolerance ?? 8);
+    }
+
+    /**
+     * 动态启用/禁用吸附功能
+     * @param options 吸附选项
+     */
+    public updateSnapOptions(options: SnapOptions): void {
+        if (options.enabled) {
+            // 1：无论下面那个，都要设置高亮信息（这种写法是把吸附控制器和高亮行为区分开了，不知道是对是错！）
+            if (options?.highlight) {
+                this.snapHighlightOptions = options.highlight;
+            }
+            // 2：启用吸附
+            if (!this.snapController) {
+                // 初始化吸附控制器
+                this.initSnap(this.map, options);
+            } else if (options) {
+                // 更新配置
+                this.snapController.setModes(options.modes ?? ['vertex']);
+                this.snapController.setTolerance(options?.tolerance ?? 8);
+            }
+        } else {
+            // 禁用吸附
+            if (this.snapController) {
+                this.cleanupSnapResources();
+            }
+        }
+    }
+
+    /**
+     * 获取当前吸附配置
+     */
+    public getSnapOptions(): SnapOptions | null {
+        if (!this.snapController) {
+            return null;
+        }
+
+        return {
+            enabled: true,
+            modes: this.snapController.getModes(),
+            tolerance: this.snapController.getTolerance()
+        };
+    }
+
+    /**
+     * 设置吸附源（其他几何图形）
+     * @param layers 要排除的图层列表
+     */
+    protected setSnapSources(excludeLayers: L.Layer[]): void {
+        if (!this.snapController) {
+            throw new Error('吸附功能未启用');
+        }
+
+        const allIndices: GeometryIndex[] = [];
+
+        excludeLayers.forEach(excludeLayer => {
+            const indices = this.collectAllOtherGeometryIndices(this.map, excludeLayer);
+            allIndices.push(...indices);
+        });
+
+        this.snapController.setGeometrySources(allIndices);
+    }
+
+    /** 【吸附器】确定最终的坐标(顶点会去吸附边和其他顶点)
+     *
+     *
+     * @protected
+     * @param {L.LatLng} latlng
+     * @return {*}  {L.LatLng}
+     * @memberof BaseEditor
+     */
+    protected applySnapWithTarget(latlng: L.LatLng): SnapResult {
+        // 移除高亮的图层
+        this.clearSnapHighlights();
+        const snappedVertex = this.snapController?.snapVertex?.(latlng);
+        if (snappedVertex) {
+            // console.log('顶点吸附：', snappedVertex);
+            if (this.snapHighlightOptions.enabled) this.highlightPoint(snappedVertex);
+            return {
+                snappedLatLng: snappedVertex,
+                snapped: true,
+                type: 'vertex',
+                target: snappedVertex
+            };
+        }
+
+        const snappedEdge = this.snapController?.snapEdge?.(latlng);
+        if (snappedEdge) {
+            // console.log('边缘吸附：', snappedEdge);
+            const edge = this.snapController?.getClosestEdge?.(latlng); // 返回输入点即将吸附的目标边线
+            if (this.snapHighlightOptions.enabled && edge) this.highlightEdge(edge);
+            return {
+                snappedLatLng: snappedEdge,
+                snapped: true,
+                type: 'edge',
+                target: edge
+            };
+        }
+
+        return {
+            snappedLatLng: latlng,
+            snapped: false
+        };
+    }
+
+
+    /** 【顶点吸附器】收集所有其他图层的顶点信息
+     *
+     *
+     * @protected
+     * @param {L.Map} map
+     * @param {L.Layer} excludeLayer
+     * @return {*}  {L.LatLng[]}
+     * @memberof BaseEditor
+     */
+    protected collectAllOtherGeometryIndices(map: L.Map, excludeLayer: L.Layer): GeometryIndex[] {
+        const indices: GeometryIndex[] = [];
+
+        map.eachLayer((layer: any) => {
+            if (layer !== excludeLayer && layer.toGeoJSON) {
+                const geo = layer.toGeoJSON();
+                const geometry = geo.type === 'Feature' ? geo.geometry : geo;
+                try {
+                    const index = this.buildGeometryIndex(geometry);
+                    indices.push(index);
+                } catch (e) {
+                    console.warn('跳过不支持的图层类型', e);
+                }
+            }
+        });
+
+        return indices;
+    }
+
+    /** 高亮吸附目标点
+     *
+     *
+     * @protected
+     * @param {{ start: L.LatLng; end: L.LatLng }} edge
+     * @memberof BaseEditor
+     */
+    private highlightPoint(latlng: L.LatLng) {
+        // 清除上一次的高亮图层
+        if (this.highlightCircleMarker) {
+            this.highlightCircleMarker.remove();
+            this.highlightCircleMarker = null;
+        }
+        const marker = L.circleMarker(latlng, this.snapHighlightOptions.pointStyle);
+        if (!this.snapHighlightLayer) {
+            this.snapHighlightLayer = L.layerGroup().addTo(this.map);
+        }
+        this.snapHighlightLayer.addLayer(marker);
+        this.highlightCircleMarker = marker;
+    }
+
+    /** 高亮吸附目标线段
+     *
+     *
+     * @protected
+     * @param {{ start: L.LatLng; end: L.LatLng }} edge
+     * @memberof BaseEditor
+     */
+    private highlightEdge(edge: { start: L.LatLng; end: L.LatLng }) {
+        // 移除上次吸附高亮图层
+        if (this.highlightEdgeLayer) {
+            this.highlightEdgeLayer.remove();
+            this.highlightEdgeLayer = null;
+        }
+        // 添加新的高亮图层
+        const edgeLine = L.polyline([edge.start, edge.end], this.snapHighlightOptions.edgeStyle)
+        if (!this.snapHighlightLayer) {
+            this.snapHighlightLayer = L.layerGroup().addTo(this.map);
+        }
+        this.snapHighlightLayer.addLayer(edgeLine);
+        this.highlightEdgeLayer = edgeLine;
+    }
+
+    /** 移除上次吸附高亮图层
+     * 
+     *
+     * @protected
+     * @memberof BaseEditor
+     */
+    protected clearSnapHighlights() {
+        // 清除上一次的高亮图层
+        if (this.snapHighlightLayer) {
+            this.snapHighlightLayer.clearLayers();
+        }
+        this.highlightCircleMarker = null;
+        this.highlightEdgeLayer = null;
+    }
+
+    // 清理吸附相关资源的方法
+    protected cleanupSnapResources(): void {
+        // 1. 清理高亮层
+        this.clearSnapHighlights();
+        // 清空组
+        if (this.snapHighlightLayer && this.map.hasLayer(this.snapHighlightLayer)) {
+            this.map.removeLayer(this.snapHighlightLayer);
+            this.snapHighlightLayer = undefined;
+        }
+        // 2. 清理吸附控制器
+        this.snapController = undefined;
+    }
+
+
+    // #endregion
+
+
+
+    // #region 辅助函数
+
+    /** 提取多边形的坐标点（全部平铺到一个数组中）
+     *
+     *
+     * @protected
+     * @param {GeoJSON.GeoJSON} geo
+     * @return {*}  {L.LatLng[]}
+     * @memberof BaseEditor
+     */
+    protected extractVerticesFromGeoJSON(geo: GeoJSON.GeoJSON): L.LatLng[] {
+        const result: L.LatLng[] = [];
+        if (geo.type === 'Feature') geo = geo.geometry;
+        if (geo.type === 'Polygon') {
+            geo.coordinates.forEach(ring =>
+                ring.forEach(([lng, lat]) => result.push(L.latLng(lat, lng)))
+            );
+        } else if (geo.type === 'MultiPolygon') {
+            geo.coordinates.forEach(polygon =>
+                polygon.forEach(ring =>
+                    ring.forEach(([lng, lat]) => result.push(L.latLng(lat, lng)))
+                )
+            );
+        }
+        return result;
+    }
+
+    /** 构建空间数据索引 
+     *
+     *
+     * @protected
+     * @param {GeoJSON.Geometry} geometry
+     * @return {*}  {GeometryIndex}
+     * @memberof BaseEditor
+     */
+    protected buildGeometryIndex(geometry: GeoJSON.Geometry): GeometryIndex {
+        const vertices: L.LatLng[] = [];
+        const edges: { start: L.LatLng; end: L.LatLng }[] = [];
+
+        if (geometry.type === 'Polygon') {
+            geometry.coordinates.forEach(ring => {
+                const ringPoints = ring.map(([lng, lat]) => L.latLng(lat, lng));
+                vertices.push(...ringPoints);
+                for (let i = 0; i < ringPoints.length; i++) {
+                    const start = ringPoints[i];
+                    const end = ringPoints[(i + 1) % ringPoints.length]; // 闭合
+                    edges.push({ start, end });
+                }
+            });
+        } else if (geometry.type === 'MultiPolygon') {
+            geometry.coordinates.forEach(polygon => {
+                polygon.forEach(ring => {
+                    const ringPoints = ring.map(([lng, lat]) => L.latLng(lat, lng));
+                    vertices.push(...ringPoints);
+                    for (let i = 0; i < ringPoints.length; i++) {
+                        const start = ringPoints[i];
+                        const end = ringPoints[(i + 1) % ringPoints.length];
+                        edges.push({ start, end });
+                    }
+                });
+            });
+        } else if (geometry.type === 'LineString') {
+            const linePoints = geometry.coordinates.map(([lng, lat]) => L.latLng(lat, lng));
+            vertices.push(...linePoints);
+            for (let i = 0; i < linePoints.length - 1; i++) {
+                edges.push({ start: linePoints[i], end: linePoints[i + 1] });
+            }
+        } else if (geometry.type === 'MultiLineString') {
+            geometry.coordinates.forEach(line => {
+                const linePoints = line.map(([lng, lat]) => L.latLng(lat, lng));
+                vertices.push(...linePoints);
+                for (let i = 0; i < linePoints.length - 1; i++) {
+                    edges.push({ start: linePoints[i], end: linePoints[i + 1] });
+                }
+            });
+        } else {
+            // 不再执行输出错误信息
+            // throw new Error(`不支持的 geometry 类型: ${geometry.type}`);
+        }
+
+        const bounds = L.latLngBounds(vertices);
+
+        return {
+            type: geometry.type.startsWith('Polygon') ? 'polygon' : 'polyline',
+            vertices,
+            edges,
+            bounds,
+            geometry
+        };
+    }
+
+
+
+    // #endregion
+
+
+    // #region 几何图形的有效性校验
+    // 添加校验配置
+    protected validationOptions: ValidationOptions = {};
+    /** 更新几何校验的内容项
+     * 
+     *
+     * @param {ValidationOptions} rules
+     * @memberof LeafletPolyline
+     */
+    public setValidationOptions(rules: ValidationOptions): void {
+        this.validationOptions = { ...this.validationOptions, ...rules };
+    }
+    /** 获取几何校验的内容项
+     * 
+     *
+     * @param {ValidationOptions} rules
+     * @memberof LeafletPolyline
+     */
+    public getValidationOptions(): ValidationOptions {
+        return this.validationOptions;
+    }
+
+    /** 校验面图层的有效性
+     *
+     *
+     * @private
+     * @param {L.LatLng[]} coords
+     * @return {*}  {boolean}
+     * @memberof LeafletRectangle
+     */
+    public isValidPolygon(coords: number[][]): boolean {
+
+        // 1. 检查自相交（根据配置）
+        if (this.validationOptions?.allowSelfIntersect === false) {
+            if (this.hasSelfIntersection(coords)) {
+                return false;
+            }
+        }
+
+        // 2. 其他校验规则可以在这里添加...
+
+        return true;
+
+    }
+
+    /** 自相交检测（使用 turf.kinks）
+     *
+     *
+     * @private
+     * @param {number[][]} coords
+     * @return {*}  {boolean} true=有自相交，false=无自相交
+     * @memberof LeafletPolyline
+     */
+    private hasSelfIntersection(coords: number[][]): boolean {
+
+        if (coords.length < 4) return false;
+
+        try {
+            // 2. 转换为GeoJSON格式 [lng, lat] ✅ 这个转换是必要的！
+            const geoJsonCoords = coords.map(coord => [coord[1], coord[0]]);
+            const turfPolygon = polygon([geoJsonCoords]);
+            const intersections = kinks(turfPolygon);
+
+            return intersections.features.length > 0;
+        } catch (error) {
+            console.warn('自相交检测失败:', error);
+            return false;
+        }
+    }
+    // #endregion
 
 
 
