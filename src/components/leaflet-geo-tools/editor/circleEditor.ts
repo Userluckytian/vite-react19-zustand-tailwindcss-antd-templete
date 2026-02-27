@@ -1,5 +1,5 @@
 import { BaseCircleEditor } from "../base/BaseCircleEditor";
 
-export abstract class CircleEditor extends BaseCircleEditor {
+export  default abstract class CircleEditor extends BaseCircleEditor {
     
 }

@@ -1,5 +1,5 @@
 import { BaseRectangleEditor } from "../base/BaseRectangleEditor";
 
-export abstract class RectangleEditor extends BaseRectangleEditor {
+export default abstract class RectangleEditor extends BaseRectangleEditor {
     
 }

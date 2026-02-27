@@ -1,5 +1,5 @@
 import { BasePolygonEditor } from "../base/BasePolygonEditor";
 
-export abstract class PolygonEditor extends BasePolygonEditor {
+export default abstract class PolygonEditor extends BasePolygonEditor {
     
 }
