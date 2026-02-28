@@ -67,14 +67,14 @@ export function mergePolygon(selLayers: any): GeoJSON.Feature | null {
         if (idx === 1) {
             const polygon1 = selLayers[0]?.toGeoJSON(9);
             const polygon2 = selLayers[1]?.toGeoJSON(9);
-            const p1Normalized = normalizeGeoJSONCoordinates(polygon1.features[0]);
-            const p2Normalized = normalizeGeoJSONCoordinates(polygon2.features[0]);
+            const p1Normalized = normalizeGeoJSONCoordinates(polygon1.features[0], 9);
+            const p2Normalized = normalizeGeoJSONCoordinates(polygon2.features[0], 9);
             unionGeom = union(featureCollection([p1Normalized, p2Normalized]));
         }
         if (idx > 1) {
             const polygon = layer?.toGeoJSON(9);
-            const befNormalized = normalizeGeoJSONCoordinates(unionGeom);
-            const pNormalized = normalizeGeoJSONCoordinates(polygon.features[0]);
+            const befNormalized = normalizeGeoJSONCoordinates(unionGeom, 9);
+            const pNormalized = normalizeGeoJSONCoordinates(polygon.features[0], 9);
             unionGeom = union(featureCollection([befNormalized, pNormalized]));
         }
     });
@@ -148,10 +148,11 @@ export function reshapeSelectedLayersByLine(
  * 支持 FeatureCollection、Feature、Geometry 对象
  */
 function normalizeGeoJSONCoordinates(geojson: any, precision = 6): any {
-    const round = (num: number) => parseFloat(num.toFixed(precision));
+    // const round = (num: number) => parseFloat(num.toFixed(precision));
+    const round1 = (num: number) => num;
 
     const normalizeRing = (ring: number[][]) =>
-        ring.map(([lng, lat]) => [round(lng), round(lat)]);
+        ring.map(([lng, lat]) => [round1(lng), round1(lat)]);
 
     const normalizePolygon = (polygon: number[][][]) =>
         polygon.map(normalizeRing);

@@ -223,7 +223,7 @@ export default class LeafletPolyline {
      * @param {number} precision - 精度（小数位数），默认6位
      * @returns {Array} 去重后的坐标数组
      */
-    private deduplicateCoordinates(coordinates: number[][], precision = 6) {
+    private deduplicateCoordinates(coordinates: number[][]) {
         if (!Array.isArray(coordinates) || coordinates.length === 0) {
             return [];
         }
@@ -235,9 +235,7 @@ export default class LeafletPolyline {
             const previous = coordinates[i - 1];
 
             // 检查当前坐标是否与上一个坐标相同（在指定精度下）
-            const isDuplicate =
-                current[0].toFixed(precision) === previous[0].toFixed(precision) &&
-                current[1].toFixed(precision) === previous[1].toFixed(precision);
+            const isDuplicate = current[0] === previous[0] && current[1] === previous[1];
 
             if (!isDuplicate) {
                 result.push(current);
