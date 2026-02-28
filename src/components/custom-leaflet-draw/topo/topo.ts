@@ -112,7 +112,7 @@ export class LeafletTopology {
     // 添加绘制完毕后，重新调整状态为topo状态
     this.drawLineListener = (status: PolygonEditorState) => {
       if (status === PolygonEditorState.Idle) {
-        const geoJson = this.drawLineLayer!.geojson();
+        const geoJson = this.drawLineLayer!.geojson(9);
         // console.log('绘制的线图层的空间信息：', this.drawLineLayer, geoJson);
         // console.log('用户选择的图层：', this.selectedLayers);
         // console.log('地图对象', this.map);
@@ -174,7 +174,7 @@ export class LeafletTopology {
     // 添加绘制完毕后，重新调整状态为topo状态
     this.drawLineListener = (status: PolygonEditorState) => {
       if (status === PolygonEditorState.Idle) {
-        const geoJson = this.drawLineLayer!.geojson();
+        const geoJson = this.drawLineLayer!.geojson(9);
         // console.log('绘制的线图层的空间信息：', geoJson, this.selectedLayers);
         const { doClipLayers, clipedGeoms } = clipSelectedLayersByLine(geoJson, this.selectedLayers);
         // console.log('clipsPolygons', clipedGeoms, 'waitingDelLayer', doClipLayers);
@@ -216,7 +216,7 @@ export class LeafletTopology {
    * @memberof LeafletTopology
    */
   private addHighLightLayerByPickLayerGeom(layer: any) {
-    const layerGeom = layer.toGeoJSON();
+    const layerGeom = layer.toGeoJSON(9);
     // 暂时不支持点类型的
     if (layerGeom.geometry.type === 'Point') {
       throw new Error('不支持的数据类型：' + layerGeom.geometry.type + '，不支持高亮');

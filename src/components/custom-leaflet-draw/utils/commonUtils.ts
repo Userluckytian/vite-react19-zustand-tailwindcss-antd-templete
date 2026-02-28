@@ -28,13 +28,13 @@ export function queryLayerOnClick(map: L.Map, e: L.LeafletMouseEvent) {
         ])
     );
     let selectBoundsCoords: any =
-        L.rectangle(selectBounds).toGeoJSON().geometry.coordinates[0];
+        L.rectangle(selectBounds).toGeoJSON(9).geometry.coordinates[0];
     let selectList: any[] = [];
     map.eachLayer((layer: any) => {
         if (!layer.toGeoJSON) {
             return;
         }
-        let feature = layer.toGeoJSON();
+        let feature = layer.toGeoJSON(9);
         if (feature.type === "FeatureCollection") {
             return;
         }
@@ -123,13 +123,13 @@ export function queryLayersIntersectingGeometry(
     // 转换为标准 GeoJSON Feature
     const inputFeature: GeoJSON.Feature =
         geometry instanceof L.Polyline || geometry instanceof L.Polygon
-            ? geometry.toGeoJSON() as any
+            ? geometry.toGeoJSON(9) as any
             : geometry;
 
     map.eachLayer((layer: any) => {
         if (!layer.toGeoJSON) return;
 
-        const feature = layer.toGeoJSON();
+        const feature = layer.toGeoJSON(9);
         if (feature.type === 'FeatureCollection') return;
 
         const layerFeature = turfFeature(feature.geometry);

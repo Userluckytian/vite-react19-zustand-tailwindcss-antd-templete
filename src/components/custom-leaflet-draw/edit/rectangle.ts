@@ -176,7 +176,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         if (!this.canConsume(e)) return;
         if (!this.rectangleLayer) throw new Error('图层实例化失败，无法完成图层创建，请重试');
         const clickedLatLng = e.latlng;
-        const polygonGeoJSON = this.rectangleLayer.toGeoJSON();
+        const polygonGeoJSON = this.rectangleLayer.toGeoJSON(9);
         // 判断用户是否点击到了面上，是的话，就开始编辑模式
         const turfPoint = point([clickedLatLng.lng, clickedLatLng.lat]);
         const isInside = booleanPointInPolygon(turfPoint, polygonGeoJSON);
@@ -740,7 +740,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
         if (!this.rectangleLayer) return false;
 
         try {
-            const polygonGeoJSON = this.rectangleLayer.toGeoJSON();
+            const polygonGeoJSON = this.rectangleLayer.toGeoJSON(9);
             const turfPoint = point([e.latlng.lng, e.latlng.lat]);
             return booleanPointInPolygon(turfPoint, polygonGeoJSON);
         } catch (error) {

@@ -204,7 +204,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         } else {
             // 情况 2：已绘制完成后的后续双击事件的逻辑均走这个
             const clickedLatLng = e.latlng;
-            const polygonGeoJSON = this.polygonLayer.toGeoJSON();
+            const polygonGeoJSON = this.polygonLayer.toGeoJSON(9);
             // 判断用户是否点击到了面上，是的话，就开始编辑模式
             const turfPoint = point([clickedLatLng.lng, clickedLatLng.lat]);
             const isInside = booleanPointInPolygon(turfPoint, polygonGeoJSON);
@@ -944,7 +944,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         if (!this.polygonLayer) return false;
 
         try {
-            const polygonGeoJSON = this.polygonLayer.toGeoJSON();
+            const polygonGeoJSON = this.polygonLayer.toGeoJSON(9);
             const turfPoint = point([e.latlng.lng, e.latlng.lat]);
             console.log('turfPoint', turfPoint, polygonGeoJSON);
 

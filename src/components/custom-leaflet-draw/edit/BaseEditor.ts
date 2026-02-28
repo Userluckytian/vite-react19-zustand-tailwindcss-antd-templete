@@ -352,7 +352,7 @@ export abstract class BaseEditor {
 
         map.eachLayer((layer: any) => {
             if (layer !== excludeLayer && layer.toGeoJSON) {
-                const geo = layer.toGeoJSON();
+                const geo = layer.toGeoJSON(9);
                 const geometry = geo.type === 'Feature' ? geo.geometry : geo;
                 try {
                     const index = this.buildGeometryIndex(geometry);
