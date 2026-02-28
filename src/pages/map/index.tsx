@@ -406,8 +406,8 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
 
       {/* 绘制工具 */}
       <div className="draw-tools">
-         <CustomLeafLetDraw mapInstance={mapView} drawGeoJsonResult={handleDrawResult} /> 
-       {/* <LeafLetGeoTools mapInstance={mapView} drawGeoJsonResult={handleDrawResult} /> */}
+         {/* <CustomLeafLetDraw mapInstance={mapView} drawGeoJsonResult={handleDrawResult} />  */}
+       <LeafLetGeoTools mapInstance={mapView} drawGeoJsonResult={handleDrawResult} />
       </div>
 
       {/* 经纬度信息 */}
