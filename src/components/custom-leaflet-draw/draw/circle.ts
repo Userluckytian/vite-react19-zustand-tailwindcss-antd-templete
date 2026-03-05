@@ -171,7 +171,6 @@ export default class LeafletCircle {
      */
     public geojson() {
         if (this.circleLayer && this.center) {
-            // 发出消息(圆需要自己定制吐出的结构)
             const lnglat = [this.center.lng, this.center.lat];
             const options: any = { steps: 64, units: 'kilometers', properties: { type: 'circle' } };
             const geojson = circle(lnglat, this.radius / km_value, options); // 获取图形！

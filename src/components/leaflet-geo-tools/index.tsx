@@ -5,8 +5,9 @@ import CustomIcon from '../custom-icon';
 import { App, Divider, Switch } from 'antd';
 import * as L from 'leaflet';
 import './index.scss';
-import MarkerPointEditor from './editor/markerPointEditor';
+
 import { EditorState, type EditorInstance } from './types';
+import { MarkerPointEditor } from './editor/markerPointEditor';
 // import PolylineEditor from './editor/polylineEditor';
 // import LeafletPolygon from './editor/polygon';
 // import LeafletCircle from './editor/circle';
@@ -218,6 +219,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
         // }
 
     }
+    
     // 改变other属性的选项
     const changeOtherBarOptions = (item: any, checked: boolean) => {
         // item.enable = !item.enable;
@@ -236,6 +238,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
         // }
 
     }
+    
     // 改变EditConfigBar的选项
     const changeEditConfigBarOptions = (item: any, checked: boolean) => {
         // item.enable = !item.enable;

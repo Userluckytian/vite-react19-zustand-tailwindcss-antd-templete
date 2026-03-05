@@ -1,6 +1,6 @@
 import type CircleEditor from "./editor/circleEditor";
-import type MarkerPointEditor from "./editor/markerPointEditor";
-import type PolygonEditor from "./editor/polygonEditor";
+import type { MarkerPointEditor } from "./editor/markerPointEditor";
+import type { PolygonEditor } from "./editor/polygonEditor";
 import type PolylineEditor from "./editor/polylineEditor";
 import type RectangleEditor from "./editor/rectangleEditor";
 
@@ -29,6 +29,7 @@ export interface LeafletPolylineOptions extends L.PolylineOptions {
 }
 
 export interface LeafletEditorOptions {
+    defaultGeometry?: GeoJSON.Geometry; // 默认几何信息（如果有的话，可以在编辑时直接加载）
     defaultStyle?: LeafletPolylineOptions; // 存放（用户自己想要设置的）图层的默认样式信息
     snap?: SnapOptions;  // 吸附配置信息
     edit?: EditOptionsExpends; // 编辑信息
@@ -102,3 +103,10 @@ export interface GeometryIndex {
 // export type measureInstance = LeafletArea | LeafletDistance;
 export type editInstance = CircleEditor | MarkerPointEditor | PolygonEditor | PolylineEditor | RectangleEditor;
 export type EditorInstance = editInstance;
+
+
+// 中点标记（插入中点标记（红色marker） 和 拖动边的标记（蓝色marker））
+export type MidpointPair = {
+    insert: L.Marker | null;
+    edge: L.Marker | null;
+};

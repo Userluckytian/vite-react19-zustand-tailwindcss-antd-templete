@@ -1,280 +1,153 @@
 import { buildMarkerIcon } from "@/components/custom-leaflet-draw/utils/commonUtils";
-import { EditorState, type BaseEditOptions, type EditorListenerConfigs, type GeometryIndex, type LeafletEditorOptions, type SnapHighlightLayerOptions, type SnapOptions, type SnapResult, type ValidationOptions } from "../types";
+import { EditorState, type BaseEditOptions, type EditOptionsExpends, type EditorListenerConfigs, type GeometryIndex, type LeafletEditorOptions, type SnapHighlightLayerOptions, type SnapOptions, type SnapResult, type ValidationOptions } from "../types";
 import { SnapController } from "@/components/custom-leaflet-draw/utils/SnapController";
 import { kinks, polygon } from "@turf/turf";
 import * as L from "leaflet";
 
 
-/** 作为编辑器基类-提供通用部分
- *  1：图层管理
- * */
 export abstract class BaseEditor<T extends L.Layer> {
-    // 静态属性 - 所有编辑器实例共享同一个激活状态
-    private static currentActiveEditor: BaseEditor<any> | null = null;
-    protected isVisible = true; // 图层可见性
-
-    // 定义图层（先设置protected，后续需要再放开）
-    protected layer: T;
 
     protected map: L.Map; // 地图实例（编辑器本身是不需要的，奈何其他的都继承自它，索性直接在这里定义好了）
 
-    // 当前状态
-    protected currentState: EditorState = EditorState.Idle;
-    // 状态监听器存储数组，比如来了多个监听函数，触发的时候，要遍历全部监听函数。
-    protected stateListeners: ((state: EditorState) => void)[] = [];
+    protected options: LeafletEditorOptions = {}; // 配置信息
 
-    constructor(map: L.Map, options: LeafletEditorOptions) {
-        this.map = map;
-        this.initBaseEditOptions
-    }
+    protected layer: T; // 图层实例（编辑器本身是不需要的，奈何其他的都继承自它，索性直接在这里定义好了）
 
-    /** 创建图层对象
+    protected layerVisble: boolean = true; // 图层的显隐状态
+
+    // #region 编辑器的[图层]内容
+    /** 编辑器的图层需要提供的内容
      * 
-     * */
-    protected abstract createLayer<U extends L.LayerOptions>(layerOptions: U, geometry?: L.LatLng | L.LatLng[]): void;
-
-    /** 绑定地图事件(任何几何图层，绘制时，都需要关联地图事件)
-     * 
-     * */
-    protected abstract bindMapEvents(): void;
-
-    /** 关闭地图事件(任何几何图层，绘制时，都需要关联地图事件)
-     * 
-     * */
-    protected abstract offMapEvents(): void;
-
-    /** 
-     * 图层显隐控制 
+     * 1.1：初始化构建`abstruct createEditorLayer()`方法，交由子类去实现，毕竟不同的编辑器，图层类型不一样，构建方式也不一样。
+     * 1.2：图层初始化后，还要绑定一系列的地图事件（点击、双击、鼠标移动） abstruct bindMapEvents()方法，交由子类去实现，毕竟不同的编辑器，事件绑定的方式和事件类型也不一样。
+     * 1.3：编辑器是否提供显隐事件？如果不提供的话，比如双击编辑事件，如果这个图层是隐藏的，就不能激活编辑功能, 如何做？先提供吧。 abstruct setLayerVisibility()方法，交由子类去实现，毕竟不同的编辑器，图层显隐的方式也不一样。
+     * 1.4：toGeojson默认支持的参数，要保持住，之前的丢了。
+     * 1.5：销毁鼠标监听事件 abstruct offMapEvents()方法，交由子类去实现，毕竟不同的编辑器，事件解绑的方式和事件类型也不一样。
      */
-    protected abstract setLayerVisibility(visible: boolean): void;
-
-    /** 
-     * 获取图层的geometry信息 
-     */
-    protected abstract getGeoJson(): GeoJSON.Feature;
-
-    /** 
-     * 获取绘制的图层本身
-     */
-    protected getLayer(): L.Layer {
-        return this.layer;
-    }
-
-    /** 销毁图层
-     * 
-     */
-    protected layerDestroy(): void { // 销毁图层（起这个名字是为了规避编辑器的销毁事件。）
-        if (this.layer) {
-            this.layer.remove();
-            this.layer = null;
-        }
-    }
-
-    // #endregion
-
-    // #region 实例是否是激活状态（编辑时，就是激活态，否则就是非激活态，这时，关闭全部事件） 
-
-    /**
-     * 激活当前编辑器实例
-     */
-    protected activate(): void {
-        // console.log('激活编辑器:', this.constructor.name);
-
-        // 保存之前的激活编辑器
-        const previousActiveEditor = BaseEditor.currentActiveEditor;
-
-        // 停用之前激活的编辑器
-        if (previousActiveEditor && previousActiveEditor !== this) {
-            // console.log('停用之前的编辑器:', previousActiveEditor.constructor.name);
-            previousActiveEditor.forceExitEditMode(); // 强制退出编辑模式
-            previousActiveEditor.deactivate(); // 停用激活状态
-        }
-
-        // 设置当前实例为激活状态
-        BaseEditor.currentActiveEditor = this;
-    }
-
-    /**
-     * 停用当前编辑器实例
-     */
-    protected deactivate(): void {
-        // console.log('停用编辑器:', this.constructor.name);
-        if (BaseEditor.currentActiveEditor === this) {
-            BaseEditor.currentActiveEditor = null;
-        }
 
 
-    }
-
-    /**
-     * 检查当前实例是否激活
-     */
-    protected isActive(): boolean {
-        return BaseEditor.currentActiveEditor === this && this.isVisible;
-    }
-
-    /**
-     * 静态方法：停用所有编辑器（压根不用，我都不想写！）
-     */
-    public static deactivateAllEditors(): void {
-        // console.log('停用所有编辑器');
-        if (BaseEditor.currentActiveEditor) {
-            BaseEditor.currentActiveEditor.deactivate();
-        }
-    }
-
-    /**
-     * 强制停用编辑状态（但不改变激活状态）
-     */
-    protected forceExitEditMode(): void {
-        // console.log('强制退出编辑模式:', this.constructor.name);
-        this.exitEditMode();
-        if (this.currentState === EditorState.Editing) {
-            this.updateAndNotifyStateChange(EditorState.Idle);
-        }
-    }
-
-    // #endregion
-
-    // #region 事件回调
-    /** 状态改变时，触发存储的所有监听事件的回调
+    /**创建图层并添加到地图上（三件事:1: 创建图层并添加到地图上 2:要不要给图层绑定自身的监听事件? 3: 如果编辑器开启吸附,则需要设置吸附源）
      *
      *
      * @protected
-     * @param {EditorState} status
-     * @param {boolean} [immediateNotify] (立即发出消息通知)
-     * @return {*}  {void}
+     * @abstract
+     * @template U
+     * @param {U} layerOptions 图层的样式配置项
+     * @param {GeoJSON.Geometry} [geometry] 图层的默认几何信息
      * @memberof BaseEditor
      */
-    protected updateAndNotifyStateChange(status: EditorState, immediateNotify: boolean = true): void {
-        this.currentState = status;
-        if (immediateNotify) {
-            this.stateListeners.forEach(fn => fn(this.currentState));
-        }
-    }
+    protected abstract initLayer<U extends L.LayerOptions>(layerOptions: U, geometry?: GeoJSON.Geometry | L.LatLng): void;
 
-    /** 设置编辑器当前的状态，
-     *
-     *
-     * @param {EditorState} status
-     * @memberof BaseEditor
-     */
-    public setCurrentState(status: EditorState): void {
-        this.currentState = status;
-    }
-    /** 返回编辑器当前的状态，
-     *
-     *
-     * @param {EditorState} status
-     * @memberof BaseEditor
-     */
-    public getCurrentState(): EditorState {
-        return this.currentState;
-    }
-
-    /** 外部监听者添加的回调监听函数，存储到这边，状态改变时，触发这些监听事件的回调
-     *
-     *
-     * @param {(state: EditorState) => void} listener // 监听事件
-     * @param {EditorListenerConfigs} [configs={ immediateNotify: false }] // 配置参数
-     * @memberof BaseEditor
-     */
-    public onStateChange(listener: (state: EditorState) => void, configs: EditorListenerConfigs = { immediateNotify: false }): void {
-        // 存储回调事件并立刻触发一次
-        this.stateListeners.push(listener);
-        configs.immediateNotify && listener(this.currentState);
-    }
-
-    /** 移除监听器的方法
-     *
-     *
-     * @param {(state: EditorState) => void} listener
-     * @memberof BaseEditor
-     */
-    public offStateChange(listener: (state: EditorState) => void): void {
-        const index = this.stateListeners.indexOf(listener);
-        if (index > -1) {
-            this.stateListeners.splice(index, 1);
-        }
-    }
-
-    /** 清空所有状态监听器 
-     * 
-     */
-    protected clearAllStateListeners(): void {
-        this.stateListeners = [];
-    }
-
-    // #endregion
-
-    // #region 编辑行为  
-
-    /** 初始化编辑点marker的配置信息
+    /** 绑定地图事件
      *
      *
      * @protected
-     * @memberof BaseEditor
-     */
-    protected initBaseEditOptions(options?: BaseEditOptions): BaseEditOptions {
-        if (options) {
-            const userConfig: BaseEditOptions = {
-                enabled: options?.enabled ?? this.baseEditOptions.enabled,
-                vertexsMarkerStyle: options?.vertexsMarkerStyle
-                    ? { ...this.baseEditOptions.vertexsMarkerStyle, ...options.vertexsMarkerStyle }
-                    : this.baseEditOptions.vertexsMarkerStyle
-            };
-            // save
-            this.baseEditOptions = userConfig;
-        }
-        return { ...this.baseEditOptions };
-    }
-
-    /** 更新编辑配置
-      *
-      *
-      * @abstract
-      * @memberof BaseEditor
-      */
-    public abstract updateEditOptions(options: BaseEditOptions): void;
-
-    /** 退出编辑模式
-     *
-     *
      * @abstract
      * @memberof BaseEditor
      */
-    public abstract exitEditMode(): void;
+    protected abstract bindMapEvents(map: L.Map): void;
+
+    /** 取消绑定地图事件
+     *
+     *
+     * @protected
+     * @abstract
+     * @memberof BaseEditor
+     */
+    protected abstract offMapEvents(map: L.Map): void;
+
+    /** 设置图层的显隐状态
+     *
+     *
+     * @protected
+     * @abstract
+     * @memberof BaseEditor
+     */
+    protected abstract setLayerVisibility(visible: boolean): void;
+
+    /** 获取图层的显隐状态
+     *
+     *
+     * @protected
+     * @return {*}  {boolean}
+     * @memberof BaseEditor
+     */
+    protected getLayerVisibility(): boolean {
+        return this.layerVisble;
+    }
+
+    /** 渲染图层
+     *
+     *
+     * @protected
+     * @abstract
+     * @param {any[]} coords 坐标数组
+     * @param {boolean} valid 是否为有效几何坐标
+     * @memberof BaseEditor
+     */
+    protected abstract renderLayer(coords: any[], valid: boolean): void;
+
+    /** 返回图层的空间信息 
+     * 
+     * 
+     * @memberof LeafletEditPolygon
+     */
+    public getGeoJSON(precision?: number | false) {
+        if (this.layer && (this.layer as any).toGeoJSON) {
+            return (this.layer as any).toGeoJSON(precision);
+        } else {
+            throw new Error("未捕获到图层，无法获取到geojson数据");
+        }
+    }
+
+    /** 返回绘制的图层
+     * 
+     * 应用场景1： 地图上存在多个图层实例，每个图层的options属性中有其唯一id标识。现在若要删除其中一个图层，就需要先找到这个图层实例的options中存储的id标识，然后调用后台的删除接口。
+     * 
+     * 应用场景2： 更改图层样式。
+     *
+     * （简言之： 场景太多，索性直接返回图层对象即可）
+     * @return {*} 
+     * @memberof LeafletEditPolygon
+     */
+    public getLayer() {
+        return this.layer;
+    }
+
+    /** 销毁图层，从地图中移除图层
+     *
+     *
+     * @memberof LeafletPolyLine
+     */
+    public layerDestroy() {
+        if (this.layer) {
+            this.map.removeLayer(this.layer);
+            this.layer.remove();
+            this.layer = null;
+        }
+        this.clearAllStateListeners();
+    }
+
+    /** 地图状态重置
+     *
+     *
+     * @private
+     * @memberof LeafletEditRectangle
+     */
+    public reset() {
+        this.map.getContainer().style.cursor = 'grab';
+        // 恢复双击地图放大事件（先考虑让用户自己去写，里面不再控制）
+        // this.map.doubleClickZoom.enable();
+    }
 
     // #endregion
 
-
-    /** 销毁编辑器
-     * 
-     */
-    protected destroy(): void {
-        // 第一步：关闭事件
-        this.offMapEvents();
-        // 第二步：销毁图层
-        this.layerDestroy();
-        // 第三步：销毁状态等
-    }
-
-
-    // #region 吸附行为
-    /** 
-      * arcgis，
-      * 1：拖动面时，不进行吸附行为，
-      * 2：拖动点接近另一个点时，点被吸附到一起，
-      * 3：拖动一个点接近一条线时，点会被吸附到线上
-      * 4：拖动一条线接近另一条线时，会根据鼠标按下拖动的那个坐标去吸附目标线，而拖动的线会跟着跑，同步的图形也在变化
-     */
-
+    // #region 编辑器的[吸附]内容
     // 吸附
     protected snapController?: SnapController; // 顶点吸附控制器
     private snapHighlightLayer: L.LayerGroup | undefined; // 吸附时，高亮显示的图层组
     private highlightCircleMarker: L.CircleMarker | null = null; // 吸附时，高亮显示的marker
     private highlightEdgeLayer: L.Polyline | null = null; // 吸附时，高亮显示的边线
-
     // 添加高亮配置属性
     protected snapHighlightOptions: SnapHighlightLayerOptions = {
         enabled: true,
@@ -292,14 +165,7 @@ export abstract class BaseEditor<T extends L.Layer> {
             pane: 'mapPane'  // 过高的pane会影响绘制时双击结束的操作，会导致无法触发双击事件。
         }
     };
-    /** 初始化吸附控制器
-     *
-     *
-     * @protected
-     * @param {L.Map} map
-     * @param {SnapOptions} [snap]
-     * @memberof BaseEditor
-     */
+
     private initSnap(map: L.Map, snap?: SnapOptions) {
         if (!snap?.enabled) return;
 
@@ -411,7 +277,6 @@ export abstract class BaseEditor<T extends L.Layer> {
         };
     }
 
-
     /** 【顶点吸附器】收集所有其他图层的顶点信息
      *
      *
@@ -440,7 +305,7 @@ export abstract class BaseEditor<T extends L.Layer> {
         return indices;
     }
 
-    /** 高亮吸附目标点
+    /** 高亮吸附目标[点]
      *
      *
      * @protected
@@ -461,7 +326,7 @@ export abstract class BaseEditor<T extends L.Layer> {
         this.highlightCircleMarker = marker;
     }
 
-    /** 高亮吸附目标线段
+    /** 高亮吸附目标[线段]
      *
      *
      * @protected
@@ -512,9 +377,436 @@ export abstract class BaseEditor<T extends L.Layer> {
     }
 
 
+    /** 是否开启了吸附操作
+     *
+     *
+     * @private
+     * @return {*}  {boolean}
+     * @memberof LeafletPolygonEditor
+     */
+    protected IsEnableSnap(): boolean {
+        const snapOptions = this.getSnapOptions();
+        if (snapOptions && snapOptions.enabled && this.snapController) {
+            return true;
+        }
+        return false;
+    }
+
+
+    /**
+     * 快捷方法：动态切换吸附功能
+     */
+    public toggleSnap(options: SnapOptions): void {
+        this.updateSnapOptions(options);
+        // 如果正在编辑，需要更新吸附源
+        if (this.currentState === EditorState.Editing) {
+            if (this.IsEnableSnap()) {
+                this.setSnapSources([this.layer!]);
+            }
+        }
+    }
+
     // #endregion
 
+    // #region 编辑器的[编辑]内容（这个里面包含了：是否启用编辑功能，编辑时的顶点的样式，更新编辑器的配置信息，退出编辑）
 
+    // 编辑时的顶点配置
+    protected editOptions: EditOptionsExpends = {
+        // 顶点属性信息
+        enabled: true,
+        vertexsMarkerStyle: {
+            icon: buildMarkerIcon(),
+            draggable: true,
+            pane: 'markerPane'
+        },
+        // 这里不对下面两种类型设置默认值,之所以写出来又注释掉,主要是想把全部的配置项展示出来.后续也知道编辑配置项的全部属性,
+        // // 中点拖动属性信息
+        // dragMidMarkerOptions: {
+        //     enabled: true,
+        //     dragMarkerStyle: {
+        //         // 多边形/线共用的默认中点样式
+        //         icon: buildMarkerIcon("border-radius: 50%; background: #ffffff80; border: solid 1px #f00;", [14, 14]),
+        //         draggable: true,
+        //         pane: 'markerPane'
+        //     },
+        //     positionRatio: 0.3
+        // },
+        // // 拖动边的marker属性信息
+        // dragLineMarkerOptions: {
+        //     enabled: true,
+        //     dragMarkerStyle: {
+        //         // 多边形/线共用的默认边拖动样式
+        //         icon: buildMarkerIcon("border-radius: 50%; background: #007bff80; border: solid 1px #007bff;", [14, 14]),
+        //         draggable: true,
+        //         pane: 'markerPane'
+        //     },
+        //     positionRatio: 0.6
+        // }
+    };
+
+    // 编辑历史栈
+    protected abstract vertexMarkers: any[]; // 存储顶点标记的数组
+    protected abstract midpointMarkers: any[]; // 存储【线中点、拖动线marker】两种标记的数组
+    protected abstract historyStack: any[]; // 历史记录，存储快照
+    protected abstract redoStack: any[]; // 重做记录，存储快照
+
+    /**
+     * 获取是否启用编辑
+     */
+    public getEditEnabled(): boolean {
+        return this.editOptions.enabled;
+    }
+
+    /** 初始化编辑点marker的配置信息
+     *
+     *
+     * @protected
+     * @memberof BaseEditor
+     */
+    protected initEditOptions(options?: EditOptionsExpends): EditOptionsExpends {
+        if (options) {
+            const userConfig: EditOptionsExpends = {
+                enabled: options?.enabled ?? this.editOptions.enabled,
+                vertexsMarkerStyle: options?.vertexsMarkerStyle
+                    ? { ...this.editOptions.vertexsMarkerStyle, ...options.vertexsMarkerStyle }
+                    : this.editOptions.vertexsMarkerStyle,
+                // 下面的用户传了才会有
+                // 中点
+                dragMidMarkerOptions: options?.dragMidMarkerOptions,
+                // 拖动线的marker
+                dragLineMarkerOptions: options?.dragLineMarkerOptions
+            };
+
+            // 
+            if (userConfig?.dragMidMarkerOptions?.dragMarkerStyle) {
+                // 强制设置可拖动
+                userConfig.dragMidMarkerOptions!.dragMarkerStyle!.draggable = true;
+            }
+            if (userConfig?.dragLineMarkerOptions?.dragMarkerStyle) {
+                // 强制设置可拖动
+                userConfig.dragLineMarkerOptions!.dragMarkerStyle!.draggable = true;
+            }
+
+            // save
+            this.editOptions = userConfig;
+        }
+        return { ...this.editOptions };
+    }
+
+    /** 获取编辑配置项
+      *
+      *
+      * @abstract
+      * @memberof BaseEditor
+      */
+    protected getEditOptions(): EditOptionsExpends {
+        return this.editOptions;
+    }
+
+    /** 更新编辑配置
+      *
+      *
+      * @abstract
+      * @memberof BaseEditor
+      */
+    protected updateEditOptions(options: EditOptionsExpends): void {
+        this.editOptions = {
+            enabled: options?.enabled ?? this.editOptions.enabled,
+            vertexsMarkerStyle: options?.vertexsMarkerStyle ? { ...this.editOptions.vertexsMarkerStyle, ...options?.vertexsMarkerStyle } : this.editOptions.vertexsMarkerStyle,
+            // 中点
+            dragMidMarkerOptions: options?.dragMidMarkerOptions
+                ? { ...this.editOptions.dragMidMarkerOptions, ...options?.dragMidMarkerOptions }
+                : this.editOptions.dragMidMarkerOptions,
+            // 拖动线的marker
+            dragLineMarkerOptions: options?.dragLineMarkerOptions
+                ? { ...this.editOptions.dragLineMarkerOptions, ...options?.dragLineMarkerOptions } : this.editOptions.dragLineMarkerOptions,
+        }
+
+        // 1：更新中点和拖动线marker在线上的位置：
+        const isEnabledMidPointsMarker = this.editOptions?.dragMidMarkerOptions?.enabled;
+        const isEnabledEdgeMarker = this.editOptions?.dragLineMarkerOptions?.enabled;
+        if (this.editOptions.dragMidMarkerOptions) {
+            this.editOptions.dragMidMarkerOptions!.positionRatio = (isEnabledMidPointsMarker && isEnabledEdgeMarker) ? 0.3 : 0.5;
+            if (this.editOptions.dragMidMarkerOptions?.dragMarkerStyle) {
+                this.editOptions.dragMidMarkerOptions!.dragMarkerStyle!.draggable = true;
+            }
+        }
+        if (this.editOptions.dragLineMarkerOptions) {
+            this.editOptions.dragLineMarkerOptions!.positionRatio = (isEnabledMidPointsMarker && isEnabledEdgeMarker) ? 0.6 : 0.5;
+            if (this.editOptions.dragLineMarkerOptions?.dragMarkerStyle) {
+                this.editOptions.dragLineMarkerOptions!.dragMarkerStyle!.draggable = true;
+            }
+        }
+    };
+
+    /**
+     * 检查是否可以进入编辑模式
+     * @private
+     */
+    protected canEnterEditMode(): boolean {
+        // 基础检查
+        if (!this.editOptions.enabled) return false;
+        if (!this.layer) return false;
+        if (this.currentState === EditorState.Editing) return false;
+        if (!this.layerVisble) return false;
+
+        return true;
+    }
+
+    /** 进入编辑模式
+     * 1: 更新编辑状态变量 
+     * 2: 构建marker点 
+     * 3: 给marker添加拖动事件
+     *
+     * @abstract
+     * @memberof BaseEditor
+     */
+    protected abstract enterEditMode(): void;
+
+    /** 退出编辑模式(注意职责分离,一般我们退出编辑状态,要发消息通知我们设置的监听事件: 比如: "在? 从编辑状态变成空闲状态了. 你爪子?" 但是我希望你不要在这个事件中写状态变更.保持职责分离.)
+     * 进入编辑模式时，事件内部绑定了三个事件（drag、dragend、contextmenu），
+     * 事件绑定之后是需要解绑的，不过Leaflet 的事件绑定是和对象实例绑定的，
+     * 一旦你调用 map.removeLayer(marker)，
+     * 这个 marker 就被销毁了，它的事件也随之失效， 
+     * 所以你只需要在 exitEditMode() 中清理掉 vertexMarkers，
+     * 就可以完成“事件解绑”的效果
+     *
+     * @abstract
+     * @memberof BaseEditor
+     */
+    protected abstract exitEditMode(): void;
+
+    /** 获取最后的坐标数据并提交保存
+     *
+     *
+     * @protected
+     * @abstract
+     * @memberof BaseEditor
+     */
+    protected abstract getCurrentMarkerCoords(): any;
+
+    /** 根据坐标重建 marker 和图形
+     *
+     *
+     * @protected
+     * @abstract
+     * @param {any[]} coords  latlngs坐标数组
+     * @memberof BaseEditor
+     */
+    protected abstract reBuildMarker(coords: any[]): void;
+
+    /** 实时更新中线点的位置（传参意思：用户正在拖动的避免销毁和重新构建）
+     *
+     *
+     * @protected
+     * @abstract
+     * @param {L.Marker} [skipMarker]
+     * @memberof BaseEditor
+     */
+    protected abstract updateMidpoints(skipMarker?: L.Marker): void;
+
+    /** 重渲染
+     *
+     *
+     * @protected
+     * @abstract
+     * @param {any} coordinatesArray 坐标数组
+     * @memberof BaseEditor
+     */
+    protected abstract reBuildMarkerAndRender(coordinatesArray: any): void;
+
+    /** 撤回
+     *
+     *
+     * @protected
+     * @memberof BaseEditor
+     */
+    protected undoEdit(): void {
+        if (this.historyStack.length < 2) return;
+        const popItem = this.historyStack.pop(); // 弹出当前状态
+        if (popItem) this.redoStack.push(popItem); // 用于重做
+        const previous = this.historyStack[this.historyStack.length - 1]; // 获取上一个状态
+        this.reBuildMarkerAndRender(previous);
+    };
+
+    /** 取消撤回
+     *
+     *
+     * @protected
+     * @memberof BaseEditor
+     */
+    protected redoEdit(): void {
+        if (!this.redoStack.length) return;
+        const next = this.redoStack.pop();
+        if (next) {
+            this.historyStack.push(next);
+            this.reBuildMarkerAndRender(next);
+        }
+    };
+
+    /** 重置回[编辑前]的状态
+     *
+     *
+     * @protected
+     * @memberof BaseEditor
+     */
+    protected resetToInitial(): void {
+        if (!this.historyStack.length) return;
+        // 保存当前状态到重做栈，以便用户可以恢复（简言之，将撤销全部的操作也当作一个快照，方便用户后悔）
+        const currentState = this.historyStack[this.historyStack.length - 1];
+        const initial = this.historyStack[0];
+        // 存储快照
+        this.redoStack.push(currentState);
+        // 渲染初始状态
+        this.reBuildMarkerAndRender(initial);
+    };
+
+    /** 完成编辑
+     *
+     *
+     * @protected
+     * @memberof BaseEditor
+     */
+    protected commitEdit(): void {
+        const current = this.getCurrentMarkerCoords();
+        this.historyStack = [current]; // 读取当前状态作为新的初始快照
+        this.redoStack = []; // 清空重做栈（如果有）
+        this.exitEditMode();
+        // 事件监听停止。
+        this.deactivate();
+        this.updateAndNotifyStateChange(EditorState.Idle);
+        this.reset();
+    };
+
+    // #endregion
+
+    // #region 编辑器的状态管理，比如当前是否是激活状态，状态的更新改变，以及向外部吐出当前状态等
+
+    // 静态属性 - 所有编辑器实例共享同一个激活状态
+    private static currentActiveEditor: BaseEditor<any> | null = null;
+
+    /** 激活当前编辑器实例
+     * 
+     */
+    protected activate(): void {
+        // console.log('激活编辑器:', this.constructor.name);
+
+        // 保存之前的激活编辑器
+        const previousActiveEditor = BaseEditor.currentActiveEditor;
+
+        // 停用之前激活的编辑器
+        if (previousActiveEditor && previousActiveEditor !== this) {
+            // console.log('停用之前的编辑器:', previousActiveEditor.constructor.name);
+            previousActiveEditor.exitEditMode(); // 强制退出编辑模式
+            // 吐出状态
+            if (this.currentState === EditorState.Editing) {
+                this.updateAndNotifyStateChange(EditorState.Idle);
+            }
+            previousActiveEditor.deactivate(); // 停用激活状态
+        }
+
+        // 设置当前实例为激活状态
+        BaseEditor.currentActiveEditor = this;
+    }
+
+    /** 停用当前编辑器实例
+     * 
+     */
+    protected deactivate(): void {
+        // console.log('停用编辑器:', this.constructor.name);
+
+        if (BaseEditor.currentActiveEditor === this) {
+            BaseEditor.currentActiveEditor = null;
+        }
+
+
+    }
+
+    /** 检查当前实例是否激活
+     * 
+     */
+    protected isActive(): boolean {
+        return BaseEditor.currentActiveEditor === this && this.layerVisble;
+    }
+
+    // #endregion
+
+    // #region 向外吐出绘制结果的事件收集器（发布订阅模式，地图监听事件也是发布订阅模式）
+
+    // 1：我们需要记录当前状态是处于绘制状态--见：currentState变量
+    protected currentState: EditorState = EditorState.Idle; // 默认空闲状态
+    // 2：我们需要一个数组，存储全部的监听事件，然后在状态改变时，触发所有这些事件的监听回调！
+    private stateListeners: ((state: EditorState) => void)[] = [];
+
+    /** 外部监听者添加的回调监听函数，存储到这边，状态改变时，触发这些监听事件的回调
+     *
+     *
+     * @param {(state: EditorState) => void} listener // 监听事件
+     * @param {EditorListenerConfigs} [configs={ immediateNotify: false }] // 配置参数
+     * @memberof BaseEditor
+     */
+    public onStateChange(listener: (state: EditorState) => void, configs: EditorListenerConfigs = { immediateNotify: false }): void {
+        // 存储回调事件并立刻触发一次
+        this.stateListeners.push(listener);
+        configs.immediateNotify && listener(this.currentState);
+    }
+
+    /** 添加移除单个监听器的方法 
+     * 
+     */
+    public offStateChange(listener: (state: EditorState) => void): void {
+        const index = this.stateListeners.indexOf(listener);
+        if (index > -1) {
+            this.stateListeners.splice(index, 1);
+        }
+    }
+
+    /** [内部使用] 清空所有状态监听器 
+     * 
+     */
+    private clearAllStateListeners(): void {
+        this.stateListeners = [];
+    }
+
+    /** 状态改变时，触发所有的监听事件
+     *
+     *
+     * @private
+     * @memberof LeafletPolyLine
+     */
+    protected updateAndNotifyStateChange(status: EditorState): void {
+        this.currentState = status;
+        this.stateListeners.forEach(fn => fn(this.currentState));
+    }
+
+    // #endregion
+
+    // #region 编辑器的几何校验内容
+
+    // 添加校验配置
+    protected validationOptions: ValidationOptions = {};
+
+    /** 更新几何校验的内容项
+     * 
+     *
+     * @param {ValidationOptions} rules
+     * @memberof LeafletPolyline
+     */
+    public setValidationOptions(rules: ValidationOptions): void {
+        this.validationOptions = { ...this.validationOptions, ...rules };
+    }
+
+    /** 获取几何校验的内容项
+     * 
+     *
+     * @param {ValidationOptions} rules
+     * @memberof LeafletPolyline
+     */
+    public getValidationOptions(): ValidationOptions {
+        return this.validationOptions;
+    }
+
+    // #endregion
 
     // #region 辅助函数
 
@@ -607,82 +899,71 @@ export abstract class BaseEditor<T extends L.Layer> {
         };
     }
 
+    // #endregion
 
+    // #region 其他函数
+
+    /** 销毁图层，从地图中移除图层
+     *
+     *
+     * @memberof LeafletEditPolygon
+     */
+    public destroy() {
+        // #region 1：绘制图层用到的内容
+        this.layerDestroy();
+        // #endregion
+
+        // #region 2：编辑模式用到的内容
+        // 关闭事件监听内容
+        this.deactivate();
+        // 编辑模式的内容也重置
+        this.exitEditMode();
+        // #endregion
+
+        // #region 3：吸附用到的内容
+        this.cleanupSnapResources();
+        // #endregion
+
+        // #region3：地图相关内容处理（关闭事件监听，恢复部分交互功能【缩放、鼠标手势】）
+        this.offMapEvents(this.map);
+        this.reset();
+        // #endregion
+        // #region4：清除类自身绑定的相关事件
+        this.clearAllStateListeners();
+        // 设置为空闲状态，并发出状态通知
+        this.updateAndNotifyStateChange(EditorState.Idle);
+        // #endregion
+
+    }
 
     // #endregion
 
+    // 初始化编辑器
+    constructor(map: L.Map, options: LeafletEditorOptions) {
+        // 对于编辑器来说，我是否应该考虑精度问题？我觉得应该考虑，因为无论是吸附、还是topo，都会涉及到精度问题，所以我觉得在编辑器基类中，应该把这个精度问题的配置项做好，后续其他编辑器继承了这个基类，就可以直接使用这个精度配置项了。
+        this.map = map;
+        if (this.map) {
+            // 1、编辑器是否启用吸附功能(初始化吸附控制器，设置吸附模式、吸附范围阈值、吸附高亮配置等)
+            if (options?.snap?.enabled) {
+                // 初始化吸附控制器 
+                this.snapHighlightLayer = L.layerGroup().addTo(map);
+                this.initSnap(map, options?.snap);
+            }
 
-    // #region 几何图形的有效性校验
-    // 添加校验配置
-    protected validationOptions: ValidationOptions = {};
-    /** 更新几何校验的内容项
-     * 
-     *
-     * @param {ValidationOptions} rules
-     * @memberof LeafletPolyline
-     */
-    public setValidationOptions(rules: ValidationOptions): void {
-        this.validationOptions = { ...this.validationOptions, ...rules };
-    }
-    /** 获取几何校验的内容项
-     * 
-     *
-     * @param {ValidationOptions} rules
-     * @memberof LeafletPolyline
-     */
-    public getValidationOptions(): ValidationOptions {
-        return this.validationOptions;
-    }
+            // 2、编辑器是否启用编辑功能( 子类可能扩充这个内容，initEditOptions还是放在子类中调用吧)
+            if (options.edit?.enabled) {
+                this.initEditOptions(options?.edit);
+            }
 
-    /** 校验面图层的有效性
-     *
-     *
-     * @private
-     * @param {L.LatLng[]} coords
-     * @return {*}  {boolean}
-     * @memberof LeafletRectangle
-     */
-    public isValidPolygon(coords: number[][]): boolean {
-
-        // 1. 检查自相交（根据配置）
-        if (this.validationOptions?.allowSelfIntersect === false) {
-            if (this.hasSelfIntersection(coords)) {
-                return false;
+            // 3、编辑器是否启用几何有效性校验功能(初始化校验配置，设置允许、校验失败时的样式等 )
+            if (options.validation) {
+                // 校验规则
+                this.validationOptions = {
+                    ...options?.validation
+                };
             }
         }
 
-        // 2. 其他校验规则可以在这里添加...
-
-        return true;
-
     }
-
-    /** 自相交检测（使用 turf.kinks）
-     *
-     *
-     * @private
-     * @param {number[][]} coords
-     * @return {*}  {boolean} true=有自相交，false=无自相交
-     * @memberof LeafletPolyline
-     */
-    private hasSelfIntersection(coords: number[][]): boolean {
-
-        if (coords.length < 4) return false;
-
-        try {
-            // 2. 转换为GeoJSON格式 [lng, lat] ✅ 这个转换是必要的！
-            const geoJsonCoords = coords.map(coord => [coord[1], coord[0]]);
-            const turfPolygon = polygon([geoJsonCoords]);
-            const intersections = kinks(turfPolygon);
-
-            return intersections.features.length > 0;
-        } catch (error) {
-            console.warn('自相交检测失败:', error);
-            return false;
-        }
-    }
-    // #endregion
-
-
 
 }

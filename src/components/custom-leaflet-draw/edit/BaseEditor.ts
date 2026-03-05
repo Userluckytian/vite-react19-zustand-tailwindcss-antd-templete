@@ -163,6 +163,7 @@ export abstract class BaseEditor {
     public setCurrentState(status: PolygonEditorState): void {
         this.currentState = status;
     }
+
     /** 返回编辑器当前的状态，
      *
      *
@@ -336,7 +337,6 @@ export abstract class BaseEditor {
             snapped: false
         };
     }
-
 
     /** 【顶点吸附器】收集所有其他图层的顶点信息
      *
@@ -571,10 +571,7 @@ export abstract class BaseEditor {
         };
     }
 
-
-
     // #endregion
-
 
     // #region 几何图形的有效性校验
 
@@ -620,7 +617,7 @@ export abstract class BaseEditor {
 
     }
 
-    /** 自相交检测（使用 turf.kinks）
+    /** 自相交检测（使用 turf.kinks， 一般线、面才会有）
      *
      *
      * @private

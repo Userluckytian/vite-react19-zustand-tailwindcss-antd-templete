@@ -84,6 +84,7 @@ export default class LeafletPolyline {
     }
 
     // #region 工具函数，点图层的逻辑只需要看上面的内容就行了
+    
     /**  地图点击事件，用于设置点的位置
      *
      *
@@ -100,6 +101,7 @@ export default class LeafletPolyline {
         // 通过校验，则添加点
         isValid && this.tempCoords.push(newPoint);
     }
+
     /**  地图双击事件，用于设置点的位置
      *
      *

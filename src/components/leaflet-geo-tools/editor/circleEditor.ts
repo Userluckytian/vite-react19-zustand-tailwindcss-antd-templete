@@ -1,5 +1,5 @@
-import { BaseCircleEditor } from "../base/BaseCircleEditor";
+import { BaseEditor } from "../base/BaseEditor";
 
-export  default abstract class CircleEditor extends BaseCircleEditor {
+export  default abstract class CircleEditor extends BaseEditor<L.Circle> {
     
 }
