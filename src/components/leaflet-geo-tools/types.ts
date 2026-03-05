@@ -73,8 +73,8 @@ export type ValidationOptions = {
 
 export type DragMarkerOptions = {
     enabled: boolean; // 是否启用拖拽线功能
-    dragMarkerStyle?: L.MarkerOptions; // 拖动边的样式
-    positionRatio?: number; // 中点位置比例（0-1，默认 0.3）
+    dragMarkerStyle: L.MarkerOptions; // 拖动边的样式
+    positionRatio: number; // 中点位置比例（0-1，默认 0.3）
 }
 
 // 吸附结果

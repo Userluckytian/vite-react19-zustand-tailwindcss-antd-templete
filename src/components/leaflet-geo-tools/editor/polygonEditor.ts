@@ -33,13 +33,13 @@ export class PolygonEditor extends BaseEditor<L.Polygon> {
             this.map.getContainer().style.cursor = existGeometry ? 'grab' : 'crosshair';
 
             // 构建编辑器的图层内容
-            this.initLayer(options.defaultStyle, options.defaultGeometry);
+            this.initLayer(options?.defaultStyle, options?.defaultGeometry);
             // 绑定地图事件
             this.bindMapEvents(this.map);
         }
     }
 
-    protected initLayer<U extends L.LayerOptions>(layerOptions: U, geometry?: GeoJSON.Geometry | L.LatLng): void {
+    protected initLayer<U extends L.LayerOptions>(layerOptions: U | undefined, geometry?: GeoJSON.Geometry | L.LatLng): void {
         // 1: 提供一些默认值, 防止用户构建的图层样式异常
         const defaultLayerStyle = {
             weight: 2,

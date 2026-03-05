@@ -6,8 +6,9 @@ import { App, Divider, Switch } from 'antd';
 import * as L from 'leaflet';
 import './index.scss';
 
-import { EditorState, type EditorInstance } from './types';
+import { EditorState, type DragMarkerOptions, type EditOptionsExpends, type EditorInstance, type SnapOptions, type ValidationOptions } from './types';
 import { MarkerPointEditor } from './editor/markerPointEditor';
+import { PolygonEditor } from './editor/polygonEditor';
 // import PolylineEditor from './editor/polylineEditor';
 // import LeafletPolygon from './editor/polygon';
 // import LeafletCircle from './editor/circle';
@@ -312,43 +313,45 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
         }
 
         // 吸附参数
-        // const snap: SnapOptions = {
-        //     enabled: true,
-        //     modes: ['edge', 'vertex']
-        // };
-        // // 顶点渲染参数
-        // const midPointMarkerConfig: DragMarkerOptions = {
-        //     enabled: true,
-        //     dragMarkerStyle: {
-        //         icon: L.divIcon({
-        //             className: 'polygon-midpoint-insert',
-        //             html: `<div style="border-radius:50%;background:#fff;border:2px solid #f00;width:14px;height:14px"></div>`,
-        //             iconSize: [14, 14]
-        //         }),
-        //         pane: 'markerPane'
-        //     }
-        // }
-        // const edgeMarkerConfig: DragMarkerOptions = {
-        //     enabled: true,
-        //     dragMarkerStyle: {
-        //         icon: L.divIcon({
-        //             className: 'polygon-midpoint-insert',
-        //             html: `<div style="border-radius:50%;background:#fff;border:2px solid #0f0;width:14px;height:14px"></div>`,
-        //             iconSize: [14, 14]
-        //         }),
-        //         pane: 'markerPane'
-        //     }
-        // }
-        // const edit: EditOptionsExpends = {
-        //     enabled: true,
-        //     dragLineMarkerOptions: edgeMarkerConfig,
-        //     dragMidMarkerOptions: midPointMarkerConfig
-        // };
-        // const validation: ValidationOptions = {
-        //     allowSelfIntersect: someConfigBar.find((it: any) => it.id === 'valid').enable,
-        // };
-        // // 先清理之前的绘制
-        // clearCurrentDraw();
+        const snap: SnapOptions = {
+            enabled: true,
+            modes: ['edge', 'vertex']
+        };
+        // 顶点渲染参数
+        const midPointMarkerConfig: DragMarkerOptions = {
+            enabled: true,
+            dragMarkerStyle: {
+                icon: L.divIcon({
+                    className: 'polygon-midpoint-insert',
+                    html: `<div style="border-radius:50%;background:#fff;border:2px solid #f00;width:14px;height:14px"></div>`,
+                    iconSize: [14, 14]
+                }),
+                pane: 'markerPane'
+            },
+            positionRatio: 0.3
+        }
+        const edgeMarkerConfig: DragMarkerOptions = {
+            enabled: true,
+            dragMarkerStyle: {
+                icon: L.divIcon({
+                    className: 'polygon-midpoint-insert',
+                    html: `<div style="border-radius:50%;background:#fff;border:2px solid #0f0;width:14px;height:14px"></div>`,
+                    iconSize: [14, 14]
+                }),
+                pane: 'markerPane'
+            },
+            positionRatio: 0.6
+        }
+        const edit: EditOptionsExpends = {
+            enabled: true,
+            dragLineMarkerOptions: edgeMarkerConfig,
+            dragMidMarkerOptions: midPointMarkerConfig
+        };
+        const validation: ValidationOptions = {
+            allowSelfIntersect: someConfigBar.find((it: any) => it.id === 'valid').enable,
+        };
+        // 先清理之前的绘制
+        clearCurrentDraw();
 
         setCurrSelTool(toolId);
         // clearAllIfExist(); // 根据需求来，有的时候，我们绘制新内容时，会期望移除上次绘制的结果
@@ -389,15 +392,16 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
             //     const editRectangleLayer = new LeafletEditRectangle(mapInstance);
             //     saveEditorAndAddListener(editRectangleLayer);
             //     break;
-            // case 'polygon_editor':
-            //     const polygonLayerEditor = new LeafletPolygonEditor(mapInstance, {
-            //         snap,
-            //         edit,
-            //         validation,
-            //     });
-            //     saveEditorAndAddListener(polygonLayerEditor, true);
-
-            //     break;
+            case 'polygon_editor':
+                // defaultGeometry ?: GeoJSON.Geometry; // 默认几何信息（如果有的话，可以在编辑时直接加载）
+                // defaultStyle ?: LeafletPolylineOptions; // 存放（用户自己想要设置的）图层的默认样式信息
+                const polygonLayerEditor = new PolygonEditor(mapInstance, {
+                    snap,
+                    edit,
+                    validation,
+                });
+                saveEditorAndAddListener(polygonLayerEditor, true);
+                break;
             // case 'rectangle_editor':
             //     const rectangleLayerEditor = new LeafletRectangleEditor(mapInstance, { snap, edit });
             //     saveEditorAndAddListener(rectangleLayerEditor, true);
@@ -864,12 +868,12 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
             const currentTool = currSelToolRef.current;
             if (status === EditorState.Drawing) {
 
-            } else 
-            if (status === EditorState.Editing) {
-               
-            } else {
-                
-            }
+            } else
+                if (status === EditorState.Editing) {
+
+                } else {
+
+                }
         }, { immediateNotify })
     }
 
