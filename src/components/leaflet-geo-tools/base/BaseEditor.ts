@@ -166,6 +166,14 @@ export abstract class BaseEditor<T extends L.Layer> {
         }
     };
 
+    /** 初始化吸附控制器
+     *
+     *
+     * @protected
+     * @param {L.Map} map
+     * @param {SnapOptions} [snap]
+     * @memberof BaseEditor
+     */
     private initSnap(map: L.Map, snap?: SnapOptions) {
         if (!snap?.enabled) return;
 
@@ -455,6 +463,32 @@ export abstract class BaseEditor<T extends L.Layer> {
      */
     public getEditEnabled(): boolean {
         return this.editOptions.enabled;
+    }
+
+    /** 启用/禁用编辑
+     * 
+     * @param enabled 是否启用
+     */
+    protected enableEdit(enabled: boolean): void {
+        const oldEnabled = this.editOptions.enabled;
+
+        if (oldEnabled !== enabled) {
+            this.editOptions.enabled = enabled;
+
+            // 如果从启用变为禁用，且正在编辑，强制退出编辑模式
+            if (oldEnabled && !enabled && this.currentState === EditorState.Editing) {
+                // 退出编辑状态
+                this.exitEditMode();
+                // 设置当前状态为空闲
+                this.updateAndNotifyStateChange(EditorState.Idle);
+            }
+
+            // // 如果从禁用变为启用，且当前是空闲状态，可以重新激活（可选）
+            // if (!oldEnabled && enabled && this.currentState === EditorState.Idle) {
+            //     // 这里可以根据需求决定是否自动进入编辑模式
+            //     console.log('编辑功能已启用，双击图形可进入编辑模式');
+            // }
+        }
     }
 
     /** 初始化编辑点marker的配置信息
@@ -768,15 +802,20 @@ export abstract class BaseEditor<T extends L.Layer> {
         this.stateListeners = [];
     }
 
-    /** 状态改变时，触发所有的监听事件
+    /** 状态改变时，触发存储的所有监听事件的回调
      *
      *
-     * @private
-     * @memberof LeafletPolyLine
+     * @protected
+     * @param {PolygonEditorState} status
+     * @param {boolean} [immediateNotify] (立即发出消息通知)
+     * @return {*}  {void}
+     * @memberof BaseEditor
      */
-    protected updateAndNotifyStateChange(status: EditorState): void {
+    protected updateAndNotifyStateChange(status: EditorState, immediateNotify: boolean = true): void {
         this.currentState = status;
-        this.stateListeners.forEach(fn => fn(this.currentState));
+        if (immediateNotify) {
+            this.stateListeners.forEach(fn => fn(this.currentState));
+        }
     }
 
     // #endregion
@@ -940,6 +979,7 @@ export abstract class BaseEditor<T extends L.Layer> {
 
     // 初始化编辑器
     constructor(map: L.Map, options: LeafletEditorOptions) {
+        if (!map) throw new Error('传入的地图对象异常，请先确保地图对象已实例完成。');
         // 对于编辑器来说，我是否应该考虑精度问题？我觉得应该考虑，因为无论是吸附、还是topo，都会涉及到精度问题，所以我觉得在编辑器基类中，应该把这个精度问题的配置项做好，后续其他编辑器继承了这个基类，就可以直接使用这个精度配置项了。
         this.map = map;
         if (this.map) {

@@ -154,7 +154,7 @@ export abstract class BaseEditor {
         }
     }
 
-    /** 设置编辑器当前的状态，
+    /** 设置编辑器当前的状态，(没人使用啊)
      *
      *
      * @param {PolygonEditorState} status
@@ -164,7 +164,7 @@ export abstract class BaseEditor {
         this.currentState = status;
     }
 
-    /** 返回编辑器当前的状态，
+    /** 返回编辑器当前的状态，(没人使用啊)
      *
      *
      * @param {PolygonEditorState} status

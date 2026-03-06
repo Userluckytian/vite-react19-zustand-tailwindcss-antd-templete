@@ -1,4 +1,4 @@
-import { EditorState, type EditOptionsExpends, type LeafletEditorOptions, type MidpointPair, type SnapOptions, type ValidationOptions } from "../types";
+import { EditorState, type LeafletEditorOptions, type MidpointPair } from "../types";
 import * as L from "leaflet";
 import { LeafletTopology } from "@/components/custom-leaflet-draw/topo/topo";
 import { booleanPointInPolygon, point } from '@turf/turf';
@@ -501,10 +501,7 @@ export class PolygonEditor extends BaseEditor<L.Polygon> {
                     });
                 });
 
-                const updated = this.vertexMarkers.map(polygon =>
-                    polygon.map(ring =>
-                        ring.map(marker => [marker.getLatLng().lat, marker.getLatLng().lng])
-                    ));
+                const updated = this.getCurrentMarkerCoords();
                 this.renderLayer(updated);
                 this.updateMidpoints();
 
@@ -532,12 +529,7 @@ export class PolygonEditor extends BaseEditor<L.Polygon> {
                 this.isDraggingPolygon = false;
                 this.dragStartLatLng = null;
                 this.map.dragging.enable();
-                const updated = this.vertexMarkers.map(polygon =>
-                    polygon.map(ring =>
-                        ring.map(marker => [marker.getLatLng().lat, marker.getLatLng().lng])
-                    )
-                );
-
+                const updated = this.getCurrentMarkerCoords();
                 this.renderLayer(updated);
                 this.historyStack.push(updated);
                 this.updateMidpoints();
@@ -741,11 +733,7 @@ export class PolygonEditor extends BaseEditor<L.Polygon> {
             }
 
             // 1. 拷贝当前顶点坐标
-            const coords = this.vertexMarkers.map(polygon =>
-                polygon.map(ring =>
-                    ring.map(m => [m.getLatLng().lat, m.getLatLng().lng])
-                )
-            );
+            const coords = this.getCurrentMarkerCoords();
 
             // 2. 插入中点坐标到对应位置（不修改原 marker 数组）
             const ring = coords[polygonIndex][ringIndex];
@@ -889,20 +877,12 @@ export class PolygonEditor extends BaseEditor<L.Polygon> {
 
 
     private renderLayerFromMarkers() {
-        const coords = this.vertexMarkers.map(polygon =>
-            polygon.map(ring =>
-                ring.map(m => [m.getLatLng().lat, m.getLatLng().lng])
-            )
-        );
+        const coords = this.getCurrentMarkerCoords()
         this.renderLayer(coords);
     }
 
     private pushHistoryFromMarkers() {
-        const coords = this.vertexMarkers.map(polygon =>
-            polygon.map(ring =>
-                ring.map(m => [m.getLatLng().lat, m.getLatLng().lng])
-            )
-        );
+        const coords = this.getCurrentMarkerCoords()
         this.historyStack.push(coords);
     }
 
