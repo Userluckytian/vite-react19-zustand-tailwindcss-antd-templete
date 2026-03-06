@@ -234,6 +234,31 @@ export function reverseLatLngs(
     }
 }
 
+/** 转换【矩形】的geojson-经纬度坐标
+ *
+ *
+ * @private
+ * @param {GeoJSON.Geometry} geometry
+ * @return {*}  {L.LatLngBoundsExpression}
+ * @memberof LeafletRectangleEditor
+ */
+export function reverseRectLatLngs(geometry: GeoJSON.Geometry): L.LatLngBoundsExpression {
+    if (geometry.type === 'Polygon') {
+        const coords = geometry.coordinates[0]; // [[lng, lat], ...]
+        const lats = coords.map(c => c[1]);
+        const lngs = coords.map(c => c[0]);
+
+        const south = Math.min(...lats);
+        const north = Math.max(...lats);
+        const west = Math.min(...lngs);
+        const east = Math.max(...lngs);
+
+        return [[south, west], [north, east]];
+    } else {
+        throw new Error('不支持的 geometry 类型: ' + geometry.type);
+    }
+}
+
 /**  判断点击事件是否点击到layer身上
      *
      *

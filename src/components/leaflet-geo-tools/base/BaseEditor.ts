@@ -571,6 +571,12 @@ export abstract class BaseEditor<T extends L.Layer> {
                 this.editOptions.dragLineMarkerOptions!.dragMarkerStyle!.draggable = true;
             }
         }
+
+        // 2: 如果正在编辑中，需要重新渲染(举例: 多边形渲染了中点和拖动线的点,这个时候你更新编辑项,可能需要页面同步变化,比如你关闭了中点的渲染,则页面需要同步更新)
+        if (this.currentState === EditorState.Editing) {
+            const currentCoords = this.getCurrentMarkerCoords();
+            this.reBuildMarkerAndRender(currentCoords);
+        }
     };
 
     /**
@@ -639,7 +645,7 @@ export abstract class BaseEditor<T extends L.Layer> {
      */
     protected abstract updateMidpoints(skipMarker?: L.Marker): void;
 
-    /** 重渲染
+    /** 根据坐标重建 marker 和图形 + 重新渲染图层
      *
      *
      * @protected

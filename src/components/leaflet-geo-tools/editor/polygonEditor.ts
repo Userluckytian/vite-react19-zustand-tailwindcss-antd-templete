@@ -41,20 +41,7 @@ export class PolygonEditor extends BaseEditor<L.Polygon> {
 
     protected initLayer<U extends L.LayerOptions>(layerOptions: U | undefined, geometry?: GeoJSON.Geometry | L.LatLng): void {
         // 1: 提供一些默认值, 防止用户构建的图层样式异常
-        const defaultLayerStyle = {
-            weight: 2,
-            color: '#008BFF', // 设置边线颜色
-            fillColor: "#008BFF", // 设置填充颜色
-            fillOpacity: 0.3, // 设置填充透明度
-            fill: true, // no fill color means default fill color (gray for `dot` and `circle` markers, transparent for `plus` and `star`)
-            ...layerOptions,
-        };
-        const allOptions = {
-            pane: 'overlayPane',
-            layerVisible: true, // 增加了一个自定义属性，用于用户从图层层面获取图层的显隐状态
-            defaultStyle: defaultLayerStyle,
-            ...defaultLayerStyle,
-        }
+        const allOptions = this.getLayerStyle();
         // 2:  提供默认空图形
         let coords: L.LatLngExpression[] | L.LatLngExpression[][] | L.LatLngExpression[][][] = [[181, 181], [181, 181], [181, 181], [181, 181]];
         if (geometry) {
