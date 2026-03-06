@@ -28,6 +28,10 @@
     6. 图层显隐控制：BaseEditor抽象，子类实现。（一般都是设置透明度做图层显隐吧？ 是的话，可以写在BaseEditor中实现）、
 
     原则上BaseXXXEditor抽象类用于做【历史栈】的具体实现。绘制点的情况下是没有历史栈的，所以可以不用BaseXXXEditor这一层。
+
+
+     
+    
     */
 import * as L from 'leaflet';
 
@@ -35,31 +39,17 @@ import { EditorState, type BaseEditOptions } from '../types';
 import { BaseEditor } from '../base/BaseEditor';
 
 export class MarkerPointEditor extends BaseEditor<L.Marker> {
-    protected initLayer<U extends L.LayerOptions>(layerOptions: U, geometry?: GeoJSON.Geometry | L.LatLng): void {
-        throw new Error('Method not implemented.');
-    }
-    protected renderLayer(coords: any[], valid: boolean): void {
-        throw new Error('Method not implemented.');
-    }
+    protected initLayer<U extends L.LayerOptions>(layerOptions: U, geometry?: GeoJSON.Geometry | L.LatLng): void {}
+    protected renderLayer(coords: any[], valid: boolean): void {}
     protected vertexMarkers: any[];
     protected midpointMarkers: any[];
     protected historyStack: any[];
     protected redoStack: any[];
-    protected enterEditMode(): void {
-        throw new Error('Method not implemented.');
-    }
-    protected getCurrentMarkerCoords() {
-        throw new Error('Method not implemented.');
-    }
-    protected reBuildMarker(coords: any[]): void {
-        throw new Error('Method not implemented.');
-    }
-    protected updateMidpoints(skipMarker?: L.Marker): void {
-        throw new Error('Method not implemented.');
-    }
-    protected reBuildMarkerAndRender(coordinatesArray: any): void {
-        throw new Error('Method not implemented.');
-    }
+    protected enterEditMode(): void {}
+    protected getCurrentMarkerCoords() {}
+    protected reBuildMarker(coords: any[]): void {}
+    protected updateMidpoints(skipMarker?: L.Marker): void {}
+    protected reBuildMarkerAndRender(coordinatesArray: any): void {}
     // 常量
     private static markerIcon = L.divIcon({
         className: 'draw-marker-icon',

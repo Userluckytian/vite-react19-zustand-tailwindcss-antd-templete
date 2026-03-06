@@ -43,12 +43,6 @@ import type { LeafletEditorOptions } from "../types";
 
 
 export default class PolylineEditor extends BaseEditor<L.Polyline> {
-    protected getCurrentMarkerCoords() {
-        throw new Error("Method not implemented.");
-    }
-    protected initLayer<U extends L.LayerOptions>(layerOptions: U, geometry?: GeoJSON.Geometry | L.LatLng): void {
-        throw new Error("Method not implemented.");
-    }
 
     protected vertexMarkers: any[];
     protected midpointMarkers: any[];
@@ -60,18 +54,19 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
     }
 
     // [绘制]: 创建图层 + 绑定/关闭监听事件 + 设置图层显隐 + (缺少的[layerDestroy\getLayer\getGeoJSON\getLayerVisibility\]在基类中已实现)
-    protected createLayerAndAddToMap() { }
 
+    protected initLayer<U extends L.LayerOptions>(layerOptions: U, geometry?: GeoJSON.Geometry | L.LatLng): void {}
+    
     protected bindMapEvents() { }
 
     protected offMapEvents() { }
 
     protected setLayerVisibility() { }
 
-    protected renderLayer(coords: any[], valid: boolean): void {
-    }
+    protected renderLayer(coords: any[], valid: boolean): void {}
 
     // [编辑]: 编辑的配置项 + 更新编辑功能 + 进入\退出编辑\编辑时的撤销\重做\重置\完成编辑等功能
+
     protected updateEditOptions() { }
 
     protected enterEditMode() { }
@@ -79,18 +74,22 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
     protected exitEditMode() { }
 
     protected undoEdit(): void { }
+    
     protected redoEdit(): void { }
+    
     protected resetToInitial(): void { }
+    
     protected commitEdit(): void { }
 
     protected getLastCoords() { }
 
     protected reBuildMarkerAndRender(coordinatesArray: any): void { }
 
-    protected reBuildMarker(coords: any[]): void {
-    }
-    protected updateMidpoints(skipMarker?: L.Marker): void {
-    }
+    protected reBuildMarker(coords: any[]): void {}
+
+    protected updateMidpoints(skipMarker?: L.Marker): void {}
+    
+    protected getCurrentMarkerCoords() {}
 
     // [吸附]: 全部内容已经写在基类中
     // [状态]: 全部内容已经写在基类中
