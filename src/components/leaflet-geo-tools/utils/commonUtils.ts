@@ -5,6 +5,7 @@
 
 import * as L from 'leaflet';
 import { feature as turfFeature, booleanIntersects, booleanPointInPolygon, point } from '@turf/turf';
+
 /** 查询点击位置处的图层
  * 优点：不依赖外部库，纯 Leaflet 实现（优化版本，见queryLayersIntersectingGeometry，可读性强，但依赖@turf/turf库）
  *
@@ -254,6 +255,39 @@ export function reverseRectLatLngs(geometry: GeoJSON.Geometry): L.LatLngBoundsEx
         const east = Math.max(...lngs);
 
         return [[south, west], [north, east]];
+    } else {
+        throw new Error('不支持的 geometry 类型: ' + geometry.type);
+    }
+}
+/** 转换【点】的经纬度坐标
+ *
+ *
+ * @private
+ * @param {GeoJSON.Geometry} geometry
+ * @return {*}  {L.LatLngBoundsExpression}
+ * @memberof LeafletRectangleEditor
+ */
+export function reversePointLatLngs(geometry: GeoJSON.Geometry): number[] {
+    if (geometry.type === 'Point') {
+        const coords = geometry.coordinates; // [[lng, lat], ...]
+        return coords.reverse();
+    } else {
+        throw new Error('不支持的 geometry 类型: ' + geometry.type);
+    }
+}
+/** 转换【线】的经纬度坐标
+ *
+ *
+ * @private
+ * @param {GeoJSON.Geometry} geometry
+ * @return {*}  {L.LatLngBoundsExpression}
+ * @memberof LeafletRectangleEditor
+ */
+export function reversePolyLineLatLngs(geometry: GeoJSON.Geometry): number[][] | number[][][] {
+    if (geometry.type === 'LineString') {
+        return geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+    } else if (geometry.type === 'MultiLineString') {
+        return geometry.coordinates.map(line => line.map(([lng, lat]) => [lat, lng]));
     } else {
         throw new Error('不支持的 geometry 类型: ' + geometry.type);
     }

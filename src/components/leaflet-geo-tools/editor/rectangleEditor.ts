@@ -9,7 +9,6 @@ import { LeafletTopology } from "@/components/custom-leaflet-draw/topo/topo";
 
 export default class RectangleEditor extends BaseEditor<L.Rectangle> {
 
-
     // #region 暂时未使用的部分
     protected midpointMarkers: any[];  // 矩形暂时不实现这个
     // #endregion

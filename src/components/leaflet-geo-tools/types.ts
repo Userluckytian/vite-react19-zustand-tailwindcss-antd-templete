@@ -27,10 +27,14 @@ export interface LeafletPolylineOptions extends L.PolylineOptions {
     origin?: any; // 可以存放源信息
     [key: string]: unknown
 }
+export interface LeafletMarkerOptions extends L.MarkerOptions {
+    origin?: any; // 可以存放源信息
+    [key: string]: unknown
+}
 
 export interface LeafletEditorOptions {
     defaultGeometry?: GeoJSON.Geometry; // 默认几何信息（如果有的话，可以在编辑时直接加载）
-    defaultStyle?: LeafletPolylineOptions; // 存放（用户自己想要设置的）图层的默认样式信息
+    defaultStyle?: LeafletPolylineOptions | LeafletMarkerOptions; // 存放（用户自己想要设置的）图层的默认样式信息
     snap?: SnapOptions;  // 吸附配置信息
     edit?: EditOptionsExpends; // 编辑信息
     validation?: ValidationOptions;   // 几何有效性校验（之前考虑放到topo里。但是topo一般是自身和其他几何的相互关系。而自相交是和自身，所以我考虑区分开）
