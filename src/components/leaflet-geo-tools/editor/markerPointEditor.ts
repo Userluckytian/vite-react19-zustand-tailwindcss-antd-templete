@@ -50,12 +50,16 @@ export class MarkerPointEditor extends BaseEditor<L.Marker> {
     protected getCurrentMarkerCoords() { }
     protected updateMidpoints(skipMarker?: L.Marker): void { }
     protected reBuildMarkerAndRender(coordinatesArray: any): void { }
+    public exitEditMode(): void {
+        // 移除真实拐点Marker(没有)
+        // 移除边的中线点标记(没有)
+    }
     // #endregion
 
     constructor(map: L.Map, options?: LeafletEditorOptions) {
         super(map, options);
         if (this.map) {
-            const existPosition = !!options.defaultGeometry;
+            const existPosition = !!options?.defaultGeometry;
             // 初始化时，设置绘制状态为true，且发出状态通知
             this.updateAndNotifyStateChange(existPosition ? EditorState.Idle : EditorState.Drawing);
             this.map.getContainer().style.cursor = existPosition ? 'grab' : 'crosshair';
@@ -134,7 +138,7 @@ export class MarkerPointEditor extends BaseEditor<L.Marker> {
     private getLayerStyle(valid: boolean = true) {
         const markerIcon = L.divIcon({
             className: 'draw-marker-icon',
-            html: `<div style="width: 16px; height: 16px; border-radius: 8px; overflow: hidden; border: solid 1px ${valid ? '#8abee6' : '#ff0000'}; background: ${valid ? '#8abee648' : '#ff000048'}"></div>`
+            html: `<div style="width: 16px; height: 16px; border-radius: 8px; overflow: hidden; border: solid 1px ${valid ? '#0082e6' : '#ff0000'}; background: ${valid ? '#0082e648' : '#ff000048'}"></div>`
         });
 
         // 1: 提供一些默认值, 防止用户构建的图层样式异常
@@ -161,11 +165,5 @@ export class MarkerPointEditor extends BaseEditor<L.Marker> {
     }
     // #endregion
 
-    // --------下面的针对点似乎就没有，写个空函数咯？--------
-
-    public exitEditMode(): void {
-        // 移除真实拐点Marker(没有)
-        // 移除边的中线点标记(没有)
-    }
 
 }

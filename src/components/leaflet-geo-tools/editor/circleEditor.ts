@@ -1,4 +1,5 @@
 import { BaseEditor } from "../base/BaseEditor";
+import type { LeafletEditorOptions } from "../types";
 
 /*
 
@@ -25,6 +26,62 @@ import { BaseEditor } from "../base/BaseEditor";
 
 
  */
-export default abstract class CircleEditor extends BaseEditor<L.Circle> {
+export default class CircleEditor extends BaseEditor<L.Circle> {
 
+    protected vertexMarkers: any[];
+    protected midpointMarkers: any[];
+    protected historyStack: any[];
+    protected redoStack: any[];
+    protected enterEditMode(): void { }
+    protected exitEditMode(): void { }
+
+    protected initLayer<U extends L.LayerOptions>(layerOptions: U, geometry?: GeoJSON.Geometry | L.LatLng): void { }
+    protected bindMapEvents(map: L.Map): void { }
+    protected offMapEvents(map: L.Map): void { }
+    protected setLayerVisibility(visible: boolean): void { }
+    protected renderLayer(coords: any[], valid: boolean): void { }
+    protected getCurrentMarkerCoords() { }
+    protected reBuildMarker(coords: any[]): void { }
+    protected updateMidpoints(skipMarker?: L.Marker): void { }
+    protected reBuildMarkerAndRender(coordinatesArray: any): void { }
+
+
+    constructor(map: L.Map, options: LeafletEditorOptions = {}) {
+        super(map, options);
+
+    }
+
+
+
+    // #region 辅助函数
+
+    /** 获取图层的样式信息
+     *
+     *
+     * @private
+     * @param {boolean} [valid=true] 获取无效的样式还是有效的样式
+     * @memberof PolygonEditor
+     */
+    private getLayerStyle(valid: boolean = true) {
+        // 1: 提供一些默认值, 防止用户构建的图层样式异常
+        const defaultLayerStyle = {
+            weight: 2,
+            color: '#008BFF', // 设置边线颜色
+            ...this.options.defaultStyle,
+        };
+        const allOptions = {
+            pane: 'overlayPane',
+            layerVisible: true, // 增加了一个自定义属性，用于用户从图层层面获取图层的显隐状态
+            defaultStyle: defaultLayerStyle,
+            ...defaultLayerStyle,
+        }
+        const errorLayerStyle = {
+            weight: 2,
+            color: 'red', // 设置边线颜色
+            ...this.options?.validation?.validErrorPolygonStyle
+        }
+        return valid ? allOptions : errorLayerStyle;
+    }
+
+    // #endregion
 }

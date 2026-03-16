@@ -9,6 +9,7 @@ import './index.scss';
 import { EditorState, type DragMarkerOptions, type EditOptionsExpends, type EditorInstance, type SnapOptions, type ValidationOptions } from './types';
 import { MarkerPointEditor } from './editor/markerPointEditor';
 import { PolygonEditor } from './editor/polygonEditor';
+import RectangleEditor from './editor/rectangleEditor';
 // import PolylineEditor from './editor/polylineEditor';
 // import LeafletPolygon from './editor/polygon';
 // import LeafletCircle from './editor/circle';
@@ -351,13 +352,13 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
             allowSelfIntersect: someConfigBar.find((it: any) => it.id === 'valid').enable,
         };
         // 先清理之前的绘制
-        clearCurrentDraw();
+        // clearCurrentDraw();
 
         setCurrSelTool(toolId);
         // clearAllIfExist(); // 根据需求来，有的时候，我们绘制新内容时，会期望移除上次绘制的结果
         switch (toolId) {
             case 'point':
-                const markerPoint = new MarkerPointEditor(mapInstance);
+                const markerPoint = new MarkerPointEditor(mapInstance, { snap });
                 saveEditorAndAddListener(markerPoint);
                 break;
             // case 'line':
@@ -402,10 +403,10 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 });
                 saveEditorAndAddListener(polygonLayerEditor, true);
                 break;
-            // case 'rectangle_editor':
-            //     const rectangleLayerEditor = new LeafletRectangleEditor(mapInstance, { snap, edit });
-            //     saveEditorAndAddListener(rectangleLayerEditor, true);
-            //     break;
+            case 'rectangle_editor':
+                const rectangleLayerEditor = new RectangleEditor(mapInstance, { snap, edit });
+                saveEditorAndAddListener(rectangleLayerEditor, true);
+                break;
             // case 'add':
             //     const geometry: any = {
             //         "type": "Polygon",

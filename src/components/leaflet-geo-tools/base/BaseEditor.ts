@@ -997,12 +997,12 @@ export abstract class BaseEditor<T extends L.Layer> {
             }
 
             // 2、编辑器是否启用编辑功能( 子类可能扩充这个内容，initEditOptions还是放在子类中调用吧)
-            if (options.edit?.enabled) {
+            if (options?.edit?.enabled) {
                 this.initEditOptions(options?.edit);
             }
 
             // 3、编辑器是否启用几何有效性校验功能(初始化校验配置，设置允许、校验失败时的样式等 )
-            if (options.validation) {
+            if (options?.validation) {
                 // 校验规则
                 this.validationOptions = {
                     ...options?.validation

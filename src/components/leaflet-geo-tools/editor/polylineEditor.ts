@@ -46,10 +46,19 @@ import { polylineHasSelfIntersection } from '../utils/validShapeUtils';
 
 export default class PolylineEditor extends BaseEditor<L.Polyline> {
 
+    // #region 暂时未使用的部分
+    protected redoStack: any[];
     protected vertexMarkers: any[];
     protected midpointMarkers: any[];
     protected historyStack: any[];
-    protected redoStack: any[];
+    protected enterEditMode(): void { }
+    protected exitEditMode(): void { }
+    protected getCurrentMarkerCoords() { }
+    protected reBuildMarker(coords: any[]): void { }
+    protected updateMidpoints(skipMarker?: L.Marker): void { }
+    protected reBuildMarkerAndRender(coordinatesArray: any): void { }
+    // #endregion
+
 
     private tempCoords: number[][] = [];
 
@@ -118,31 +127,6 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
     }
 
     // [编辑]: 编辑的配置项 + 更新编辑功能 + 进入\退出编辑\编辑时的撤销\重做\重置\完成编辑等功能
-
-    protected enterEditMode(): void { }
-
-    protected exitEditMode(): void { }
-
-    protected undoEdit(): void { }
-
-    protected redoEdit(): void { }
-
-    protected resetToInitial(): void { }
-
-    protected commitEdit(): void { }
-
-    protected getLastCoords() { }
-
-    protected reBuildMarkerAndRender(coordinatesArray: any): void { }
-
-    protected reBuildMarker(coords: any[]): void { }
-
-    protected updateMidpoints(skipMarker?: L.Marker): void { }
-
-    protected getCurrentMarkerCoords(): number[][][] {
-        return []
-    }
-
 
     // [吸附]: 全部内容已经写在基类中
     // [状态]: 全部内容已经写在基类中
@@ -216,6 +200,7 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
             }
         }
     }
+
     /**  地图鼠标移动事件，用于设置点的位置
      *
      *
@@ -272,6 +257,7 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
             })
         }
     }
+
     /** 隐藏图层
      *
      *
@@ -287,6 +273,7 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
             })
         }
     }
+    
     // #endregion
 
 }
