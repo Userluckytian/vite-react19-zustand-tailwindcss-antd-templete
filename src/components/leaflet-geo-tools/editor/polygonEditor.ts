@@ -547,37 +547,6 @@ export class PolygonEditor extends BaseEditor<L.Polygon> {
 
     }
 
-    /** 双击事件是否可以继续触发
-     *
-     *
-     * @private
-     * @param {L.LeafletMouseEvent} e
-     * @return {*}  {boolean}
-     * @memberof PolygonEditor
-     */
-    private canConsume(e: L.LeafletMouseEvent): boolean {
-        // 如果是绘制操作，则直接跳过判断，后面的逻辑是给编辑操作准备的
-        if (this.currentState === EditorState.Drawing) return true;
-        if (!this.layerVisble) return false;
-        // 🔒 检查是否处于topo选择状态，如果是则不进入编辑模式
-        if (LeafletTopology.isPicking(this.map)) {
-            // topo正在选择图层，不处理双击编辑事件
-            return false;
-        }
-        const clickIsSelf = isClickOnLayer(e, this.layer);
-        // 已经激活的实例，确保点击在自己的图层上
-        if (this.isActive()) {
-            return clickIsSelf;
-        } else {
-            if (clickIsSelf) {
-                // console.log('重新激活编辑器');
-                this.activate();
-                return true;
-            }
-        }
-        return false;
-    }
-
     /** 完成绘制（结束绘制）
      *
      *

@@ -302,7 +302,7 @@ export function reversePolyLineLatLngs(geometry: GeoJSON.Geometry): number[][] |
      * @return {*}  {boolean}
      * @memberof LeafletEditRectangle
      */
-export function isClickOnLayer(e: L.LeafletMouseEvent, layer: L.Polygon | L.Rectangle | L.Circle): boolean {
+export function isClickOnLayer(e: L.LeafletMouseEvent, layer: L.Polygon | L.Rectangle | L.Circle | L.Polyline): boolean {
     if (!layer) return false;
 
     try {

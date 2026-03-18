@@ -10,7 +10,8 @@ import { EditorState, type DragMarkerOptions, type EditOptionsExpends, type Edit
 import { MarkerPointEditor } from './editor/markerPointEditor';
 import { PolygonEditor } from './editor/polygonEditor';
 import RectangleEditor from './editor/rectangleEditor';
-// import PolylineEditor from './editor/polylineEditor';
+import PolylineEditor from './editor/polylineEditor';
+import { LeafletTopology } from '../custom-leaflet-draw/topo/topo';
 // import LeafletPolygon from './editor/polygon';
 // import LeafletCircle from './editor/circle';
 // import LeafletRectangle from './editor/rectangle';
@@ -221,7 +222,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
         // }
 
     }
-    
+
     // 改变other属性的选项
     const changeOtherBarOptions = (item: any, checked: boolean) => {
         // item.enable = !item.enable;
@@ -361,10 +362,10 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 const markerPoint = new MarkerPointEditor(mapInstance, { snap });
                 saveEditorAndAddListener(markerPoint);
                 break;
-            // case 'line':
-            //     const lineLayer = new LeafletPolyline(mapInstance, { validation });
-            //     saveEditorAndAddListener(lineLayer, true);
-            //     break;
+            case 'line':
+                const lineLayer = new PolylineEditor(mapInstance, { snap, validation });
+                saveEditorAndAddListener(lineLayer, true);
+                break;
             // case 'polygon':
             //     const polygonLayer = new LeafletPolygon(mapInstance, { validation });
             //     saveEditorAndAddListener(polygonLayer, true);
@@ -839,6 +840,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
      * @param {EditorInstance} editor
      */
     const saveEditorAndAddListener = (editor: EditorInstance, needSnapToobar: boolean = false, immediateNotify: boolean = false, toolId?: string) => {
+        setCurrEditor(editor);
         setDrawLayers((pre: any[]) => [...pre, editor]);
         // 对于有默认 geometry 的工具，立即触发绘制结果回调
         if (props.drawGeoJsonResult && toolId && ['add', 'add_hole', 'add_hole_multi'].includes(toolId)) {
@@ -1019,13 +1021,13 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
             }
         }
         if (e.ctrlKey && e.key === 'z') {
-            // e.preventDefault();
-            // const state = (currEditor as (LeafletPolygonEditor | LeafletRectangleEditor)).getCurrentState();
-            // if (state === PolygonEditorState.Drawing) {
-            //     undoDraw();
-            // } else {
-            //     undoEdit();
-            // }
+            e.preventDefault();
+            const state = (currEditor as any).getCurrentState();
+            if (state === EditorState.Drawing) {
+                undoDraw();
+            } else {
+                undoEdit();
+            }
         }
         if (e.ctrlKey && e.key === 's') {
             e.preventDefault();
@@ -1048,8 +1050,8 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
 
     useEffect(() => {
         if (mapInstance) {
-            // const topology = LeafletTopology.getInstance(mapInstance);
-            // setTopologyInstance(topology);
+            const topology = LeafletTopology.getInstance(mapInstance);
+            setTopologyInstance(topology);
         }
         return () => {
 

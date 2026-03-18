@@ -12,17 +12,17 @@
 
 **顶点删除**：对于编辑行为来说，是需要的。
 
-**吸附**：编辑和绘制时都需要。
+**吸附**：编辑和绘制时都需要。(✅)
 
 **撤销重做**：编辑时需要，绘制时要支持撤销已经绘制的点，允许重绘。
 
-**校验**：有的，是否允许自相交
+**校验**：有的，是否允许自相交 ✅
 
-**状态管理**：用户从绘制状态变成完成状态、从编辑状态到完成状态。是必要的，可以做。
+**状态管理**：用户从绘制状态变成完成状态、从编辑状态到完成状态。是必要的，可以做。 ✅
 
-**图层显隐控制**：可做
+**图层显隐控制**：可做 ✅
 
-**样式配置**：必做
+**样式配置**：必做 ✅
 
 
 **第二轮分析(主要分析要不要放到BaseEditor中， 比如：BaseEditor中写抽象接口、方法、子类实现接口、方法。或者不应该放到BaseEditor中，由子类去写)**：
@@ -60,7 +60,8 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
     // #endregion
 
 
-    private tempCoords: number[][] = [];
+    private tempCoords: number[][] = [];  // 绘制的时候存储用户点击的坐标点
+    private lastMoveCoord: number[] = []; // 存储鼠标移动的最后一个点的坐标信息
 
     constructor(map: L.Map, options?: LeafletEditorOptions) {
         super(map, options);
@@ -169,13 +170,23 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
      * @memberof LeafletPolyLine
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
-        // 尝试添加新点
-        const newPoint = [e.latlng.lat, e.latlng.lng];
-        const testCoords = [...this.tempCoords, newPoint];
-        // 实时校验并改变样式
-        const isValid = this.isValidPolyline(testCoords);
-        // 通过校验，则添加点
-        isValid && this.tempCoords.push(newPoint);
+        if (!this.isActive()) return;
+        if (this.currentState === EditorState.Drawing) {
+            // 尝试添加新点
+            let waitingAddCoord = [e.latlng.lat, e.latlng.lng];
+            if (this.IsEnableSnap()) {
+                const { snappedLatLng } = this.applySnapWithTarget(e.latlng);
+                waitingAddCoord = [snappedLatLng.lat, snappedLatLng.lng];
+            }
+            const testCoords = [...this.tempCoords, waitingAddCoord];
+            // 实时校验并改变样式
+            const isValid = this.isValidPolyline(testCoords);
+            // 通过校验，则添加点
+            isValid && this.tempCoords.push(waitingAddCoord);
+            // 同时记录最后一个点，用于后续撤回操作行为
+            this.lastMoveCoord = waitingAddCoord;
+            return;
+        }
     }
 
     /**  地图双击事件，用于设置点的位置
@@ -186,19 +197,42 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
      * @memberof LeafletPolyLine
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
-        if (this.layer) {
+        // 关键：只有激活的实例才处理事件
+        if (!this.canConsume(e)) return;
+        if (!this.layer) throw new Error('面图层实例化失败，无法完成图层创建，请重试');
+        // 情况1： 正在绘制状态时，绘制的逻辑
+        if (this.currentState === EditorState.Drawing) {
             const lastCoord = [e.latlng.lat, e.latlng.lng];
             // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
             const finalCoords = deduplicateCoordinates([...this.tempCoords, lastCoord]);
             if (this.isValidPolyline(finalCoords)) {
-                this.renderLayer(finalCoords);
-                this.reset();
+                this.finishedDraw(finalCoords);
             } else {
                 // 校验失败，保持绘制状态
                 throw new Error('绘制的折线无效，请继续绘制或调整');
                 // 不执行 reset()，让用户继续调整
             }
+        } else {
+            // 情况 2：已绘制完成后的后续双击事件的逻辑均走这个
+
         }
+    }
+
+    /** 完成绘制（结束绘制）
+     *
+     *
+     * @private
+     * @param {number[][]} finalCoords
+     * @memberof LeafletPolyLine
+     */
+    private finishedDraw(finalCoords: number[][]): void {
+        this.renderLayer(finalCoords);
+        this.reset();
+        this.tempCoords = []; // 清空吧，虽然不清空也没事，毕竟后面就不使用了
+        // 移除（吸附后）可能存在的高亮
+        this.clearSnapHighlights();
+        // 设置为空闲状态，并发出状态通知
+        this.updateAndNotifyStateChange(EditorState.Idle);
     }
 
     /**  地图鼠标移动事件，用于设置点的位置
@@ -209,14 +243,28 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
      * @memberof LeafletPolyLine
      */
     private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
-        // 1：一个点也没有时，我们移动事件，也什么也不做。
-        if (!this.tempCoords.length) return;
-        const lastMoveEndPoint: number[] = [e.latlng.lat, e.latlng.lng];
-        const tempRenderCoords = [...this.tempCoords, lastMoveEndPoint];
-        // 实时校验并改变样式
-        const isValid = this.isValidPolyline(tempRenderCoords);
-        // 实时渲染
-        this.renderLayer(tempRenderCoords, isValid);
+        // 关键：只有激活的实例才处理事件
+        if (!this.isActive()) return;
+        if (this.currentState === EditorState.Drawing) {
+            let lastMoveEndPoint: number[] = [e.latlng.lat, e.latlng.lng];
+            let tempMovedCoords = this.tempCoords;
+            if (this.IsEnableSnap()) {
+                const { snappedLatLng } = this.applySnapWithTarget(e.latlng);
+                lastMoveEndPoint = [snappedLatLng.lat, snappedLatLng.lng];
+            }
+            // 1：一个点也没有时，我们移动事件，也什么也不做。
+            if (!this.tempCoords.length) return;
+            // 2：构建临时坐标点数组。
+            tempMovedCoords = [...tempMovedCoords, lastMoveEndPoint];
+            // 实时校验并改变样式
+            const isValid = this.isValidPolyline(tempMovedCoords);
+            // 实时渲染
+            this.renderLayer(tempMovedCoords, isValid);
+            return;
+        }
+        if (this.currentState === EditorState.Editing) {
+            return;
+        }
     }
 
     /** 校验线图层的有效性
@@ -273,7 +321,37 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
             })
         }
     }
-    
+
+    /**  绘制时,用于撤销最后一个绘制点(一般绑定到快捷键ctrl + Z上)
+     *
+     *
+     * @return {*}  {boolean}
+     * @memberof PolylineEditor
+     */
+    public undoDraw(): boolean {
+        if (this.currentState !== EditorState.Drawing)
+            return false;
+
+        if (this.tempCoords.length > 0) {
+            // 移除最后一个点
+            this.tempCoords.pop();
+
+            // ✅ 修复：检查是否还有剩余点
+            if (this.tempCoords.length > 0) {
+                const finalCoords = [...this.tempCoords, this.lastMoveCoord];
+                this.renderLayer(finalCoords);
+            } else {
+                // 没有点了，清空渲染
+                this.renderLayer([[]]);
+                this.lastMoveCoord = []; // 清空移动点
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+
     // #endregion
 
 }
