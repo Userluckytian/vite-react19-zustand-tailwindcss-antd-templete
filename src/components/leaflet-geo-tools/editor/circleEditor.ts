@@ -35,7 +35,7 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
     protected enterEditMode(): void { }
     protected exitEditMode(): void { }
 
-    protected initLayer<U extends L.LayerOptions>(layerOptions: U, geometry?: GeoJSON.Geometry | L.LatLng): void { }
+    protected initLayer(geometry?: GeoJSON.Geometry | L.LatLng): void { }
     protected bindMapEvents(map: L.Map): void { }
     protected offMapEvents(map: L.Map): void { }
     protected setLayerVisibility(visible: boolean): void { }

@@ -38,12 +38,12 @@ export default class RectangleEditor extends BaseEditor<L.Rectangle> {
             this.map.getContainer().style.cursor = existGeometry ? 'grab' : 'crosshair';
             // 不需要设置十字光标和禁用双击放大（先考虑让用户自己去写，里面不再控制）
             // existGeometry ? this.map.doubleClickZoom.enable() : this.map.doubleClickZoom.disable();
-            this.initLayer(options?.defaultStyle, options?.defaultGeometry);
+            this.initLayer(options?.defaultGeometry);
             this.bindMapEvents(this.map);
         }
     }
 
-    protected initLayer<U extends L.LayerOptions>(layerOptions: U, geometry?: GeoJSON.Geometry): void {
+    protected initLayer(geometry?: GeoJSON.Geometry): void {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[[-90, -180], [-90, -180]]坐标，也就是页面的左下角
         const polylineOptions = this.getLayerStyle();
         let coords: L.LatLngBoundsExpression = [[181, 181], [182, 182]]; // 默认空图形

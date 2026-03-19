@@ -38,7 +38,7 @@ export abstract class BaseEditor<T extends L.Layer> {
      * @param {GeoJSON.Geometry} [geometry] 图层的默认几何信息
      * @memberof BaseEditor
      */
-    protected abstract initLayer<U extends L.LayerOptions>(layerOptions: U, geometry?: GeoJSON.Geometry | L.LatLng): void;
+    protected abstract initLayer(geometry?: GeoJSON.Geometry | L.LatLng): void;
 
     /** 绑定地图事件
      *

@@ -3,20 +3,20 @@
     拖拽调整位置、吸附、撤销/重做、图层显隐控制、状态管理、样式配置
 
     **第一轮分析（功能的合理性： 从功能的必要性，绘制行为、编辑行为等角度分析）**：
-    **点拖动**，可以做（但这个不是编辑行为，默认支持的）
+    **点拖动**，可以做（但这个不是编辑行为，默认支持的） (✅)
 
-    **吸附**：绘制时支持吸附，拖动时支持吸附（不是编辑行为）。
+    **吸附**：绘制时支持吸附，拖动时支持吸附（不是编辑行为）。 (✅)
 
     **撤销重做**：用户绘制了一个点，然后发现自己绘制错了，可以撤销，重新绘制。（
     Q: 那什么时候能完成绘制呢？ 除非提供一个按钮，点击表示完成绘制。
     A: 去球吧~，没必要支持撤销重做，用户绘制错了，就把当前绘制的点删除，重新绘制就行了。
     ）
 
-    **图层显隐控制**：可做(怎么做？ 答：编辑器中定义isVisible属性，然后用户在设置图层显隐时，设置该属性的值，然后提供getVisible函数，用户获取当前图层状态)
+    **图层显隐控制**：可做(怎么做？ 答：编辑器中定义isVisible属性，然后用户在设置图层显隐时，设置该属性的值，然后提供getVisible函数，用户获取当前图层状态) (✅)
+ 
+    **状态管理**：用户从绘制状态变成完成绘 制状态。是必要的，可以做。 (✅)
 
-    **状态管理**：用户从绘制状态变成完成绘 制状态。是必要的，可以做。
-
-    **样式配置**：必做
+    **样式配置**：必做 (✅)
 
 
     **第二轮分析(主要分析要不要放到BaseEditor中， 比如：BaseEditor中写抽象接口、方法、子类实现接口、方法。或者不应该放到BaseEditor中，由子类去写)**：
@@ -63,13 +63,13 @@ export class MarkerPointEditor extends BaseEditor<L.Marker> {
             // 初始化时，设置绘制状态为true，且发出状态通知
             this.updateAndNotifyStateChange(existPosition ? EditorState.Idle : EditorState.Drawing);
             this.map.getContainer().style.cursor = existPosition ? 'grab' : 'crosshair';
-            this.initLayer(options?.defaultStyle, options?.defaultGeometry);
+            this.initLayer(options?.defaultGeometry);
             this.bindMapEvents();
         }
     }
 
     // 初始化图层
-    protected initLayer<U extends L.LayerOptions>(layerOptions: U, geometry?: GeoJSON.Geometry): void {
+    protected initLayer(geometry?: GeoJSON.Geometry): void {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[-90, -180]坐标，也就是页面的左下角
         const polylineOptions = this.getLayerStyle();
         let coords: number[] = [181, 181];

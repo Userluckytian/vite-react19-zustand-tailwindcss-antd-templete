@@ -33,13 +33,13 @@ export class PolygonEditor extends BaseEditor<L.Polygon> {
             this.map.getContainer().style.cursor = existGeometry ? 'grab' : 'crosshair';
 
             // 构建编辑器的图层内容
-            this.initLayer(options?.defaultStyle, options?.defaultGeometry);
+            this.initLayer(options?.defaultGeometry);
             // 绑定地图事件
             this.bindMapEvents(this.map);
         }
     }
 
-    protected initLayer<U extends L.LayerOptions>(layerOptions: U | undefined, geometry?: GeoJSON.Geometry | L.LatLng): void {
+    protected initLayer(geometry?: GeoJSON.Geometry | L.LatLng): void {
         // 1: 提供一些默认值, 防止用户构建的图层样式异常
         const allOptions = this.getLayerStyle();
         // 2:  提供默认空图形
@@ -300,7 +300,7 @@ export class PolygonEditor extends BaseEditor<L.Polygon> {
 
                     // 右键删除点（前提是环点数大于3）
                     marker.on('contextmenu', () => {
-                        const ring = this.vertexMarkers[polygonIndex][ringIndex];
+                        const ring = this.vertexMarkers[polygonIndex][ringIndex]; // 获取当前右键点击的顶点所属的那个“环”（ring），因为要先确保足够3个点，不然无法凑成一个面。
                         if (ring.length > 3) {
                             this.map.removeLayer(marker);
                             // 这里应该查找当前 marker 的索引，而不是使用捕获时的 pointIndex
