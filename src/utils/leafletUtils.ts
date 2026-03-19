@@ -1,4 +1,5 @@
-import { lineString, bbox, getCoords, polygon, transformTranslate, booleanValid, kinks, distance, point, bearing } from "@turf/turf";
+import { booleanValidEnhance } from "@/components/leaflet-geo-tools/utils/commonUtils";
+import { lineString, bbox, getCoords, polygon, kinks, distance, point, bearing } from "@turf/turf";
 import { message } from "antd";
 import * as L from 'leaflet';
 import type { MarkerOptions } from "leaflet";
@@ -198,7 +199,7 @@ function bindPolygonEditEvents(layer: L.Polygon, coords: GeoJSON.Position[], map
     // 校验合法性
     function validatePolygon(coords: GeoJSON.Position[]) {
         const poly = polygon([coords]);
-        const valid = booleanValid(poly);
+        const valid = booleanValidEnhance(poly);
         const hasKinks = kinks(poly).features.length > 0;
         if (!valid || hasKinks) {
             alert('图形不合法：存在交叉或顶点错误');

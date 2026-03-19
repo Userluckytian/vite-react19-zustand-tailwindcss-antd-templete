@@ -4,7 +4,7 @@
 */
 
 import * as L from 'leaflet';
-import { feature as turfFeature, booleanIntersects, booleanPointInPolygon, point } from '@turf/turf';
+import { feature as turfFeature, booleanIntersects, booleanPointInPolygon, point, booleanValid, getCoords } from '@turf/turf';
 
 /** 查询点击位置处的图层
  * 优点：不依赖外部库，纯 Leaflet 实现（优化版本，见queryLayersIntersectingGeometry，可读性强，但依赖@turf/turf库）
@@ -316,6 +316,29 @@ export function isClickOnLayer(e: L.LeafletMouseEvent, layer: L.Polygon | L.Rect
     }
 }
 
+
+
+/** turf的校验有效性，同时增强，因为要同步进行坐标的范围进行校验
+ * 
+ * @param geom 
+ * @returns 
+ */
+export function booleanValidEnhance(geom: any) {
+    // 1. 先使用 turf 进行标准有效性检查
+    if (!booleanValid(geom)) {
+        return false;
+    }
+    // 2. 再自定义检查坐标范围
+    let coords = getCoords(geom); // 使用 turf.getCoords 安全地提取坐标
+    // 注意：这里需要一个递归遍历所有坐标的逻辑
+    // 简单起见，假设我们检查第一个坐标
+    if (Array.isArray(coords)) {
+        return isValidCoordinate(coords)
+    }
+    return true;
+}
+
+
 // #region 不需要暴露出去的函数集合
 
 function lineStringsIntersect(c1: number[][], c2: number[][]) {
@@ -370,4 +393,22 @@ function pointInPolygon(x: number, y: number, polyCoords: number[][]) {
     }
     return inside;
 }
+
+function isValidCoordinate(coords: any[]) {
+    for (const coord of coords) {
+        if (Array.isArray(coord)) {
+            if (typeof coord[0] === 'number' && typeof coord[1] === 'number') {
+                const result = coord[0] >= -180 && coord[0] <= 180 && coord[1] >= -90 && coord[1] <= 90;
+                if (!result) {
+                    return false;
+                }
+            } else {
+                return isValidCoordinate(coord);
+            }
+        }
+        continue;
+    }
+    return true;
+}
+
 // #endregion

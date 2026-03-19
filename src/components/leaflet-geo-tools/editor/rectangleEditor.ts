@@ -1,8 +1,8 @@
 
-import { bboxPolygon, booleanPointInPolygon, booleanValid, point } from "@turf/turf";
+import { bboxPolygon, booleanPointInPolygon, point } from "@turf/turf";
 import { BaseEditor } from "../base/BaseEditor";
 import { EditorState, type LeafletEditorOptions } from "../types";
-import { buildMarkerIcon, isClickOnLayer, reverseRectLatLngs } from "../utils/commonUtils";
+import { booleanValidEnhance, buildMarkerIcon, isClickOnLayer, reverseRectLatLngs } from "../utils/commonUtils";
 import * as L from 'leaflet';
 import type { BBox } from "geojson";
 import { LeafletTopology } from "@/components/custom-leaflet-draw/topo/topo";
@@ -482,7 +482,7 @@ export default class RectangleEditor extends BaseEditor<L.Rectangle> {
             ];
 
             const rectanglePolygon = bboxPolygon(bbox);
-            return booleanValid(rectanglePolygon);
+            return booleanValidEnhance(rectanglePolygon);
 
         } catch (error) {
             return false;
