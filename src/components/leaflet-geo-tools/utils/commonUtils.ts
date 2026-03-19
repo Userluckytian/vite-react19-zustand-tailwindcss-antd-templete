@@ -275,7 +275,7 @@ export function reversePointLatLngs(geometry: GeoJSON.Geometry): number[] {
         throw new Error('不支持的 geometry 类型: ' + geometry.type);
     }
 }
-/** 转换【线】的经纬度坐标
+/** 转换【线】的经纬度坐标,并强制按照多线的结构返回。
  *
  *
  * @private
@@ -283,9 +283,10 @@ export function reversePointLatLngs(geometry: GeoJSON.Geometry): number[] {
  * @return {*}  {L.LatLngBoundsExpression}
  * @memberof LeafletRectangleEditor
  */
-export function reversePolyLineLatLngs(geometry: GeoJSON.Geometry): number[][] | number[][][] {
+export function reversePolyLineLatLngs(geometry: GeoJSON.Geometry): number[][][] {
     if (geometry.type === 'LineString') {
-        return geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+        const singlePolyline = geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+        return [singlePolyline]
     } else if (geometry.type === 'MultiLineString') {
         return geometry.coordinates.map(line => line.map(([lng, lat]) => [lat, lng]));
     } else {
