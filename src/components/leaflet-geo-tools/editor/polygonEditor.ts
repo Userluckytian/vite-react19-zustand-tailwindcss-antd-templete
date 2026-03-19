@@ -1,6 +1,5 @@
 import { EditorState, type LeafletEditorOptions, type MidpointPair } from "../types";
 import * as L from "leaflet";
-import { LeafletTopology } from "@/components/custom-leaflet-draw/topo/topo";
 import { booleanPointInPolygon, point } from '@turf/turf';
 import { BaseEditor } from "../base/BaseEditor";
 import { deduplicateCoordinates, getFractionalPointOnEdge, isClickOnLayer, reverseLatLngs } from "../utils/commonUtils";
@@ -576,7 +575,7 @@ export class PolygonEditor extends BaseEditor<L.Polygon> {
         // 2：状态变更，并发出状态通知
         this.updateAndNotifyStateChange(EditorState.Editing);
         // 3: 设置当前激活态是本实例，因为事件监听和激活态实例是关联的，只有激活的实例才处理事件
-        this.isActive()
+        this.activate()
         // 4: 进入编辑模式
         this.enterEditMode();
     }

@@ -54,8 +54,6 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
 
     // #region 暂时未使用的部分
 
-    protected exitEditMode(): void { }
-
     protected reBuildMarkerAndRender(coordinatesArray: any): void { }
     // #endregion
 
@@ -332,6 +330,22 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
                 color: '#3388ff'
             })
         }
+        // ✅ 退出编辑状态（若存在）
+        if (this.currentState === EditorState.Editing) {
+            this.exitEditMode();
+            this.updateAndNotifyStateChange(EditorState.Idle);
+        }
+    }
+
+    protected exitEditMode(): void {
+        // 移除所有顶点 marker
+        this.vertexMarkers.flat(1).forEach(marker => {
+            this.map.removeLayer(marker);
+        });
+        this.vertexMarkers = [];
+
+        // 移除所有中点 marker
+        this.removeAllMidPointMarkers();
     }
 
     /**  绘制时,用于撤销最后一个绘制点(一般绑定到快捷键ctrl + Z上)
@@ -381,7 +395,7 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
         // 2：状态变更，并发出状态通知
         this.updateAndNotifyStateChange(EditorState.Editing);
         // 3: 设置当前激活态是本实例，因为事件监听和激活态实例是关联的，只有激活的实例才处理事件
-        this.isActive()
+        this.activate()
         // 4: 进入编辑模式
         this.enterEditMode();
     }

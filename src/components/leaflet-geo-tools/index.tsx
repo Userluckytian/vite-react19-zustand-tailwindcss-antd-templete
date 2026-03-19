@@ -153,6 +153,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
     const [currSelTool, setCurrSelTool] = useState<string | null>(null); // 当前使用的【绘制条上的绘制工具】
     const [drawLayers, setDrawLayers] = useState<any[]>([]); // 存放绘制的图层
     const [currEditor, setCurrEditor] = useState<any>(null); // 当前编辑的图层【我们设置的是一次仅可编辑一个图层】
+    const currEditorRef = useRef(currEditor);
     const [topologyInstance, setTopologyInstance] = useState<any>(null);
 
     const [reshapeBar, setReshapeBar] = useState<any[]>([
@@ -241,7 +242,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
         // }
 
     }
-    
+
     // 改变EditConfigBar的选项
     const changeEditConfigBarOptions = (item: any, checked: boolean) => {
         // item.enable = !item.enable;
@@ -363,8 +364,60 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 saveEditorAndAddListener(markerPoint);
                 break;
             case 'line':
-                const lineLayer = new PolylineEditor(mapInstance, { snap, validation });
-                saveEditorAndAddListener(lineLayer, true);
+                // const polylineGeom: any = {
+                //     "type": "MultiLineString",
+                //     "coordinates": [
+                //         [
+                //             [
+                //                 114.60937500000001,
+                //                 39.16414104768742,
+                //             ],
+                //             [
+                //                 126.73828125000001,
+                //                 42.032974332441405,
+                //             ],
+                //             [
+                //                 127.52929687500001,
+                //                 33.797408767572485,
+                //             ],
+                //             [
+                //                 117.07031250000001,
+                //                 31.653381399664,
+                //             ],
+                //             [
+                //                 108.89648437500001,
+                //                 34.74161249883172,
+                //             ]
+                //         ],
+                //         [
+                //             [
+                //                 120.05859375000001,
+                //                 37.71859032558816,
+                //             ],
+                //             [
+                //                 124.01367187500001,
+                //                 38.685509760012025,
+                //             ],
+                //             [
+                //                 123.57421875000001,
+                //                 35.889050079360935,
+                //             ],
+                //             [
+                //                 119.26757812500001,
+                //                 35.38904996691167,
+                //             ],
+                //             [
+                //                 116.71875000000001,
+                //                 35.81781315869664,
+                //             ]
+                //         ],
+                //     ]
+                // };
+                // 存在默认空间信息的
+                // const lineLayer = new PolylineEditor(mapInstance, { snap, edit, validation, defaultGeometry: polylineGeom });
+                // 不存在默认空间信息的
+                const lineLayer = new PolylineEditor(mapInstance, { snap, edit, validation });
+                saveEditorAndAddListener(lineLayer);
                 break;
             // case 'polygon':
             //     const polygonLayer = new LeafletPolygon(mapInstance, { validation });
@@ -839,8 +892,10 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
      *
      * @param {EditorInstance} editor
      */
-    const saveEditorAndAddListener = (editor: EditorInstance, needSnapToobar: boolean = false, immediateNotify: boolean = false, toolId?: string) => {
-        setCurrEditor(editor);
+    const saveEditorAndAddListener = (editor: EditorInstance, immediateNotify: boolean = false, toolId?: string) => {
+        setCurrEditor(() => editor);
+        currEditorRef.current = editor;
+        // ----------------------------
         setDrawLayers((pre: any[]) => [...pre, editor]);
         // 对于有默认 geometry 的工具，立即触发绘制结果回调
         if (props.drawGeoJsonResult && toolId && ['add', 'add_hole', 'add_hole_multi'].includes(toolId)) {
@@ -1171,6 +1226,14 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                                 )
                             })
                         }
+                    </div>
+                </div>
+                <div className='test'>
+                    <div>测试工具条：</div>
+                    <div className='bottom' onClick={() => {
+                        currEditorRef.current.startEdit();
+                    }}>
+                        激活线图层的编辑
                     </div>
                 </div>
             </div>
