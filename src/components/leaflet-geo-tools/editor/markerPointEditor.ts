@@ -59,24 +59,26 @@ export class MarkerPointEditor extends BaseEditor<L.Marker> {
     constructor(map: L.Map, options?: LeafletEditorOptions) {
         super(map, options);
         if (this.map) {
+            this.activate();
             const existPosition = !!options?.defaultGeometry;
             // 初始化时，设置绘制状态为true，且发出状态通知
             this.updateAndNotifyStateChange(existPosition ? EditorState.Idle : EditorState.Drawing);
             this.map.getContainer().style.cursor = existPosition ? 'grab' : 'crosshair';
             this.initLayer(options?.defaultGeometry);
-            this.bindMapEvents();
+            this.bindMapEvents(this.map);
         }
     }
 
     // 初始化图层
     protected initLayer(geometry?: GeoJSON.Geometry): void {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[-90, -180]坐标，也就是页面的左下角
-        const polylineOptions = this.getLayerStyle();
+        const pointOptions = this.getLayerStyle();
+
         let coords: number[] = [181, 181];
         if (geometry) {
             coords = reversePointLatLngs(geometry);
         }
-        this.layer = L.marker(coords as L.LatLngExpression, polylineOptions);
+        this.layer = L.marker(coords as L.LatLngExpression, pointOptions);
         this.layer.addTo(this.map);
         // 绑定图层自身事件(无)
         // 设置吸附源（排除当前图层） 
@@ -85,13 +87,12 @@ export class MarkerPointEditor extends BaseEditor<L.Marker> {
         }
     }
 
-    protected bindMapEvents() {
-        this.map && this.map.on('click', this.mapClickEvent);
+    protected bindMapEvents(map: L.Map): void {
+        map.on('click', this.mapClickEvent);
     }
 
-    protected offMapEvents() {
-        // 设置完毕就关闭地图事件监听
-        this.map && this.map.off('click', this.mapClickEvent);
+    protected offMapEvents(map: L.Map): void {
+        map.off('click', this.mapClickEvent);
     }
 
     protected setLayerVisibility(visible: boolean) {
@@ -107,8 +108,16 @@ export class MarkerPointEditor extends BaseEditor<L.Marker> {
      * @memberof markerPoint
      */
     private mapClickEvent = (e: L.LeafletMouseEvent) => {
-        if (this.layer) {
-            this.layer.setLatLng([e.latlng.lat, e.latlng.lng]);
+        if (!this.isActive()) return;
+        if (!this.layer) throw new Error('图层实例化失败，无法完成图层创建，请重试');
+        if (this.currentState === EditorState.Drawing) {
+            // 尝试添加新点
+            let waitingAddCoord: L.LatLngExpression = [e.latlng.lat, e.latlng.lng];
+            if (this.IsEnableSnap()) {
+                const { snappedLatLng } = this.applySnapWithTarget(e.latlng);
+                waitingAddCoord = [snappedLatLng.lat, snappedLatLng.lng];
+            }
+            this.layer.setLatLng(waitingAddCoord);
             this.resetStatus();
         }
     }
@@ -121,7 +130,7 @@ export class MarkerPointEditor extends BaseEditor<L.Marker> {
      */
     private resetStatus() {
         // 设置完毕就关闭地图事件监听
-        this.offMapEvents()
+        this.offMapEvents(this.map)
         this.map.getContainer().style.cursor = 'grab';
         // 设置为空闲状态，并发出状态通知
         this.updateAndNotifyStateChange(EditorState.Idle);
@@ -147,6 +156,7 @@ export class MarkerPointEditor extends BaseEditor<L.Marker> {
             opacity: 1,
             ...this.options.defaultStyle,
         };
+
         const allOptions = {
             pane: 'markerPane',
             layerVisible: true, // 增加了一个自定义属性，用于用户从图层层面获取图层的显隐状态

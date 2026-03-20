@@ -1022,6 +1022,7 @@ export abstract class BaseEditor<T extends L.Layer> {
         if (!map) throw new Error('传入的地图对象异常，请先确保地图对象已实例完成。');
         // 对于编辑器来说，我是否应该考虑精度问题？我觉得应该考虑，因为无论是吸附、还是topo，都会涉及到精度问题，所以我觉得在编辑器基类中，应该把这个精度问题的配置项做好，后续其他编辑器继承了这个基类，就可以直接使用这个精度配置项了。
         this.map = map;
+        this.options = options;
         if (this.map) {
             // 1、编辑器是否启用吸附功能(初始化吸附控制器，设置吸附模式、吸附范围阈值、吸附高亮配置等)
             if (options?.snap?.enabled) {

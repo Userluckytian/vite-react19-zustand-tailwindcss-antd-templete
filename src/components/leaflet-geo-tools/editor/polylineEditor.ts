@@ -200,7 +200,7 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
         // 关键：只有激活的实例才处理事件
         if (!this.canConsume(e)) return;
-        if (!this.layer) throw new Error('面图层实例化失败，无法完成图层创建，请重试');
+        if (!this.layer) throw new Error('图层实例化失败，无法完成图层创建，请重试');
         // 情况1： 正在绘制状态时，绘制的逻辑
         if (this.currentState === EditorState.Drawing) {
             const lastCoord = [e.latlng.lat, e.latlng.lng];

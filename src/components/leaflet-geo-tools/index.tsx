@@ -84,34 +84,6 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
             type: 'measure_area',
             desp: '测面'
         },
-        // {
-        //     id: 'edit_polygon',
-        //     title: '可编辑面',
-        //     icon: 'icon-huizhiduobianxing1-copy',
-        //     type: 'edit_polygon',
-        //     desp: '编辑面'
-        // },
-        // {
-        //     id: 'edit_rectangle',
-        //     title: '可编辑矩形',
-        //     icon: 'icon-juxinghuizhi1-copy',
-        //     type: 'edit_rectangle',
-        //     desp: '编辑矩形'
-        // },
-        {
-            id: 'polygon_editor',
-            title: '可编辑复杂面',
-            icon: 'icon-huizhiduobianxing1',
-            type: 'polygon_editor',
-            desp: '编辑复杂面'
-        },
-        {
-            id: 'rectangle_editor',
-            title: '可编辑矩形',
-            icon: 'icon-juxinghuizhi1',
-            type: 'rectangle_editor',
-            desp: '编辑矩形'
-        },
         {
             id: 'add',
             title: '添加默认图层',
@@ -360,7 +332,10 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
         // clearAllIfExist(); // 根据需求来，有的时候，我们绘制新内容时，会期望移除上次绘制的结果
         switch (toolId) {
             case 'point':
-                const markerPoint = new MarkerPointEditor(mapInstance, { snap });
+                const markerPoint = new MarkerPointEditor(mapInstance, {
+                    snap,
+                    defaultStyle: { draggable: true }
+                });
                 saveEditorAndAddListener(markerPoint);
                 break;
             case 'line':
@@ -419,18 +394,24 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 const lineLayer = new PolylineEditor(mapInstance, { snap, edit, validation });
                 saveEditorAndAddListener(lineLayer);
                 break;
-            // case 'polygon':
-            //     const polygonLayer = new LeafletPolygon(mapInstance, { validation });
-            //     saveEditorAndAddListener(polygonLayer, true);
-            //     break;
+            case 'polygon':
+                // defaultGeometry ?: GeoJSON.Geometry; // 默认几何信息（如果有的话，可以在编辑时直接加载）
+                // defaultStyle ?: LeafletPolylineOptions; // 存放（用户自己想要设置的）图层的默认样式信息
+                const polygonLayerEditor = new PolygonEditor(mapInstance, {
+                    snap,
+                    edit,
+                    validation,
+                });
+                saveEditorAndAddListener(polygonLayerEditor, true);
+                break;
             case 'circle':
                 const circleLayer = new LeafletCircle(mapInstance, { edit });
                 saveEditorAndAddListener(circleLayer);
                 break;
-            // case 'rectangle':
-            //     const rectangleLayer = new LeafletRectangle(mapInstance);
-            //     saveEditorAndAddListener(rectangleLayer);
-            //     break;
+            case 'rectangle':
+                const rectangleLayerEditor = new RectangleEditor(mapInstance, { snap, edit });
+                saveEditorAndAddListener(rectangleLayerEditor, true);
+                break;
             // case 'measure_distance':
             //     const distanceLayer = new LeafletDistance(mapInstance);
             //     saveEditorAndAddListener(distanceLayer);
@@ -447,20 +428,6 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
             //     const editRectangleLayer = new LeafletEditRectangle(mapInstance);
             //     saveEditorAndAddListener(editRectangleLayer);
             //     break;
-            case 'polygon_editor':
-                // defaultGeometry ?: GeoJSON.Geometry; // 默认几何信息（如果有的话，可以在编辑时直接加载）
-                // defaultStyle ?: LeafletPolylineOptions; // 存放（用户自己想要设置的）图层的默认样式信息
-                const polygonLayerEditor = new PolygonEditor(mapInstance, {
-                    snap,
-                    edit,
-                    validation,
-                });
-                saveEditorAndAddListener(polygonLayerEditor, true);
-                break;
-            case 'rectangle_editor':
-                const rectangleLayerEditor = new RectangleEditor(mapInstance, { snap, edit });
-                saveEditorAndAddListener(rectangleLayerEditor, true);
-                break;
             // case 'add':
             //     const geometry: any = {
             //         "type": "Polygon",
@@ -1233,7 +1200,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                     <div className='bottom' onClick={() => {
                         currEditorRef.current.startEdit();
                         console.log('当前编辑器：', currEditorRef.current);
-                        
+
                     }}>
                         激活线图层的编辑
                     </div>
