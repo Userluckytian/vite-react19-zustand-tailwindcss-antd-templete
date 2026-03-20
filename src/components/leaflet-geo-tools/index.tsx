@@ -13,7 +13,7 @@ import RectangleEditor from './editor/rectangleEditor';
 import PolylineEditor from './editor/polylineEditor';
 import { LeafletTopology } from '../custom-leaflet-draw/topo/topo';
 // import LeafletPolygon from './editor/polygon';
-// import LeafletCircle from './editor/circle';
+import LeafletCircle from './editor/circleEditor';
 // import LeafletRectangle from './editor/rectangle';
 // import LeafletDistance from './measure/distance';
 // import LeafletArea from './measure/area';
@@ -423,10 +423,10 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
             //     const polygonLayer = new LeafletPolygon(mapInstance, { validation });
             //     saveEditorAndAddListener(polygonLayer, true);
             //     break;
-            // case 'circle':
-            //     const circleLayer = new LeafletCircle(mapInstance);
-            //     saveEditorAndAddListener(circleLayer);
-            //     break;
+            case 'circle':
+                const circleLayer = new LeafletCircle(mapInstance, { edit });
+                saveEditorAndAddListener(circleLayer);
+                break;
             // case 'rectangle':
             //     const rectangleLayer = new LeafletRectangle(mapInstance);
             //     saveEditorAndAddListener(rectangleLayer);
@@ -1232,6 +1232,8 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                     <div>测试工具条：</div>
                     <div className='bottom' onClick={() => {
                         currEditorRef.current.startEdit();
+                        console.log('当前编辑器：', currEditorRef.current);
+                        
                     }}>
                         激活线图层的编辑
                     </div>

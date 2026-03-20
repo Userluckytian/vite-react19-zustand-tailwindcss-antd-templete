@@ -57,7 +57,7 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
     protected reBuildMarkerAndRender(coordinatesArray: any): void { }
     // #endregion
 
-    protected historyStack: any[] = [];
+    protected historyStack: number[][][][] = [];
     private tempCoords: number[][] = [];  // 绘制的时候存储用户点击的坐标点
     private lastMoveCoord: number[] = []; // 存储鼠标移动的最后一个点的坐标信息
     protected vertexMarkers: L.Marker[][] = []; // 存储顶点标记的数组
