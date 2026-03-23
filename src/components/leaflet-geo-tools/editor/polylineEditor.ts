@@ -65,7 +65,7 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
     protected redoStack: any[] = [];
     protected midpointMarkers: MidpointPair[][] = []; // 存储【线中点、拖动线marker】两种标记的数组
 
-    constructor(map: L.Map, options?: LeafletEditorOptions) {
+    constructor(map: L.Map, options: LeafletEditorOptions = {}) {
         super(map, options);
         if (this.map) {
             this.activate();

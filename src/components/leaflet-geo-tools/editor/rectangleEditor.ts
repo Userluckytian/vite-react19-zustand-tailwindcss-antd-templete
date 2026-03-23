@@ -2,15 +2,14 @@
 import { bboxPolygon, booleanPointInPolygon, point } from "@turf/turf";
 import { BaseEditor } from "../base/BaseEditor";
 import { EditorState, type LeafletEditorOptions } from "../types";
-import { booleanValidEnhance, buildMarkerIcon, isClickOnLayer, reverseRectLatLngs } from "../utils/commonUtils";
+import { booleanValidEnhance, buildMarkerIcon, reverseRectLatLngs } from "../utils/commonUtils";
 import * as L from 'leaflet';
 import type { BBox } from "geojson";
-import { LeafletTopology } from "@/components/custom-leaflet-draw/topo/topo";
 
 export default class RectangleEditor extends BaseEditor<L.Rectangle> {
 
     // #region 暂时未使用的部分
-    protected midpointMarkers: any[];  // 矩形暂时不实现这个
+    protected midpointMarkers: any[] = [];  // 矩形暂时不实现这个
     // #endregion
 
 
@@ -25,7 +24,7 @@ export default class RectangleEditor extends BaseEditor<L.Rectangle> {
     private lastMoveCoord: L.LatLng | null = null; // 存储鼠标移动的最后一个点的坐标信息
 
 
-    constructor(map: L.Map, options?: LeafletEditorOptions) {
+    constructor(map: L.Map, options: LeafletEditorOptions = {}) {
         super(map, options);
         if (this.map) {
             // 创建时激活
@@ -369,7 +368,7 @@ export default class RectangleEditor extends BaseEditor<L.Rectangle> {
         if (!this.canConsume(e)) return;
         if (!this.layer) throw new Error('图层实例化失败，无法完成图层创建，请重试');
         const clickedLatLng = e.latlng;
-        const polygonGeoJSON = this.layer.toGeoJSON();
+        const polygonGeoJSON = this.layer.toGeoJSON(this.options.coordPrecision);
         // 判断用户是否点击到了面上，是的话，就开始编辑模式
         const turfPoint = point([clickedLatLng.lng, clickedLatLng.lat]);
         const isInside = booleanPointInPolygon(turfPoint, polygonGeoJSON);

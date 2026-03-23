@@ -1,7 +1,8 @@
-import splitPolygon from "@/components/custom-leaflet-draw/topo/turf-polygon-split";
-import { reshapeLineByLine, reshapePolygonByLine, reshapeMultiPolygonByLine } from "@/components/custom-leaflet-draw/topo/turf-reshape-feature";
-import type { TopoClipResult, ReshapeOptions, TopoReshapeFeatureResult } from "@/components/custom-leaflet-draw/types";
-import { featureCollection, flattenEach, union, polygon, lineString, booleanPointOnLine } from "@turf/turf";
+import { flattenEach, union, featureCollection, booleanPointOnLine, lineString } from "@turf/turf";
+import splitPolygon from "../topo/turf-polygon-split";
+import { reshapeLineByLine, reshapePolygonByLine, reshapeMultiPolygonByLine } from "../topo/turf-reshape-feature";
+import type { TopoClipResult, ReshapeOptions, TopoReshapeFeatureResult } from "../types";
+
 
 
 /** 保存裁剪后的图层
@@ -12,14 +13,15 @@ import { featureCollection, flattenEach, union, polygon, lineString, booleanPoin
  */
 export function clipSelectedLayersByLine(
     lineFeature: GeoJSON.Feature<any>,
-    selLayers: L.GeoJSON[]
+    selLayers: L.GeoJSON[],
+    precision?: number | false
 ): TopoClipResult {
 
     const waitingDelLayer: L.Layer[] = [];
     const clipsPolygons: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[] = [];
 
     selLayers.forEach((layer: L.GeoJSON) => {
-        const geoData = layer.toGeoJSON();
+        const geoData = layer.toGeoJSON(precision);
         let layerHasResult = false;
 
         // 使用Turf的遍历方法来处理所有几何体
@@ -61,19 +63,19 @@ export function clipSelectedLayersByLine(
  * 
  * @param selLayers 
  */
-export function mergePolygon(selLayers: any): GeoJSON.Feature | null {
+export function mergePolygon(selLayers: any, precision?: number | false): GeoJSON.Feature | null {
     let unionGeom: GeoJSON.Feature | null = null; // 合并后的新的图层信息也传入了
     selLayers.forEach((layer: any, idx: number) => {
         // 这块的逻辑就是：遍历到第一个面时，由于只有一个面，所以没法做合并操作，必须是遍历到第二个面才开始操作。
         if (idx === 1) {
-            const polygon1 = selLayers[0]?.toGeoJSON();
-            const polygon2 = selLayers[1]?.toGeoJSON();
+            const polygon1 = selLayers[0]?.toGeoJSON(precision);
+            const polygon2 = selLayers[1]?.toGeoJSON(precision);
             const p1Normalized = normalizeGeoJSONCoordinates(polygon1.features[0]);
             const p2Normalized = normalizeGeoJSONCoordinates(polygon2.features[0]);
             unionGeom = union(featureCollection([p1Normalized, p2Normalized]));
         }
         if (idx > 1) {
-            const polygon = layer?.toGeoJSON();
+            const polygon = layer?.toGeoJSON(precision);
             const befNormalized = normalizeGeoJSONCoordinates(unionGeom);
             const pNormalized = normalizeGeoJSONCoordinates(polygon.features[0]);
             unionGeom = union(featureCollection([befNormalized, pNormalized]));
@@ -94,13 +96,14 @@ export function mergePolygon(selLayers: any): GeoJSON.Feature | null {
 export function reshapeSelectedLayersByLine(
     sketchLine: GeoJSON.Feature<any>,
     selLayers: L.GeoJSON[],
-    options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
+    options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false },
+    precision?: number | false
 ): TopoReshapeFeatureResult {
     const waitingDelLayer: L.Layer[] = [];
     const results: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon | GeoJSON.LineString>[] = [];
     selLayers.forEach((layer: L.GeoJSON) => {
 
-        const geojsonFeatureInfo = layer.toGeoJSON() as GeoJSON.FeatureCollection<any> | GeoJSON.Feature<any>;
+        const geojsonFeatureInfo = layer.toGeoJSON(precision) as GeoJSON.FeatureCollection<any> | GeoJSON.Feature<any>;
         /*  排查了一下：
             若是先选择再进行重塑时，选择的图层高亮黄色，其geojsonFeatureInfo.type为'FeatureCollection'
             若是无选择重塑，geojsonFeatureInfo.type为'Feature'
@@ -149,10 +152,11 @@ export function reshapeSelectedLayersByLine(
  * 支持 FeatureCollection、Feature、Geometry 对象
  */
 function normalizeGeoJSONCoordinates(geojson: any, precision = 6): any {
-    const round = (num: number) => parseFloat(num.toFixed(precision));
+    // const round = (num: number) => parseFloat(num.toFixed(precision));
+    const round1 = (num: number) => num;
 
     const normalizeRing = (ring: number[][]) =>
-        ring.map(([lng, lat]) => [round(lng), round(lat)]);
+        ring.map(([lng, lat]) => [round1(lng), round1(lat)]);
 
     const normalizePolygon = (polygon: number[][][]) =>
         polygon.map(normalizeRing);

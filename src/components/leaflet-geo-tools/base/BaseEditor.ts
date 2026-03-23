@@ -1,10 +1,9 @@
-import { buildMarkerIcon } from "@/components/custom-leaflet-draw/utils/commonUtils";
-import { EditorState, type BaseEditOptions, type EditOptionsExpends, type EditorListenerConfigs, type GeometryIndex, type LeafletEditorOptions, type SnapHighlightLayerOptions, type SnapOptions, type SnapResult, type ValidationOptions } from "../types";
-import { SnapController } from "@/components/custom-leaflet-draw/utils/SnapController";
-import { kinks, polygon } from "@turf/turf";
+import { EditorState, type EditOptionsExpends, type EditorListenerConfigs, type GeometryIndex, type LeafletEditorOptions, type SnapHighlightLayerOptions, type SnapOptions, type SnapResult, type ValidationOptions } from "../types";
 import * as L from "leaflet";
+import { buildMarkerIcon, isClickOnLayer } from "../utils/commonUtils";
+import { SnapController } from "../utils/SnapController";
 import { LeafletTopology } from "@/components/custom-leaflet-draw/topo/topo";
-import { isClickOnLayer } from "../utils/commonUtils";
+
 
 
 export abstract class BaseEditor<T extends L.Layer> {
@@ -15,7 +14,7 @@ export abstract class BaseEditor<T extends L.Layer> {
         coordPrecision: 6
     }; // 配置信息
 
-    protected layer: T; // 图层实例（编辑器本身是不需要的，奈何其他的都继承自它，索性直接在这里定义好了）
+    protected layer: T | null = null; // 图层实例（编辑器本身是不需要的，奈何其他的都继承自它，索性直接在这里定义好了）
 
     protected layerVisble: boolean = true; // 图层的显隐状态
 
@@ -1008,7 +1007,7 @@ export abstract class BaseEditor<T extends L.Layer> {
             // topo正在选择图层，不处理双击编辑事件
             return false;
         }
-        const clickIsSelf = isClickOnLayer(e, this.layer as any);
+        const clickIsSelf = isClickOnLayer(e, this.layer as any, this.options.coordPrecision);
         // 已经激活的实例，确保点击在自己的图层上
         if (this.isActive()) {
             return clickIsSelf;

@@ -8,7 +8,8 @@ import * as L from 'leaflet';
 import { EditorState, type ValidationOptions } from '../types';
 
 export type areaOptions = {
-    precision?: number;
+    coordPrecision?: number; // 坐标精度
+    precision?: number; // 计算结果精度
     lang?: 'en' | 'zh';
     polygonStyle?: L.PolylineOptions; // 存放（用户自己想要设置的）图层的默认样式信息
     validErrorPolygonStyle?: L.PolylineOptions; // 校验失败时的样式
@@ -52,6 +53,7 @@ export default class LeafletArea {
     private markerLayer: L.Marker | null = null;
     private tempCoords: number[][] = [];
     private measureOptions: areaOptions = {
+        coordPrecision: 6,
         precision: 2,
         lang: 'zh',
         polygonStyle: {
@@ -261,9 +263,9 @@ export default class LeafletArea {
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
      * @memberof LeafletArea
      */
-    public geojson() {
+    public geojson(precision?: number | false) {
         if (this.polygonLayer) {
-            return this.polygonLayer.toGeoJSON();
+            return this.polygonLayer.toGeoJSON(precision || this.measureOptions.coordPrecision || 6);
         } else {
             throw new Error("未捕获到图层，无法获取到geojson数据");
         }

@@ -14,7 +14,7 @@ import { feature as turfFeature, booleanIntersects, booleanPointInPolygon, point
  * @param {L.LeafletMouseEvent} e 点击事件回调参数e
  * @return {*} 
  */
-export function queryLayerOnClick(map: L.Map, e: L.LeafletMouseEvent) {
+export function queryLayerOnClick(map: L.Map, e: L.LeafletMouseEvent, precision?: number | false) {
     let selectSize = L.point([4, 4]);
     const centerPoint = map.project(e.latlng);
     let selectBounds = L.latLngBounds(
@@ -28,13 +28,13 @@ export function queryLayerOnClick(map: L.Map, e: L.LeafletMouseEvent) {
         ])
     );
     let selectBoundsCoords: any =
-        L.rectangle(selectBounds).toGeoJSON().geometry.coordinates[0];
+        L.rectangle(selectBounds).toGeoJSON(precision).geometry.coordinates[0];
     let selectList: any[] = [];
     map.eachLayer((layer: any) => {
         if (!layer.toGeoJSON) {
             return;
         }
-        let feature = layer.toGeoJSON();
+        let feature = layer.toGeoJSON(precision);
         if (feature.type === "FeatureCollection") {
             return;
         }
@@ -116,20 +116,21 @@ export function queryLayerOnClick(map: L.Map, e: L.LeafletMouseEvent) {
  */
 export function queryLayersIntersectingGeometry(
     map: L.Map,
-    geometry: GeoJSON.Feature | L.Polyline | L.Polygon
+    geometry: GeoJSON.Feature | L.Polyline | L.Polygon,
+    precision?: number | false
 ): any[] {
     const selectList: any[] = [];
 
     // 转换为标准 GeoJSON Feature
     const inputFeature: GeoJSON.Feature =
         geometry instanceof L.Polyline || geometry instanceof L.Polygon
-            ? geometry.toGeoJSON() as any
+            ? geometry.toGeoJSON(precision) as any
             : geometry;
 
     map.eachLayer((layer: any) => {
         if (!layer.toGeoJSON) return;
 
-        const feature = layer.toGeoJSON();
+        const feature = layer.toGeoJSON(precision);
         if (feature.type === 'FeatureCollection') return;
 
         const layerFeature = turfFeature(feature.geometry);
@@ -303,11 +304,15 @@ export function reversePolyLineLatLngs(geometry: GeoJSON.Geometry): number[][][]
      * @return {*}  {boolean}
      * @memberof LeafletEditRectangle
      */
-export function isClickOnLayer(e: L.LeafletMouseEvent, layer: L.Polygon | L.Rectangle | L.Circle | L.Polyline): boolean {
+export function isClickOnLayer(
+    e: L.LeafletMouseEvent,
+    layer: L.Polygon | L.Rectangle | L.Circle | L.Polyline,
+    precision?: number | false
+): boolean {
     if (!layer) return false;
 
     try {
-        const polygonGeoJSON = layer.toGeoJSON();
+        const polygonGeoJSON = layer.toGeoJSON(precision);
         const turfPoint = point([e.latlng.lng, e.latlng.lat]);
         return booleanPointInPolygon(turfPoint, polygonGeoJSON);
     } catch (error) {

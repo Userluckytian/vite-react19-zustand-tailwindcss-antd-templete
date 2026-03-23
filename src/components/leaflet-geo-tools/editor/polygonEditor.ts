@@ -2,11 +2,11 @@ import { EditorState, type LeafletEditorOptions, type MidpointPair } from "../ty
 import * as L from "leaflet";
 import { booleanPointInPolygon, point } from '@turf/turf';
 import { BaseEditor } from "../base/BaseEditor";
-import { deduplicateCoordinates, getFractionalPointOnEdge, isClickOnLayer, reverseLatLngs } from "../utils/commonUtils";
+import { deduplicateCoordinates, getFractionalPointOnEdge, reverseLatLngs } from "../utils/commonUtils";
 import { polygonHasSelfIntersection } from "../utils/validShapeUtils";
 
 
-export class PolygonEditor extends BaseEditor<L.Polygon> {
+export default class PolygonEditor extends BaseEditor<L.Polygon> {
 
     // #region 辅助属性
     protected isDraggingPolygon = false; // 是否是拖动多边形

@@ -1,10 +1,4 @@
-import type CircleEditor from "./editor/circleEditor";
-import type { MarkerPointEditor } from "./editor/markerPointEditor";
-import type { PolygonEditor } from "./editor/polygonEditor";
-import type PolylineEditor from "./editor/polylineEditor";
-import type RectangleEditor from "./editor/rectangleEditor";
-import type LeafletArea from "./measure/area";
-import type LeafletDistance from "./measure/distance";
+// 使用字符串字面量类型避免循环依赖
 
 /* 编辑器状态 */
 export enum EditorState {
@@ -23,6 +17,12 @@ export interface EditorListenerConfigs {
 export interface BaseEditOptions {
     enabled: boolean; // 是否启用编辑
     vertexsMarkerStyle?: L.MarkerOptions; // 顶点样式渲染
+}
+
+export interface EditOptionsExpends extends BaseEditOptions {
+    dragLineMarkerOptions?: DragMarkerOptions; // 拖动边的marker的属性信息
+    dragMidMarkerOptions?: DragMarkerOptions; // 拖动中点的marker属性信息
+    circleLinkRadiusAndCenterDashLineOptions?: CircleDashLineOptions // 圆形：连接半径和中心点的虚线的样式
 }
 
 export interface LeafletPolylineOptions extends L.PolylineOptions {
@@ -60,17 +60,8 @@ export interface SnapHighlightLayerOptions {
 }
 
 // 编辑配置属性信息(规则，如果启用编辑，必然渲染顶点！但是中间点和拖动边的marker不一定渲染)
-// 基础编辑配置（所有编辑器都有的）
-export interface BaseEditOptions {
-    enabled: boolean;
-    vertexsMarkerStyle?: L.MarkerOptions;
-}
 
-export interface EditOptionsExpends extends BaseEditOptions {
-    dragLineMarkerOptions?: DragMarkerOptions; // 拖动边的marker的属性信息
-    dragMidMarkerOptions?: DragMarkerOptions; // 拖动中点的marker属性信息
-    circleLinkRadiusAndCenterDashLineOptions?: CircleDashLineOptions // 圆形：连接半径和中心点的虚线的样式
-}
+
 // 校验配置属性信息
 export type ValidationOptions = {
     allowSelfIntersect?: boolean; // 是否允许自相交
@@ -110,9 +101,9 @@ export interface GeometryIndex {
 
 
 
-/* 类型实例类型 */
-export type drawInstance = CircleEditor | MarkerPointEditor | PolygonEditor | PolylineEditor | RectangleEditor;
-export type measureInstance = LeafletArea | LeafletDistance;
+/* 类型实例类型 - 使用 any 类型避免循环依赖 */
+export type drawInstance = any; // CircleEditor | MarkerPointEditor | PolygonEditor | PolylineEditor | RectangleEditor;
+export type measureInstance = any; // LeafletArea | LeafletDistance;
 export type EditorInstance = drawInstance | measureInstance;
 
 
@@ -121,3 +112,42 @@ export type MidpointPair = {
     insert: L.Marker | null;
     edge: L.Marker | null;
 };
+// ----------------------------------
+
+
+/* 拓展leaflet-绘制面、线属性（用于存放用户自定义的属性内容）  */
+// #region 拓扑内容
+export interface TopoOptions {
+    precision?: number // topo操作时，坐标的精度
+}
+/* topo操作执行合并(union)后返回的结果 */
+export interface TopoMergeResult {
+    mergedLayers: L.GeoJSON[];
+    mergedGeom: GeoJSON.Feature | null;
+}
+// topo操作执行裁剪（clip）后返回的结果
+export interface TopoClipResult {
+    doClipLayers: L.Layer[]; // 参与裁剪的图层数组
+    clipedGeoms: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[];  // 裁剪完毕获取的全部单面
+}
+// topo操作执行整形要素工具（reshape Feature）后返回的结果
+export interface TopoReshapeFeatureResult {
+    doReshapeLayers: L.Layer[]; // 参与整形的图层数组
+    reshapedGeoms: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon | GeoJSON.LineString>[];  // 整形完毕获取的全部单面
+}
+// topo操作执行整形要素工具的配置项
+export interface ReshapeOptions {
+    /**
+     * auto: 自动保留 reshape 后周长最大的结果
+     * manual: 返回所有候选结果，由调用方决定保留哪一个
+     */
+    chooseStrategy?: 'auto' | 'manual';
+    /**
+     * 允许在未选择任何图层的情况下进行整形操作
+     * 默认为 false
+     */
+    AllowReshapingWithoutSelection?: Boolean;
+}
+
+// #endregion
+

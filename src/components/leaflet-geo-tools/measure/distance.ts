@@ -1,11 +1,13 @@
 /* 本组件，设计初衷是用作测量距离的工具的。
  * 因此：本组件不会吐出任何数据。
  * 1：绘制状态时，外部ui可能要展示取消按钮，所以需要给外部提供当前是否是处于绘制状态，即需要添加一个事件回调机制，外部监听状态的改变进行响应的ui调整
+ * 2：除了部分类型需要引入之外，本组件所有内容均在组件内容，可以直接搬运
  * */
 import { distance, type Units } from '@turf/turf';
 import * as L from 'leaflet';
 import { EditorState } from '../types';
 export type distanceOptions = {
+    coordPrecision?: number; // 坐标点精度
     units?: Units;
     precision?: number;
     lang?: 'en' | 'zh';
@@ -29,6 +31,7 @@ export default class LeafletDistance {
     private tempCoords: number[][] = [];
     private markerArr: L.Marker[] = []; // 用于存放临时生成的marker弹窗
     private measureOptions: distanceOptions = {
+        coordPrecision: 6,
         units: 'meters',
         precision: 2,
         lang: 'zh',
@@ -194,9 +197,9 @@ export default class LeafletDistance {
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
      * @memberof LeafletDistance
      */
-    public geojson() {
+    public geojson(precision?: number | false) {
         if (this.lineLayer) {
-            return this.lineLayer.toGeoJSON();
+            return this.lineLayer.toGeoJSON(precision || this.measureOptions.coordPrecision || 6);
         } else {
             throw new Error("未捕获到图层，无法获取到geojson数据");
         }
@@ -333,7 +336,7 @@ export default class LeafletDistance {
      * @returns 格式化后的距离对象
      */
     private formatDistance(value: number, options: distanceOptions): FormattedDistance {
-        const { lang = 'zh', precision = 2, units='meters' } = options;
+        const { lang = 'zh', precision = 2, units = 'meters' } = options;
 
         // 先统一处理同义词
         const normalizedUnit = this.normalizeUnit(units);
