@@ -3,6 +3,8 @@ import type { MarkerPointEditor } from "./editor/markerPointEditor";
 import type { PolygonEditor } from "./editor/polygonEditor";
 import type PolylineEditor from "./editor/polylineEditor";
 import type RectangleEditor from "./editor/rectangleEditor";
+import type LeafletArea from "./measure/area";
+import type LeafletDistance from "./measure/distance";
 
 /* 编辑器状态 */
 export enum EditorState {
@@ -66,6 +68,7 @@ export interface BaseEditOptions {
 export interface EditOptionsExpends extends BaseEditOptions {
     dragLineMarkerOptions?: DragMarkerOptions; // 拖动边的marker的属性信息
     dragMidMarkerOptions?: DragMarkerOptions; // 拖动中点的marker属性信息
+    circleLinkRadiusAndCenterDashLineOptions?: CircleDashLineOptions // 圆形：连接半径和中心点的虚线的样式
 }
 // 校验配置属性信息
 export type ValidationOptions = {
@@ -79,6 +82,10 @@ export type DragMarkerOptions = {
     enabled: boolean; // 是否启用拖拽线功能
     dragMarkerStyle: L.MarkerOptions; // 拖动边的样式
     positionRatio: number; // 中点位置比例（0-1，默认 0.3）
+}
+export type CircleDashLineOptions = {
+    enabled: boolean; // 是否启用这个虚线
+    dashLineStyle: L.PolylineOptions // 虚线的样式
 }
 
 // 吸附结果
@@ -103,10 +110,9 @@ export interface GeometryIndex {
 
 
 /* 类型实例类型 */
-// export type drawInstance = LeafletCircle | MarkerPoint | LeafletPolygon | LeafletPolyline | LeafletRectangle;
-// export type measureInstance = LeafletArea | LeafletDistance;
-export type editInstance = CircleEditor | MarkerPointEditor | PolygonEditor | PolylineEditor | RectangleEditor;
-export type EditorInstance = editInstance;
+export type drawInstance = CircleEditor | MarkerPointEditor | PolygonEditor | PolylineEditor | RectangleEditor;
+export type measureInstance = LeafletArea | LeafletDistance;
+export type EditorInstance = drawInstance | measureInstance;
 
 
 // 中点标记（插入中点标记（红色marker） 和 拖动边的标记（蓝色marker））

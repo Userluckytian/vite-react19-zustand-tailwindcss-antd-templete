@@ -6,7 +6,7 @@ import { App, Divider, Switch } from 'antd';
 import * as L from 'leaflet';
 import './index.scss';
 
-import { EditorState, type DragMarkerOptions, type EditOptionsExpends, type EditorInstance, type SnapOptions, type ValidationOptions } from './types';
+import { EditorState, type CircleDashLineOptions, type DragMarkerOptions, type EditOptionsExpends, type EditorInstance, type SnapOptions, type ValidationOptions } from './types';
 import { MarkerPointEditor } from './editor/markerPointEditor';
 import { PolygonEditor } from './editor/polygonEditor';
 import RectangleEditor from './editor/rectangleEditor';
@@ -14,6 +14,8 @@ import PolylineEditor from './editor/polylineEditor';
 import { LeafletTopology } from '../custom-leaflet-draw/topo/topo';
 // import LeafletPolygon from './editor/polygon';
 import LeafletCircle from './editor/circleEditor';
+import LeafletDistance from './measure/distance';
+import LeafletArea from './measure/area';
 // import LeafletRectangle from './editor/rectangle';
 // import LeafletDistance from './measure/distance';
 // import LeafletArea from './measure/area';
@@ -317,6 +319,14 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
             },
             positionRatio: 0.6
         }
+        const circleDahsLineConfig: CircleDashLineOptions = {
+            enabled: true,
+            dashLineStyle: {
+                dashArray: [5, 5],
+                color: '#009432',
+                weight: 2,
+            },
+        }
         const edit: EditOptionsExpends = {
             enabled: true,
             dragLineMarkerOptions: edgeMarkerConfig,
@@ -405,449 +415,442 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 saveEditorAndAddListener(polygonLayerEditor, true);
                 break;
             case 'circle':
-                const circleLayer = new LeafletCircle(mapInstance, { edit });
+                // 圆形有一个特殊的编辑属性
+                const circleLayer = new LeafletCircle(mapInstance, { edit: { ...edit, circleLinkRadiusAndCenterDashLineOptions: circleDahsLineConfig } });
                 saveEditorAndAddListener(circleLayer);
                 break;
             case 'rectangle':
                 const rectangleLayerEditor = new RectangleEditor(mapInstance, { snap, edit });
                 saveEditorAndAddListener(rectangleLayerEditor, true);
                 break;
-            // case 'measure_distance':
-            //     const distanceLayer = new LeafletDistance(mapInstance);
-            //     saveEditorAndAddListener(distanceLayer);
-            //     break;
-            // case 'measure_area':
-            //     const areaLayer = new LeafletArea(mapInstance, { precision: 2, lang: 'zh', validation: { allowSelfIntersect: false } });
-            //     saveEditorAndAddListener(areaLayer);
-            //     break;
-            // case 'edit_polygon':
-            //     const editPolygonLayer = new LeafletEditPolygon(mapInstance);
-            //     saveEditorAndAddListener(editPolygonLayer);
-            //     break;
-            // case 'edit_rectangle':
-            //     const editRectangleLayer = new LeafletEditRectangle(mapInstance);
-            //     saveEditorAndAddListener(editRectangleLayer);
-            //     break;
-            // case 'add':
-            //     const geometry: any = {
-            //         "type": "Polygon",
-            //         "coordinates": [
-            //             [
-            //                 [
-            //                     102.10387893927167,
-            //                     28.447770110343942
-            //                 ],
-            //                 [
-            //                     105.582591,
-            //                     28.251648
-            //                 ],
-            //                 [
-            //                     106.204812,
-            //                     31.298223
-            //                 ],
-            //                 [
-            //                     103.01435564306644,
-            //                     31.431075274005355
-            //                 ],
-            //                 [
-            //                     102.10387893927167,
-            //                     28.447770110343942
-            //                 ]
-            //             ],
-            //             [
-            //                 [
-            //                     103.293457,
-            //                     29.42046
-            //                 ],
-            //                 [
-            //                     103.293457,
-            //                     30.315988
-            //                 ],
-            //                 [
-            //                     105.095215,
-            //                     30.486551
-            //                 ],
-            //                 [
-            //                     105.380859,
-            //                     29.343875
-            //                 ],
-            //                 [
-            //                     103.293457,
-            //                     29.42046
-            //                 ]
-            //             ]
-            //         ]
-            //     };
-            //     const polygonGeom: any = {
-            //         "type": "Polygon",
-            //         "coordinates": [
-            //             [
-            //                 [
-            //                     100.876465,
-            //                     28.516969
-            //                 ],
-            //                 [
-            //                     102.10387893925075,
-            //                     28.44777011034512
-            //                 ],
-            //                 [
-            //                     103.01435564304498,
-            //                     31.431075274006247
-            //                 ],
-            //                 [
-            //                     101.271973,
-            //                     31.503629
-            //                 ],
-            //                 [
-            //                     100.876465,
-            //                     28.516969
-            //                 ]
-            //             ]
-            //         ]
-            //     };
-            //     const polyGeom: any = {
-            //         "type": "MultiPolygon",
-            //         "coordinates": [
-            //             [
-            //                 [
-            //                     [
-            //                         102.590332,
-            //                         18.937464
-            //                     ],
-            //                     [
-            //                         102.919922,
-            //                         18.145852
-            //                     ],
-            //                     [
-            //                         103.939991,
-            //                         18.12198
-            //                     ],
-            //                     [
-            //                         103.051758,
-            //                         14.081927
-            //                     ],
-            //                     [
-            //                         106.47623230452568,
-            //                         14.289011419681762
-            //                     ],
-            //                     [
-            //                         109.54186425796593,
-            //                         20.600407678388187
-            //                     ],
-            //                     [
-            //                         103.205566,
-            //                         20.014645
-            //                     ],
-            //                     [
-            //                         102.590332,
-            //                         18.937464
-            //                     ]
-            //                 ]
-            //             ],
-            //             [
-            //                 [
-            //                     [
-            //                         106.47623230454701,
-            //                         14.289011419683053
-            //                     ],
-            //                     [
-            //                         117.993164,
-            //                         14.985462
-            //                     ],
-            //                     [
-            //                         117.324258,
-            //                         18.949618
-            //                     ],
-            //                     [
-            //                         118.476563,
-            //                         19.103648
-            //                     ],
-            //                     [
-            //                         118.322754,
-            //                         21.412162
-            //                     ],
-            //                     [
-            //                         109.54186425798815,
-            //                         20.60040767839024
-            //                     ],
-            //                     [
-            //                         106.47623230454701,
-            //                         14.289011419683053
-            //                     ]
-            //                 ],
-            //                 [
-            //                     [
-            //                         108.369141,
-            //                         16.40447
-            //                     ],
-            //                     [
-            //                         108.614692,
-            //                         18.012581
-            //                     ],
-            //                     [
-            //                         110.061035,
-            //                         17.978733
-            //                     ],
-            //                     [
-            //                         112.079764,
-            //                         18.248579
-            //                     ],
-            //                     [
-            //                         113.664551,
-            //                         16.69934
-            //                     ],
-            //                     [
-            //                         108.369141,
-            //                         16.40447
-            //                     ]
-            //                 ]
-            //             ],
-            //             [
-            //                 [
-            //                     [
-            //                         94.658203,
-            //                         13.154376
-            //                     ],
-            //                     [
-            //                         97.4364787587324,
-            //                         13.154376
-            //                     ],
-            //                     [
-            //                         98.88330745073758,
-            //                         17.895114
-            //                     ],
-            //                     [
-            //                         94.658203,
-            //                         17.895114
-            //                     ],
-            //                     [
-            //                         94.658203,
-            //                         13.154376
-            //                     ]
-            //                 ]
-            //             ],
-            //             [
-            //                 [
-            //                     [
-            //                         97.4364787587514,
-            //                         13.154376
-            //                     ],
-            //                     [
-            //                         101.074219,
-            //                         13.154376
-            //                     ],
-            //                     [
-            //                         101.074219,
-            //                         17.895114
-            //                     ],
-            //                     [
-            //                         98.88330745075729,
-            //                         17.895114
-            //                     ],
-            //                     [
-            //                         97.4364787587514,
-            //                         13.154376
-            //                     ]
-            //                 ]
-            //             ]
-            //         ]
-            //     };
-            //     const polygonEditor = new LeafletPolygonEditor(mapInstance!, {}, geometry);
-            //     const polygonEditor2 = new LeafletPolygonEditor(mapInstance!, {}, polygonGeom);
-            //     const polygonEditor3 = new LeafletPolygonEditor(mapInstance!, {}, polyGeom);
-            //     saveEditorAndAddListener(polygonEditor, false, true, 'add');
+            case 'measure_distance':
+                const distanceLayer = new LeafletDistance(mapInstance);
+                saveEditorAndAddListener(distanceLayer);
+                break;
+            case 'measure_area':
+                const areaLayer = new LeafletArea(mapInstance, { precision: 2, lang: 'zh', validation: { allowSelfIntersect: false } });
+                saveEditorAndAddListener(areaLayer);
+                break;
+            case 'add':
+                // const geometry: any = {
+                //     "type": "Polygon",
+                //     "coordinates": [
+                //         [
+                //             [
+                //                 102.10387893927167,
+                //                 28.447770110343942
+                //             ],
+                //             [
+                //                 105.582591,
+                //                 28.251648
+                //             ],
+                //             [
+                //                 106.204812,
+                //                 31.298223
+                //             ],
+                //             [
+                //                 103.01435564306644,
+                //                 31.431075274005355
+                //             ],
+                //             [
+                //                 102.10387893927167,
+                //                 28.447770110343942
+                //             ]
+                //         ],
+                //         [
+                //             [
+                //                 103.293457,
+                //                 29.42046
+                //             ],
+                //             [
+                //                 103.293457,
+                //                 30.315988
+                //             ],
+                //             [
+                //                 105.095215,
+                //                 30.486551
+                //             ],
+                //             [
+                //                 105.380859,
+                //                 29.343875
+                //             ],
+                //             [
+                //                 103.293457,
+                //                 29.42046
+                //             ]
+                //         ]
+                //     ]
+                // };
+                // const polygonGeom: any = {
+                //     "type": "Polygon",
+                //     "coordinates": [
+                //         [
+                //             [
+                //                 100.876465,
+                //                 28.516969
+                //             ],
+                //             [
+                //                 102.10387893925075,
+                //                 28.44777011034512
+                //             ],
+                //             [
+                //                 103.01435564304498,
+                //                 31.431075274006247
+                //             ],
+                //             [
+                //                 101.271973,
+                //                 31.503629
+                //             ],
+                //             [
+                //                 100.876465,
+                //                 28.516969
+                //             ]
+                //         ]
+                //     ]
+                // };
+                // const polyGeom: any = {
+                //     "type": "MultiPolygon",
+                //     "coordinates": [
+                //         [
+                //             [
+                //                 [
+                //                     102.590332,
+                //                     18.937464
+                //                 ],
+                //                 [
+                //                     102.919922,
+                //                     18.145852
+                //                 ],
+                //                 [
+                //                     103.939991,
+                //                     18.12198
+                //                 ],
+                //                 [
+                //                     103.051758,
+                //                     14.081927
+                //                 ],
+                //                 [
+                //                     106.47623230452568,
+                //                     14.289011419681762
+                //                 ],
+                //                 [
+                //                     109.54186425796593,
+                //                     20.600407678388187
+                //                 ],
+                //                 [
+                //                     103.205566,
+                //                     20.014645
+                //                 ],
+                //                 [
+                //                     102.590332,
+                //                     18.937464
+                //                 ]
+                //             ]
+                //         ],
+                //         [
+                //             [
+                //                 [
+                //                     106.47623230454701,
+                //                     14.289011419683053
+                //                 ],
+                //                 [
+                //                     117.993164,
+                //                     14.985462
+                //                 ],
+                //                 [
+                //                     117.324258,
+                //                     18.949618
+                //                 ],
+                //                 [
+                //                     118.476563,
+                //                     19.103648
+                //                 ],
+                //                 [
+                //                     118.322754,
+                //                     21.412162
+                //                 ],
+                //                 [
+                //                     109.54186425798815,
+                //                     20.60040767839024
+                //                 ],
+                //                 [
+                //                     106.47623230454701,
+                //                     14.289011419683053
+                //                 ]
+                //             ],
+                //             [
+                //                 [
+                //                     108.369141,
+                //                     16.40447
+                //                 ],
+                //                 [
+                //                     108.614692,
+                //                     18.012581
+                //                 ],
+                //                 [
+                //                     110.061035,
+                //                     17.978733
+                //                 ],
+                //                 [
+                //                     112.079764,
+                //                     18.248579
+                //                 ],
+                //                 [
+                //                     113.664551,
+                //                     16.69934
+                //                 ],
+                //                 [
+                //                     108.369141,
+                //                     16.40447
+                //                 ]
+                //             ]
+                //         ],
+                //         [
+                //             [
+                //                 [
+                //                     94.658203,
+                //                     13.154376
+                //                 ],
+                //                 [
+                //                     97.4364787587324,
+                //                     13.154376
+                //                 ],
+                //                 [
+                //                     98.88330745073758,
+                //                     17.895114
+                //                 ],
+                //                 [
+                //                     94.658203,
+                //                     17.895114
+                //                 ],
+                //                 [
+                //                     94.658203,
+                //                     13.154376
+                //                 ]
+                //             ]
+                //         ],
+                //         [
+                //             [
+                //                 [
+                //                     97.4364787587514,
+                //                     13.154376
+                //                 ],
+                //                 [
+                //                     101.074219,
+                //                     13.154376
+                //                 ],
+                //                 [
+                //                     101.074219,
+                //                     17.895114
+                //                 ],
+                //                 [
+                //                     98.88330745075729,
+                //                     17.895114
+                //                 ],
+                //                 [
+                //                     97.4364787587514,
+                //                     13.154376
+                //                 ]
+                //             ]
+                //         ]
+                //     ]
+                // };
+                // const polygonEditor = new PolygonEditor(mapInstance!, { defaultGeometry: geometry });
+                // const polygonEditor2 = new PolygonEditor(mapInstance!, { defaultGeometry: polygonGeom });
+                // const polygonEditor3 = new PolygonEditor(mapInstance!, { defaultGeometry: polyGeom });
+                // saveEditorAndAddListener(polygonEditor, false, 'add');
 
-            //     const polyGeomline: any = {
-            //         "type": "LineString",
-            //         "coordinates": [
-            //             [
-            //                 124.892578,
-            //                 39.504041
-            //             ],
-            //             [
-            //                 126.62344029494868,
-            //                 42.3445773598043
-            //             ],
-            //             [
-            //                 153.457031,
-            //                 42.617791
-            //             ]
-            //         ]
-            //     };
-            //     const lineLayer111 = L.geoJSON(polyGeomline, {
-            //         style: {
-            //             color: 'red', // 设置边线颜色
-            //             weight: 2,
-            //             fillColor: "red", // 设置填充颜色
-            //             fillOpacity: 0.3, // 设置填充透明度
-            //         }
-            //     });
-            //     lineLayer111.addTo(mapInstance);
-            //     break;
-            // case 'add_hole':
-            //     const hole_geometry: any = {
-            //         "type": "Polygon",
-            //         "coordinates": [
-            //             [
-            //                 [
-            //                     100.876465,
-            //                     28.516969
-            //                 ],
-            //                 [
-            //                     105.58259123950764,
-            //                     28.251648224837997
-            //                 ],
-            //                 [
-            //                     106.20481214475944,
-            //                     31.298223358319337
-            //                 ],
-            //                 [
-            //                     101.271973,
-            //                     31.503629
-            //                 ],
-            //                 [
-            //                     100.876465,
-            //                     28.516969
-            //                 ]
-            //             ],
-            //             [
-            //                 [
-            //                     103.293457,
-            //                     29.42046
-            //                 ],
-            //                 [
-            //                     103.293457,
-            //                     30.315988
-            //                 ],
-            //                 [
-            //                     105.095215,
-            //                     30.486551
-            //                 ],
-            //                 [
-            //                     105.380859,
-            //                     29.343875
-            //                 ],
-            //                 [
-            //                     103.293457,
-            //                     29.42046
-            //                 ]
-            //             ]
-            //         ]
-            //     };
-            //     const holePolygonEditor = new LeafletPolygonEditor(mapInstance!, {}, hole_geometry);
-            //     saveEditorAndAddListener(holePolygonEditor, false, true, 'add_hole');
-            //     break;
-            // case 'add_hole_multi':
-            //     const hole_multi_geometry: any = {
-            //         "type": "MultiPolygon",
-            //         "coordinates": [
-            //             [
-            //                 [
-            //                     [
-            //                         102.590332,
-            //                         18.937464
-            //                     ],
-            //                     [
-            //                         102.919922,
-            //                         18.145852
-            //                     ],
-            //                     [
-            //                         103.93999069271662,
-            //                         18.121979970547713
-            //                     ],
-            //                     [
-            //                         103.051758,
-            //                         14.081927
-            //                     ],
-            //                     [
-            //                         117.993164,
-            //                         14.985462
-            //                     ],
-            //                     [
-            //                         117.32425772889664,
-            //                         18.949617797255353
-            //                     ],
-            //                     [
-            //                         118.476563,
-            //                         19.103648
-            //                     ],
-            //                     [
-            //                         118.322754,
-            //                         21.412162
-            //                     ],
-            //                     [
-            //                         103.205566,
-            //                         20.014645
-            //                     ],
-            //                     [
-            //                         102.590332,
-            //                         18.937464
-            //                     ]
-            //                 ],
-            //                 [
-            //                     [
-            //                         108.369141,
-            //                         16.40447
-            //                     ],
-            //                     [
-            //                         108.6146917528086,
-            //                         18.012580866169795
-            //                     ],
-            //                     [
-            //                         110.061035,
-            //                         17.978733
-            //                     ],
-            //                     [
-            //                         112.07976438163757,
-            //                         18.24857928443335
-            //                     ],
-            //                     [
-            //                         113.664551,
-            //                         16.69934
-            //                     ],
-            //                     [
-            //                         108.369141,
-            //                         16.40447
-            //                     ]
-            //                 ]
-            //             ],
-            //             [
-            //                 [
-            //                     [
-            //                         94.658203,
-            //                         13.154376
-            //                     ],
-            //                     [
-            //                         101.074219,
-            //                         13.154376
-            //                     ],
-            //                     [
-            //                         101.074219,
-            //                         17.895114
-            //                     ],
-            //                     [
-            //                         94.658203,
-            //                         17.895114
-            //                     ],
-            //                     [
-            //                         94.658203,
-            //                         13.154376
-            //                     ]
-            //                 ]
-            //             ]
-            //         ]
-            //     };
-            //     const holeMultiPolygonEditor = new LeafletPolygonEditor(mapInstance!, {}, hole_multi_geometry);
-            //     saveEditorAndAddListener(holeMultiPolygonEditor, false, true, 'add_hole_multi');
-            //     break;
-            // case 'delete':
-            //     // 销毁图层
-            //     clearAllIfExist();
-            //     // 关闭工具条
-            //     if (currEditor) {
-            //         setCurrEditor(null);
-            //     }
-            //     break;
+                // const polyGeomline: any = {
+                //     "type": "LineString",
+                //     "coordinates": [
+                //         [
+                //             124.892578,
+                //             39.504041
+                //         ],
+                //         [
+                //             126.62344029494868,
+                //             42.3445773598043
+                //         ],
+                //         [
+                //             153.457031,
+                //             42.617791
+                //         ]
+                //     ]
+                // };
+                // const lineLayer111 = L.geoJSON(polyGeomline, {
+                //     style: {
+                //         color: 'red', // 设置边线颜色
+                //         weight: 2,
+                //         fillColor: "red", // 设置填充颜色
+                //         fillOpacity: 0.3, // 设置填充透明度
+                //     }
+                // });
+                // lineLayer111.addTo(mapInstance);
+                break;
+            case 'add_hole':
+                // const hole_geometry: any = {
+                //     "type": "Polygon",
+                //     "coordinates": [
+                //         [
+                //             [
+                //                 100.876465,
+                //                 28.516969
+                //             ],
+                //             [
+                //                 105.58259123950764,
+                //                 28.251648224837997
+                //             ],
+                //             [
+                //                 106.20481214475944,
+                //                 31.298223358319337
+                //             ],
+                //             [
+                //                 101.271973,
+                //                 31.503629
+                //             ],
+                //             [
+                //                 100.876465,
+                //                 28.516969
+                //             ]
+                //         ],
+                //         [
+                //             [
+                //                 103.293457,
+                //                 29.42046
+                //             ],
+                //             [
+                //                 103.293457,
+                //                 30.315988
+                //             ],
+                //             [
+                //                 105.095215,
+                //                 30.486551
+                //             ],
+                //             [
+                //                 105.380859,
+                //                 29.343875
+                //             ],
+                //             [
+                //                 103.293457,
+                //                 29.42046
+                //             ]
+                //         ]
+                //     ]
+                // };
+                // const holePolygonEditor = new PolygonEditor(mapInstance!, {defaultGeometry: hole_geometry});
+                // saveEditorAndAddListener(holePolygonEditor, false, 'add_hole');
+                break;
+            case 'add_hole_multi':
+                // const hole_multi_geometry: any = {
+                //     "type": "MultiPolygon",
+                //     "coordinates": [
+                //         [
+                //             [
+                //                 [
+                //                     102.590332,
+                //                     18.937464
+                //                 ],
+                //                 [
+                //                     102.919922,
+                //                     18.145852
+                //                 ],
+                //                 [
+                //                     103.93999069271662,
+                //                     18.121979970547713
+                //                 ],
+                //                 [
+                //                     103.051758,
+                //                     14.081927
+                //                 ],
+                //                 [
+                //                     117.993164,
+                //                     14.985462
+                //                 ],
+                //                 [
+                //                     117.32425772889664,
+                //                     18.949617797255353
+                //                 ],
+                //                 [
+                //                     118.476563,
+                //                     19.103648
+                //                 ],
+                //                 [
+                //                     118.322754,
+                //                     21.412162
+                //                 ],
+                //                 [
+                //                     103.205566,
+                //                     20.014645
+                //                 ],
+                //                 [
+                //                     102.590332,
+                //                     18.937464
+                //                 ]
+                //             ],
+                //             [
+                //                 [
+                //                     108.369141,
+                //                     16.40447
+                //                 ],
+                //                 [
+                //                     108.6146917528086,
+                //                     18.012580866169795
+                //                 ],
+                //                 [
+                //                     110.061035,
+                //                     17.978733
+                //                 ],
+                //                 [
+                //                     112.07976438163757,
+                //                     18.24857928443335
+                //                 ],
+                //                 [
+                //                     113.664551,
+                //                     16.69934
+                //                 ],
+                //                 [
+                //                     108.369141,
+                //                     16.40447
+                //                 ]
+                //             ]
+                //         ],
+                //         [
+                //             [
+                //                 [
+                //                     94.658203,
+                //                     13.154376
+                //                 ],
+                //                 [
+                //                     101.074219,
+                //                     13.154376
+                //                 ],
+                //                 [
+                //                     101.074219,
+                //                     17.895114
+                //                 ],
+                //                 [
+                //                     94.658203,
+                //                     17.895114
+                //                 ],
+                //                 [
+                //                     94.658203,
+                //                     13.154376
+                //                 ]
+                //             ]
+                //         ]
+                //     ]
+                // };
+                // const holeMultiPolygonEditor = new PolygonEditor(mapInstance!, {defaultGeometry: hole_multi_geometry});
+                // saveEditorAndAddListener(holeMultiPolygonEditor, false, 'add_hole_multi');
+                break;
+            case 'delete':
+                // 销毁图层
+                clearAllIfExist();
+                // 关闭工具条
+                if (currEditor) {
+                    setCurrEditor(null);
+                }
+                break;
 
             default:
                 break;
