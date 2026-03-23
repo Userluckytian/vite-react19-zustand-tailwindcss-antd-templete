@@ -35,6 +35,7 @@ export interface LeafletMarkerOptions extends L.MarkerOptions {
 }
 
 export interface LeafletEditorOptions {
+    coordPrecision?: number, // 坐标精度
     defaultGeometry?: GeoJSON.Geometry; // 默认几何信息（如果有的话，可以在编辑时直接加载）
     defaultStyle?: LeafletPolylineOptions | LeafletMarkerOptions; // 存放（用户自己想要设置的）图层的默认样式信息
     snap?: SnapOptions;  // 吸附配置信息

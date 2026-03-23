@@ -19,6 +19,7 @@
     "clsx": "^2.1.1",
     "crypto-js": "^4.2.0",
     "leaflet": "^1.9.4",
+    "leaflet-geo-tools": "file:leaflet-geo-tools-1.0.0.tgz",
     "leaflet-side-by-side": "^2.2.0",
     "mapbox-gl": "^2.15.0",
     "motion": "^12.20.1",

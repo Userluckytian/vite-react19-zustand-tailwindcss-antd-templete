@@ -430,7 +430,7 @@ export class PolygonEditor extends BaseEditor<L.Polygon> {
         } else {
             // 情况 2：已绘制完成后的后续双击事件的逻辑均走这个
             const clickedLatLng = e.latlng;
-            const polygonGeoJSON = this.layer.toGeoJSON();
+            const polygonGeoJSON = this.layer.toGeoJSON(this.options.coordPrecision);
             // 判断用户是否点击到了面上，是的话，就开始编辑模式
             const turfPoint = point([clickedLatLng.lng, clickedLatLng.lat]);
             const isInside = booleanPointInPolygon(turfPoint, polygonGeoJSON);

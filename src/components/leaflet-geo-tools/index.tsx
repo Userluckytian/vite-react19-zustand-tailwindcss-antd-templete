@@ -6,7 +6,7 @@ import { App, Divider, Switch } from 'antd';
 import * as L from 'leaflet';
 import './index.scss';
 
-import { EditorState, type CircleDashLineOptions, type DragMarkerOptions, type EditOptionsExpends, type EditorInstance, type SnapOptions, type ValidationOptions } from './types';
+import { EditorState, type CircleDashLineOptions, type DragMarkerOptions, type drawInstance, type EditOptionsExpends, type EditorInstance, type SnapOptions, type ValidationOptions } from './types';
 import { MarkerPointEditor } from './editor/markerPointEditor';
 import { PolygonEditor } from './editor/polygonEditor';
 import RectangleEditor from './editor/rectangleEditor';
@@ -20,7 +20,7 @@ import LeafletArea from './measure/area';
 // import LeafletDistance from './measure/distance';
 // import LeafletArea from './measure/area';
 // import LeafletEditPolygon from './simpleEdit/polygon';
-// import { PolygonEditorState, type DragMarkerOptions, type EditOptionsExpends, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult, type ValidationOptions } from './types';
+// import { EditorState, type DragMarkerOptions, type EditOptionsExpends, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult, type ValidationOptions } from './types';
 // import LeafletEditRectangle from './simpleEdit/rectangle';
 // import { LeafletTopology } from './topo/topo';
 // import LeafletRectangleEditor from './edit/rectangle';
@@ -125,7 +125,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
     ) // 工具栏列表
     const currSelToolRef = useRef<string | null>(null); // 使用 ref 存储最新的工具类型
     const [currSelTool, setCurrSelTool] = useState<string | null>(null); // 当前使用的【绘制条上的绘制工具】
-    const [drawLayers, setDrawLayers] = useState<any[]>([]); // 存放绘制的图层
+    const [editorList, setEditorList] = useState<any[]>([]); // 存放绘制的图层
     const [currEditor, setCurrEditor] = useState<any>(null); // 当前编辑的图层【我们设置的是一次仅可编辑一个图层】
     const currEditorRef = useRef(currEditor);
     const [topologyInstance, setTopologyInstance] = useState<any>(null);
@@ -274,7 +274,8 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
         // }
     }
 
-
+    // a -> b 点击a，则a触发了激活，是否存储呢？ 如果存储了，然后再点击b，则移除上一个。
+    // 如果a绘制完成了呢？ a一直被保存，然后这时候点击b。
     // 同步 currSelTool 到 ref
     useEffect(() => {
         currSelToolRef.current = currSelTool;
@@ -282,13 +283,10 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
 
     // 工具按钮点击
     const handleToolClick = (toolId: string) => {
-
-        // 如果点击的是当前已选中的工具，则取消
-        if (currSelTool === toolId) {
+        // 清除最后一次点击的按钮残留。
+        if (currSelTool || currSelTool === toolId) {
             handleCancelDraw();
-            return;
         }
-
         // 吸附参数
         const snap: SnapOptions = {
             enabled: true,
@@ -335,11 +333,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
         const validation: ValidationOptions = {
             allowSelfIntersect: someConfigBar.find((it: any) => it.id === 'valid').enable,
         };
-        // 先清理之前的绘制
-        // clearCurrentDraw();
-
         setCurrSelTool(toolId);
-        // clearAllIfExist(); // 根据需求来，有的时候，我们绘制新内容时，会期望移除上次绘制的结果
         switch (toolId) {
             case 'point':
                 const markerPoint = new MarkerPointEditor(mapInstance, {
@@ -425,11 +419,11 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 break;
             case 'measure_distance':
                 const distanceLayer = new LeafletDistance(mapInstance);
-                saveEditorAndAddListener(distanceLayer);
+                saveEditorAndAddListener(distanceLayer, false, 'measure_distance');
                 break;
             case 'measure_area':
                 const areaLayer = new LeafletArea(mapInstance, { precision: 2, lang: 'zh', validation: { allowSelfIntersect: false } });
-                saveEditorAndAddListener(areaLayer);
+                saveEditorAndAddListener(areaLayer, false, 'measure_area');
                 break;
             case 'add':
                 // const geometry: any = {
@@ -863,62 +857,56 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
      * @param {EditorInstance} editor
      */
     const saveEditorAndAddListener = (editor: EditorInstance, immediateNotify: boolean = false, toolId?: string) => {
-        setCurrEditor(() => editor);
-        currEditorRef.current = editor;
-        // ----------------------------
-        setDrawLayers((pre: any[]) => [...pre, editor]);
-        // 对于有默认 geometry 的工具，立即触发绘制结果回调
-        if (props.drawGeoJsonResult && toolId && ['add', 'add_hole', 'add_hole_multi'].includes(toolId)) {
-            try {
-                const layerInstance = (editor as any).polygonLayer || (editor as any).markerLayer ||
-                    (editor as any).lineLayer || (editor as any).circleLayer ||
-                    (editor as any).rectangleLayer;
-
-                if (layerInstance) {
-                    let geoJsonData = null;
-                    try {
-                        geoJsonData = (editor as any).geojson ? (editor as any).geojson() : null;
-                    } catch (e) {
-                        console.error('获取 GeoJSON 数据失败:', e);
-                    }
-                    props.drawGeoJsonResult({
-                        layer: layerInstance,
-                        type: toolId,
-                        geojson: geoJsonData
-                    });
-                }
-            } catch (error) {
-                console.error('获取绘制结果失败:', error);
-            }
-        }
+        setEditorList((pre: any[]) => [...pre, editor]);
         // 添加监听逻辑
         editor.onStateChange((status: EditorState) => {
-            const currentTool = currSelToolRef.current;
-            if (status === EditorState.Drawing) {
-
-            } else
-                if (status === EditorState.Editing) {
-
-                } else {
-
+            if (status === EditorState.Editing) {
+                setCurrEditor(editor);
+            } else {
+                if (status === EditorState.Idle) {
+                    const isMeasure = ['measure_distance', 'measure_area'];
+                    // 是测量，则什么也不做，否则发出绘制结果
+                    if (!isMeasure.includes(toolId)) {
+                        try {
+                            const layerInstance = (editor as drawInstance).getLayer();
+                            if (layerInstance) {
+                                let geoJsonData = null;
+                                try {
+                                    geoJsonData = (editor as any).getGeojson ? (editor as any).getGeojson() : null;
+                                } catch (e) {
+                                    console.error('获取 GeoJSON 数据失败:', e);
+                                }
+                                props.drawGeoJsonResult({
+                                    layer: layerInstance,
+                                    type: toolId,
+                                    geojson: geoJsonData
+                                });
+                            }
+                        } catch (error) {
+                            console.error('获取绘制结果失败:', error);
+                        }
+                    }
+                    setCurrSelTool(''); // 空闲状态，当前选择自然也要置空
                 }
+                setCurrEditor(null);
+            }
         }, { immediateNotify })
     }
 
     // #region 绘制工具条事件
     // 清理当前绘制（保留之前的）
     const clearCurrentDraw = () => {
-        if (drawLayers.length > 0) {
-            const lastLayer = drawLayers[drawLayers.length - 1];
-            if (lastLayer && lastLayer.destroy) {
-                lastLayer.destroy();
+        if (editorList.length > 0) {
+            const editor = editorList[editorList.length - 1];
+            if (editor && editor.destroy) {
+                editor.destroy();
             }
-            setDrawLayers(prev => prev.slice(0, -1));
+            setEditorList(prev => prev.slice(0, -1));
         }
     };
 
     const clearAllIfExist = () => {
-        drawLayers.forEach((layer: any) => {
+        editorList.forEach((layer: any) => {
             layer.destroy();
         });
     }

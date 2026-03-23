@@ -216,9 +216,14 @@ export class LeafletTopology {
    * @memberof LeafletTopology
    */
   private addHighLightLayerByPickLayerGeom(layer: any) {
+    console.log('layer', layer);
+    
     const layerGeom = layer.toGeoJSON();
     // 暂时不支持点类型的
     if (layerGeom.geometry.type === 'Point') {
+      // 可能是圆
+      // const {isCircle, circleGeom} = validIsCircle(layer);
+      
       throw new Error('不支持的数据类型：' + layerGeom.geometry.type + '，不支持高亮');
     }
     const highlightStyle = {

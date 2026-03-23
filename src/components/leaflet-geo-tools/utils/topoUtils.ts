@@ -1,7 +1,7 @@
 import splitPolygon from "@/components/custom-leaflet-draw/topo/turf-polygon-split";
 import { reshapeLineByLine, reshapePolygonByLine, reshapeMultiPolygonByLine } from "@/components/custom-leaflet-draw/topo/turf-reshape-feature";
 import type { TopoClipResult, ReshapeOptions, TopoReshapeFeatureResult } from "@/components/custom-leaflet-draw/types";
-import { featureCollection, flattenEach, union, polygon } from "@turf/turf";
+import { featureCollection, flattenEach, union, polygon, lineString, booleanPointOnLine } from "@turf/turf";
 
 
 /** 保存裁剪后的图层
@@ -193,4 +193,36 @@ function normalizeGeoJSONCoordinates(geojson: any, precision = 6): any {
     } else {
         return geojson; // 其他类型暂不处理
     }
+}
+
+
+/**
+ * 判断点是否在线上（支持 LineString 和 MultiLineString）
+ * @param pointGeoJSON 点 GeoJSON
+ * @param lineGeoJSON 线 GeoJSON（LineString 或 MultiLineString）
+ * @returns 是否在线上
+ */
+export function isPointOnLine(pointGeoJSON: any, lineGeoJSON: any): boolean {
+    const geometryType = lineGeoJSON.geometry.type;
+    
+    if (geometryType === 'LineString') {
+        const turfLine = lineString(lineGeoJSON.geometry.coordinates);
+        return booleanPointOnLine(pointGeoJSON, turfLine);
+    }
+    
+    if (geometryType === 'MultiLineString') {
+        const multiLines = lineGeoJSON.geometry.coordinates;
+        
+        // 遍历每条线
+        for (const lineCoords of multiLines) {
+            const turfLine = lineString(lineCoords);
+            if (booleanPointOnLine(pointGeoJSON, turfLine)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    console.warn('不支持的几何类型:', geometryType);
+    return false;
 }

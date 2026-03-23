@@ -47,7 +47,8 @@ import { BaseEditor } from "../base/BaseEditor";
 import { EditorState, type LeafletEditorOptions, type MidpointPair } from "../types";
 import { deduplicateCoordinates, getFractionalPointOnEdge, reversePolyLineLatLngs } from '../utils/commonUtils';
 import { polylineHasSelfIntersection } from '../utils/validShapeUtils';
-import { booleanPointInPolygon, point } from '@turf/turf';
+import { point } from '@turf/turf';
+import { isPointOnLine } from '../utils/topoUtils';
 
 
 export default class PolylineEditor extends BaseEditor<L.Polyline> {
@@ -216,10 +217,10 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
         } else {
             // 情况 2：已绘制完成后的后续双击事件的逻辑均走这个
             const clickedLatLng = e.latlng;
-            const polylineGeoJSON = this.layer.toGeoJSON();
+            const polylineGeoJSON = this.layer.toGeoJSON(this.options.coordPrecision);
             // 判断用户是否点击到了面上，是的话，就开始编辑模式
             const turfPoint = point([clickedLatLng.lng, clickedLatLng.lat]);
-            const isInside = true; // booleanPointInPolygon(turfPoint, polylineGeoJSON);
+            const isInside = isPointOnLine(turfPoint, polylineGeoJSON);
             if (isInside && this.currentState !== EditorState.Editing) {
                 this.startEdit();
             } else {
