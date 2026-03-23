@@ -31,6 +31,7 @@ import * as L from 'leaflet';
 import { booleanValidEnhance, getFractionalPointOnEdge, reversePointLatLngs } from "../utils/commonUtils";
 import { booleanPointInPolygon, circle, point } from "@turf/turf";
 import { LeafletTopology } from "@/components/custom-leaflet-draw/topo/topo";
+import { Polyline, type LatLngExpression } from "leaflet";
 export default class CircleEditor extends BaseEditor<L.Circle> {
 
 
@@ -47,7 +48,7 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
     // 中心点的拖动需要的两个变量
     protected isDragging = false; // 是否是拖动
     protected dragStartLatLng: L.LatLng | null = null; // 拖动时，用户鼠标按下（mousedown）那一刻的坐标点，然后鼠标移动（mousemove）时，遍历全部的marker，做坐标偏移计算。
-
+    private dashLineLayer: L.Polyline | null = null; // 连接圆心、半径的虚线。
     // --- start ---
     private tempCoords: number[][] = [];  // 绘制的时候存储用户点击的坐标点
     private km_value = 1000; // 1千米 = 1000米
@@ -395,7 +396,7 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
         // 清除旧的 marker   ---   [[[181, 181], [182, 182]]]
         this.vertexMarkers.forEach(marker => this.map.removeLayer(marker));
         this.vertexMarkers = [];
-
+        // 1: 渲染顶点
         coords.forEach((coord, pointIndex) => {
 
             const latlng = L.latLng(coord[0], coord[1]);
@@ -434,8 +435,7 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
                             marker.setLatLng([old.lat + deltaLat, old.lng + deltaLng]);
                         });
 
-                        const updated = this.getCurrentMarkerCoords();
-                        this.renderLayer(updated);
+                        this.renderLayerFromMarkers()
 
                         this.dragStartLatLng = e.latlng; // 连续拖动
                     }
@@ -463,6 +463,8 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
 
             this.vertexMarkers.push(marker);
         })
+        // 2：渲染中点和半径之间的虚线
+        this.renderDashLineLayer(coords);
 
     }
 
@@ -475,6 +477,8 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
             this.tempCoords.push([marker.getLatLng().lat, marker.getLatLng().lng]); // 退出编辑后，还要保存最后一次的坐标点，因为开启编辑时，还得恢复。
         });
         this.vertexMarkers = [];
+        // 移除虚线图层
+        this.removeDashLineLayer();
     }
 
 
@@ -529,11 +533,45 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
     private renderLayerFromMarkers() {
         const coords = this.getCurrentMarkerCoords()
         this.renderLayer(coords);
+        this.renderDashLineLayer(coords);
     }
 
     private pushHistoryFromMarkers() {
         const coords = this.getCurrentMarkerCoords()
         this.historyStack.push(coords);
+    }
+    // 虚线图层
+    private renderDashLineLayer(coords: number[][]) {
+        const enableRanderDashLine = this.editOptions?.circleLinkRadiusAndCenterDashLineOptions?.enabled;
+        if (!enableRanderDashLine) return;
+
+        if (this.dashLineLayer) {
+            this.dashLineLayer.setLatLngs(coords as LatLngExpression[]);
+        } else {
+            // 要么使用注释的这个，即使用和自身图层样式一致的样式，或者使用用户传递进来的样式。
+            // const { isValid } = this.getCenterAndRadiusByCoordArr(this.tempCoords);
+            // const layerStyle = this.getLayerStyle(isValid);
+            const labelStyle = this.editOptions?.circleLinkRadiusAndCenterDashLineOptions?.dashLineStyle || {};
+            this.dashLineLayer = new Polyline(coords as LatLngExpression[], {
+                dashArray: [5, 5],
+                color: '#008BFF',
+                weight: 2,
+                ...labelStyle
+            });
+            if (this.map) {
+                this.dashLineLayer.addTo(this.map);
+            }
+        }
+    }
+
+    private removeDashLineLayer() {
+        const enableRanderDashLine = this.editOptions?.circleLinkRadiusAndCenterDashLineOptions?.enabled;
+        if (!enableRanderDashLine) return;
+
+        if (this.dashLineLayer && this.map) {
+            this.map.removeLayer(this.dashLineLayer)
+            this.dashLineLayer = null;
+        }
     }
 
     // #endregion

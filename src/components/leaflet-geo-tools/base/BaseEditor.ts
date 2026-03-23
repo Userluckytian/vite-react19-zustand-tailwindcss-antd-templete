@@ -510,7 +510,9 @@ export abstract class BaseEditor<T extends L.Layer> {
                 // 中点
                 dragMidMarkerOptions: options?.dragMidMarkerOptions,
                 // 拖动线的marker
-                dragLineMarkerOptions: options?.dragLineMarkerOptions
+                dragLineMarkerOptions: options?.dragLineMarkerOptions,
+                // 圆形-连接半径和中心点的虚线编辑项
+                circleLinkRadiusAndCenterDashLineOptions: options?.circleLinkRadiusAndCenterDashLineOptions
             };
 
             // 
@@ -556,6 +558,9 @@ export abstract class BaseEditor<T extends L.Layer> {
             // 拖动线的marker
             dragLineMarkerOptions: options?.dragLineMarkerOptions
                 ? { ...this.editOptions.dragLineMarkerOptions, ...options?.dragLineMarkerOptions } : this.editOptions.dragLineMarkerOptions,
+            // 圆形-连接半径和中心点的虚线编辑项
+            circleLinkRadiusAndCenterDashLineOptions: options?.circleLinkRadiusAndCenterDashLineOptions
+                ? { ...this.editOptions.circleLinkRadiusAndCenterDashLineOptions, ...options?.circleLinkRadiusAndCenterDashLineOptions } : this.editOptions.circleLinkRadiusAndCenterDashLineOptions,
         }
 
         // 1：更新中点和拖动线marker在线上的位置：
