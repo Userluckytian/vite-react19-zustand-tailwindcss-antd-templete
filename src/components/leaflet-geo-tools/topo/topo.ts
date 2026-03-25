@@ -2,15 +2,15 @@ import * as L from 'leaflet';
 import { queryLayerOnClick, queryLayersIntersectingGeometry } from '../utils/commonUtils';
 
 import { clipSelectedLayersByLine, mergePolygon, reshapeSelectedLayersByLine } from '../utils/topoUtils';
-import PolylineEditor from '../editor/polylineEditor';
 import { EditorState, type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoOptions, type TopoReshapeFeatureResult } from '../types';
 import { circle } from '@turf/turf';
+import AuxiliaryLine from '../utils/drawAuxiliaryLine';
 
 
 export class LeafletTopology {
   private static instance: LeafletTopology;
   private map: L.Map | null = null;
-  drawLineLayer: PolylineEditor | null = null;
+  drawLineLayer: AuxiliaryLine | null = null;
   private selectedLayers: L.GeoJSON[] = [];
   private clickHandler: ((e: L.LeafletMouseEvent) => void) | null = null;
   private drawLineListener: ((status: EditorState) => void) | null = null;
@@ -125,7 +125,7 @@ export class LeafletTopology {
     }
     // 第二步： 执行绘制操作，并添加监听事件
     const drawReshapeLineFlag = 'reshapeLine';
-    this.drawLineLayer = new PolylineEditor(this.map, { defaultStyle: { drawFlag: drawReshapeLineFlag } });
+    this.drawLineLayer = new AuxiliaryLine(this.map, { defaultStyle: { drawFlag: drawReshapeLineFlag } });
     // 添加绘制完毕后，重新调整状态为topo状态
     this.drawLineListener = (status: EditorState) => {
       if (status === EditorState.Idle) {
@@ -188,7 +188,7 @@ export class LeafletTopology {
       this.clickHandler = null;
     }
     // 第二步： 执行绘制操作，并添加监听事件
-    this.drawLineLayer = new PolylineEditor(this.map);
+    this.drawLineLayer = new AuxiliaryLine(this.map);
     // 添加绘制完毕后，重新调整状态为topo状态
     this.drawLineListener = (status: EditorState) => {
       if (status === EditorState.Idle) {
