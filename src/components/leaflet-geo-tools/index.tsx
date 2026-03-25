@@ -1168,39 +1168,6 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 </div>
             </div>
         }
-        {/* 其他属性工具条 */}
-        {true
-            &&
-            <div className="leaflet-other-toolbar leaflet-common-bar">
-                <div className='top'>
-                    <div>其他属性工具条：</div>
-                    <div className='bottom'>
-                        {
-                            someConfigBar.map((ite: any, index: number) => {
-                                return (
-                                    <div className='other-item' key={'SCEML-' + index}>
-                                        <div className='label'>{ite.label}</div>
-                                        <div className='switch-btn'>
-                                            <Switch checkedChildren="开" unCheckedChildren="关" value={ite.enable} onChange={(e) => { changeOtherBarOptions(ite, e) }} />
-                                        </div>
-                                    </div>
-                                )
-                            })
-                        }
-                    </div>
-                </div>
-                <div className='test'>
-                    <div>测试工具条：</div>
-                    <div className='bottom' onClick={() => {
-                        currEditorRef.current.startEdit();
-                        console.log('当前编辑器：', currEditorRef.current);
-
-                    }}>
-                        激活线图层的编辑
-                    </div>
-                </div>
-            </div>
-        }
         {/* 编辑配置工具 */}
         {currEditor
             &&
