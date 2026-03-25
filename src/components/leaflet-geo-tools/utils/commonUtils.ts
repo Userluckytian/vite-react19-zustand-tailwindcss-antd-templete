@@ -329,6 +329,145 @@ export function booleanValidEnhance(geom: any) {
 }
 
 
+
+/**
+ * 递归处理 GeoJSON 对象，降级 Multi 类型
+ */
+export function downgradeGeometry(
+    data: GeoJSON.Geometry | GeoJSON.Feature | GeoJSON.FeatureCollection
+): GeoJSON.Geometry | GeoJSON.Feature | GeoJSON.FeatureCollection {
+    if (!data) return data;
+    
+    // 处理 FeatureCollection
+    if (data.type === 'FeatureCollection') {
+        return {
+            ...data,
+            features: data.features.map(feature => downgradeGeometry(feature) as GeoJSON.Feature)
+        };
+    }
+    
+    // 处理 Feature
+    if (data.type === 'Feature') {
+        return {
+            ...data,
+            geometry: data.geometry ? downgradeMultiGeometry(data.geometry) : null as any
+        };
+    }
+    
+    // 处理纯 Geometry
+    return downgradeMultiGeometry(data);
+}
+
+/**
+ * 降级 Multi 类型的几何对象
+ */
+function downgradeMultiGeometry(
+    geometry: GeoJSON.Geometry
+): GeoJSON.Geometry {
+    if (!geometry) return geometry;
+
+    switch (geometry.type) {
+        case 'MultiPoint':
+            return downgradeMultiPoint(geometry);
+        
+        case 'MultiLineString':
+            return downgradeMultiLineString(geometry);
+        
+        case 'MultiPolygon':
+            return downgradeMultiPolygon(geometry);
+        
+        case 'GeometryCollection':
+            return {
+                ...geometry,
+                geometries: geometry.geometries.map(geom => downgradeMultiGeometry(geom))
+            };
+        
+        default:
+            return geometry;
+    }
+}
+
+/**
+ * 处理 MultiPoint：只包含一个点时转换为 Point
+ */
+function downgradeMultiPoint(
+    multiPoint: GeoJSON.MultiPoint
+): GeoJSON.Geometry {
+    const { coordinates, bbox } = multiPoint;
+    
+    if (coordinates.length === 0) {
+        return {
+            type: 'Point',
+            coordinates: [],
+            ...(bbox && { bbox })
+        };
+    }
+    
+    if (coordinates.length === 1) {
+        return {
+            type: 'Point',
+            coordinates: coordinates[0],
+            ...(bbox && { bbox })
+        };
+    }
+    
+    return multiPoint;
+}
+
+/**
+ * 处理 MultiLineString：只包含一条线时转换为 LineString
+ */
+function downgradeMultiLineString(
+    multiLineString: GeoJSON.MultiLineString
+): GeoJSON.Geometry {
+    const { coordinates, bbox } = multiLineString;
+    
+    if (coordinates.length === 0) {
+        return {
+            type: 'LineString',
+            coordinates: [],
+            ...(bbox && { bbox })
+        };
+    }
+    
+    if (coordinates.length === 1) {
+        return {
+            type: 'LineString',
+            coordinates: coordinates[0],
+            ...(bbox && { bbox })
+        };
+    }
+    
+    return multiLineString;
+}
+
+/**
+ * 处理 MultiPolygon：只包含一个多边形时转换为 Polygon
+ */
+function downgradeMultiPolygon(
+    multiPolygon: GeoJSON.MultiPolygon
+): GeoJSON.Geometry {
+    const { coordinates, bbox } = multiPolygon;
+    
+    if (coordinates.length === 0) {
+        return {
+            type: 'Polygon',
+            coordinates: [],
+            ...(bbox && { bbox })
+        };
+    }
+    
+    if (coordinates.length === 1) {
+        return {
+            type: 'Polygon',
+            coordinates: coordinates[0],
+            ...(bbox && { bbox })
+        };
+    }
+    
+    return multiPolygon;
+}
+
 // #region 不需要暴露出去的函数集合
 
 function lineStringsIntersect(c1: number[][], c2: number[][]) {
@@ -400,5 +539,9 @@ function isValidCoordinate(coords: any[]) {
     }
     return true;
 }
+
+
+
+
 
 // #endregion

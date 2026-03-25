@@ -1,8 +1,9 @@
 import { EditorState, type EditOptionsExpends, type EditorListenerConfigs, type GeometryIndex, type LeafletEditorOptions, type SnapHighlightLayerOptions, type SnapOptions, type SnapResult, type ValidationOptions } from "../types";
 import * as L from "leaflet";
-import { buildMarkerIcon, isClickOnLayer } from "../utils/commonUtils";
+import { buildMarkerIcon, downgradeGeometry, isClickOnLayer } from "../utils/commonUtils";
 import { SnapController } from "../utils/SnapController";
-import { LeafletTopology } from "@/components/custom-leaflet-draw/topo/topo";
+import { LeafletTopology } from "../topo/topo";
+
 
 
 
@@ -95,9 +96,10 @@ export abstract class BaseEditor<T extends L.Layer> {
      * 
      * @memberof LeafletEditPolygon
      */
-    public getGeoJSON(precision?: number | false) {
+    public getGeoJSON(precision?: number | false): any {
         if (this.layer && (this.layer as any).toGeoJSON) {
-            return (this.layer as any).toGeoJSON(precision);
+            const geoFeature = (this.layer as any).toGeoJSON(precision);
+            return downgradeGeometry(geoFeature);
         } else {
             throw new Error("未捕获到图层，无法获取到geojson数据");
         }
@@ -502,7 +504,10 @@ export abstract class BaseEditor<T extends L.Layer> {
      */
     protected initEditOptions(options?: EditOptionsExpends): EditOptionsExpends {
         if (options) {
+            // 吧【EditOptionsExpends类型】中已知的属性都重写一遍，未知的用...options替代。
             const userConfig: EditOptionsExpends = {
+                ...this.editOptions,
+                ...options,
                 enabled: options?.enabled ?? this.editOptions.enabled,
                 vertexsMarkerStyle: options?.vertexsMarkerStyle
                     ? { ...this.editOptions.vertexsMarkerStyle, ...options.vertexsMarkerStyle }
@@ -513,10 +518,10 @@ export abstract class BaseEditor<T extends L.Layer> {
                 // 拖动线的marker
                 dragLineMarkerOptions: options?.dragLineMarkerOptions,
                 // 圆形-连接半径和中心点的虚线编辑项
-                circleLinkRadiusAndCenterDashLineOptions: options?.circleLinkRadiusAndCenterDashLineOptions
+                circle_LinkRadiusAndCenterDashLineOptions: options?.circle_LinkRadiusAndCenterDashLineOptions,
             };
 
-            // 
+            // 特殊部分
             if (userConfig?.dragMidMarkerOptions?.dragMarkerStyle) {
                 // 强制设置可拖动
                 userConfig.dragMidMarkerOptions!.dragMarkerStyle!.draggable = true;
@@ -549,7 +554,10 @@ export abstract class BaseEditor<T extends L.Layer> {
       * @memberof BaseEditor
       */
     protected updateEditOptions(options: EditOptionsExpends): void {
+        // 吧【EditOptionsExpends类型】中已知的属性都重写一遍，未知的用...options替代。
         this.editOptions = {
+            ...this.editOptions,
+            ...options,
             enabled: options?.enabled ?? this.editOptions.enabled,
             vertexsMarkerStyle: options?.vertexsMarkerStyle ? { ...this.editOptions.vertexsMarkerStyle, ...options?.vertexsMarkerStyle } : this.editOptions.vertexsMarkerStyle,
             // 中点
@@ -560,8 +568,8 @@ export abstract class BaseEditor<T extends L.Layer> {
             dragLineMarkerOptions: options?.dragLineMarkerOptions
                 ? { ...this.editOptions.dragLineMarkerOptions, ...options?.dragLineMarkerOptions } : this.editOptions.dragLineMarkerOptions,
             // 圆形-连接半径和中心点的虚线编辑项
-            circleLinkRadiusAndCenterDashLineOptions: options?.circleLinkRadiusAndCenterDashLineOptions
-                ? { ...this.editOptions.circleLinkRadiusAndCenterDashLineOptions, ...options?.circleLinkRadiusAndCenterDashLineOptions } : this.editOptions.circleLinkRadiusAndCenterDashLineOptions,
+            circle_LinkRadiusAndCenterDashLineOptions: options?.circle_LinkRadiusAndCenterDashLineOptions
+                ? { ...this.editOptions.circle_LinkRadiusAndCenterDashLineOptions, ...options?.circle_LinkRadiusAndCenterDashLineOptions } : this.editOptions.circle_LinkRadiusAndCenterDashLineOptions,
         }
 
         // 1：更新中点和拖动线marker在线上的位置：
