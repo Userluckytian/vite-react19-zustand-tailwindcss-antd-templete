@@ -171,106 +171,105 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
         },
     ]);
 
-    // const polygonEditorRef = useRef<LeafletPolygonEditor | LeafletRectangleEditor | null>(null);
 
     // 改变reshapeBar的选项
     const changeReshapeBarOptions = (item: any, checked: boolean) => {
-        // item.visible = !item.visible;
-        // setReshapeBar((pre: any) => {
-        //     const tempData = JSON.parse(JSON.stringify(pre));
-        //     const itemIdx = reshapeBar.findIndex((it: any) => it.id === item.id);
-        //     itemIdx > -1 && (tempData[itemIdx] = item);
-        //     return tempData;
-        // })
-        // switch (item.id) {
-        //     case 'enableEdit':
-        //         polygonEditorRef.current.setEditEnabled(checked);
-        //         break;
-        //     case 'allowNoChoise':
-        //         break;
-        //     case 'manual':
-        //         break;
+        item.visible = !item.visible;
+        setReshapeBar((pre: any) => {
+            const tempData = JSON.parse(JSON.stringify(pre));
+            const itemIdx = reshapeBar.findIndex((it: any) => it.id === item.id);
+            itemIdx > -1 && (tempData[itemIdx] = item);
+            return tempData;
+        })
+        switch (item.id) {
+            case 'enableEdit':
+                currEditorRef.current.setEditEnabled(checked);
+                break;
+            case 'allowNoChoise':
+                break;
+            case 'manual':
+                break;
 
-        //     default:
-        //         break;
-        // }
+            default:
+                break;
+        }
 
     }
 
     // 改变other属性的选项
     const changeOtherBarOptions = (item: any, checked: boolean) => {
-        // item.enable = !item.enable;
-        // setSomeConfigBar((pre: any) => {
-        //     const tempData = JSON.parse(JSON.stringify(pre));
-        //     const itemIdx = someConfigBar.findIndex((it: any) => it.id === item.id);
-        //     itemIdx > -1 && (tempData[itemIdx] = item);
-        //     return tempData;
-        // })
-        // switch (item.id) {
-        //     case 'valid':
-        //         break;
+        item.enable = !item.enable;
+        setSomeConfigBar((pre: any) => {
+            const tempData = JSON.parse(JSON.stringify(pre));
+            const itemIdx = someConfigBar.findIndex((it: any) => it.id === item.id);
+            itemIdx > -1 && (tempData[itemIdx] = item);
+            return tempData;
+        })
+        switch (item.id) {
+            case 'valid':
+                break;
 
-        //     default:
-        //         break;
-        // }
+            default:
+                break;
+        }
 
     }
 
     // 改变EditConfigBar的选项
     const changeEditConfigBarOptions = (item: any, checked: boolean) => {
-        // item.enable = !item.enable;
-        // setEditConfigBar((pre: any) => {
-        //     const tempData = JSON.parse(JSON.stringify(pre));
-        //     const itemIdx = editConfigBar.findIndex((it: any) => it.id === item.id);
-        //     itemIdx > -1 && (tempData[itemIdx] = item);
-        //     return tempData;
-        // })
-        // switch (item.id) {
-        //     case 'edit':
-        //         polygonEditorRef.current.setEditEnabled(checked);
-        //         break;
-        //     case 'snap':
-        //         const snapAllOptions: SnapOptions = {
-        //             enabled: checked,
-        //             modes: ['edge', 'vertex'],
-        //             tolerance: 8,
-        //             highlight: {
-        //                 enabled: true,
-        //                 pointStyle: {
-        //                     radius: 15,
-        //                     color: '#00ff00',
-        //                     weight: 2,
-        //                     fillOpacity: 0.8,
-        //                     pane: 'mapPane'
-        //                 },
-        //                 edgeStyle: {
-        //                     color: '#00ff00',
-        //                     weight: 5,
-        //                     dashArray: '4,2',
-        //                     pane: 'mapPane'
-        //                 }
-        //             }
-        //         };
-        //         polygonEditorRef.current.toggleSnap(snapAllOptions);
-        //         break;
-        //     case 'midPoint':
-        //         polygonEditorRef.current.updateEditOptions({
-        //             dragMidMarkerOptions: {
-        //                 enabled: checked
-        //             }
-        //         } as EditOptionsExpends)
-        //         break;
-        //     case 'edgeMarker':
-        //         polygonEditorRef.current.updateEditOptions({
-        //             dragLineMarkerOptions: {
-        //                 enabled: checked
-        //             }
-        //         } as EditOptionsExpends)
-        //         break;
+        item.enable = !item.enable;
+        setEditConfigBar((pre: any) => {
+            const tempData = JSON.parse(JSON.stringify(pre));
+            const itemIdx = editConfigBar.findIndex((it: any) => it.id === item.id);
+            itemIdx > -1 && (tempData[itemIdx] = item);
+            return tempData;
+        })
+        switch (item.id) {
+            case 'edit':
+                currEditorRef.current.setEditEnabled(checked);
+                break;
+            case 'snap':
+                const snapAllOptions: SnapOptions = {
+                    enabled: checked,
+                    modes: ['edge', 'vertex'],
+                    tolerance: 8,
+                    highlight: {
+                        enabled: true,
+                        pointStyle: {
+                            radius: 15,
+                            color: '#00ff00',
+                            weight: 2,
+                            fillOpacity: 0.8,
+                            pane: 'mapPane'
+                        },
+                        edgeStyle: {
+                            color: '#00ff00',
+                            weight: 5,
+                            dashArray: '4,2',
+                            pane: 'mapPane'
+                        }
+                    }
+                };
+                currEditorRef.current.toggleSnap(snapAllOptions);
+                break;
+            case 'midPoint':
+                currEditorRef.current.updateEditOptions({
+                    dragMidMarkerOptions: {
+                        enabled: checked
+                    }
+                } as EditOptionsExpends)
+                break;
+            case 'edgeMarker':
+                currEditorRef.current.updateEditOptions({
+                    dragLineMarkerOptions: {
+                        enabled: checked
+                    }
+                } as EditOptionsExpends)
+                break;
 
-        //     default:
-        //         break;
-        // }
+            default:
+                break;
+        }
     }
 
     // a -> b 点击a，则a触发了激活，是否存储呢？ 如果存储了，然后再点击b，则移除上一个。
@@ -865,6 +864,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
         editor.onStateChange((status: EditorState) => {
             if (status === EditorState.Editing) {
                 setCurrEditor(editor);
+                currEditorRef.current = editor as any
             } else {
                 if (status === EditorState.Idle) {
                     const isMeasure = ['measure_distance', 'measure_area'];

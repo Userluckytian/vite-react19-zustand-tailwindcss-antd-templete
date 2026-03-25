@@ -2,6 +2,7 @@ import { EditorState, type EditOptionsExpends, type EditorListenerConfigs, type 
 import * as L from "leaflet";
 import { buildMarkerIcon, downgradeGeometry, isClickOnLayer } from "../utils/commonUtils";
 import { SnapController } from "../utils/SnapController";
+import { LeafletTopology } from "../topo/topo";
 
 
 
@@ -1010,16 +1011,9 @@ export abstract class BaseEditor<T extends L.Layer> {
         if (this.currentState === EditorState.Drawing) return true;
         if (!this.layerVisble) return false;
         // 🔒 检查是否处于topo选择状态，如果是则不进入编辑模式
-        // 动态导入以避免循环依赖
-        try {
-            const { LeafletTopology } = require("../topo/topo");
-            if (LeafletTopology.isPicking(this.map)) {
-                // topo正在选择图层，不处理双击编辑事件
-                return false;
-            }
-        } catch (error) {
-            // 如果导入失败，默认允许继续
-            console.warn('无法导入 LeafletTopology，跳过拓扑检查');
+        if (LeafletTopology.isPicking(this.map)) {
+            // topo正在选择图层，不处理双击编辑事件
+            return false;
         }
         const clickIsSelf = isClickOnLayer(e, this.layer as any, this.options.coordPrecision);
         // 已经激活的实例，确保点击在自己的图层上
