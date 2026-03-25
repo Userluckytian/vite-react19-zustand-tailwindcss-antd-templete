@@ -5,6 +5,7 @@
 
 import * as L from 'leaflet';
 import { feature as turfFeature, booleanIntersects, booleanPointInPolygon, point, booleanValid, getCoords } from '@turf/turf';
+import { isPointClickInCircle } from './topoUtils';
 
 /** 查询点击位置处的图层
  * 优点：不依赖外部库，纯 Leaflet 实现（优化版本，见queryLayersIntersectingGeometry，可读性强，但依赖@turf/turf库）
@@ -43,24 +44,8 @@ export function queryLayerOnClick(map: L.Map, e: L.LeafletMouseEvent, precision?
         let intersects = false;
         switch (feature.geometry.type) {
             case "Point":
-                coords = [coords];
-                if (layer._mRadius) {
-                    let cpt = L.latLng([coords[0][1], coords[0][0]]);
-                    let mcpt = map.project(cpt);
-                    //圆
-                    let circlerect = L.latLngBounds(
-                        map.unproject([
-                            mcpt.x + layer._mRadius / 2,
-                            mcpt.y - layer._mRadius / 2,
-                        ]),
-                        map.unproject([
-                            mcpt.x - layer._mRadius / 2,
-                            mcpt.y + layer._mRadius / 2,
-                        ])
-                    );
-                    if (selectBounds.intersects(circlerect)) {
-                        intersects = true;
-                    }
+                if (layer.getRadius && layer.getLatLng) {
+                    intersects = isPointClickInCircle(e.latlng, layer)
                     break;
                 }
             // fall through

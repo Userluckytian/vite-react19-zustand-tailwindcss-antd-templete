@@ -6,23 +6,22 @@ import { App, Divider, Switch } from 'antd';
 import * as L from 'leaflet';
 import './index.scss';
 
-import { EditorState, type CircleDashLineOptions, type DragMarkerOptions, type drawInstance, type EditOptionsExpends, type EditorInstance, type SnapOptions, type ValidationOptions } from './types';
-import { MarkerPointEditor } from './editor/markerPointEditor';
-import { PolygonEditor } from './editor/polygonEditor';
+import { EditorState, type CircleDashLineOptions, type DragMarkerOptions, type drawInstance, type EditOptionsExpends, type EditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoReshapeFeatureResult, type ValidationOptions } from './types';
+import MarkerPointEditor from './editor/markerPointEditor';
+import PolygonEditor from './editor/polygonEditor';
 import RectangleEditor from './editor/rectangleEditor';
 import PolylineEditor from './editor/polylineEditor';
-import { LeafletTopology } from '../custom-leaflet-draw/topo/topo';
 // import LeafletPolygon from './editor/polygon';
 import LeafletCircle from './editor/circleEditor';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
+import { LeafletTopology } from './topo/topo';
 // import LeafletRectangle from './editor/rectangle';
 // import LeafletDistance from './measure/distance';
 // import LeafletArea from './measure/area';
 // import LeafletEditPolygon from './simpleEdit/polygon';
 // import { EditorState, type DragMarkerOptions, type EditOptionsExpends, type leafletGeoEditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult, type ValidationOptions } from './types';
 // import LeafletEditRectangle from './simpleEdit/rectangle';
-// import { LeafletTopology } from './topo/topo';
 // import LeafletRectangleEditor from './edit/rectangle';
 // import LeafletPolygonEditor from './edit/polygon';
 
@@ -954,63 +953,63 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
     }
     // 裁切
     const cut = () => {
-        // topologyInstance && topologyInstance.clipByLine(({ doClipLayers, clipedGeoms }: TopoClipResult) => {
-        //     console.log('裁剪--clipedGeoms', clipedGeoms, doClipLayers);
-        //     // 第一步：删除之前的旧图层
-        //     doClipLayers.forEach((layer: any) => {
-        //         // console.log('layer11', layer);
-        //         const record = layer.options.origin;
-        //         // deleteRecode(record, false);
-        //     });
-        //     // 第二步：添加新的图层
-        //     clipedGeoms.forEach((Feature: GeoJSON.Feature, idx: number) => {
-        //         // console.log('Feature', Feature);
-        //         // addRecode(Feature, idx === clipedGeoms.length - 1 ? true : false);
-        //     });
-        // });
+        topologyInstance && topologyInstance.clipByLine(({ doClipLayers, clipedGeoms }: TopoClipResult) => {
+            console.log('裁剪--clipedGeoms', clipedGeoms, doClipLayers);
+            // 第一步：删除之前的旧图层
+            doClipLayers.forEach((layer: any) => {
+                // console.log('layer11', layer);
+                const record = layer.options.origin;
+                // deleteRecode(record, false);
+            });
+            // 第二步：添加新的图层
+            clipedGeoms.forEach((Feature: GeoJSON.Feature, idx: number) => {
+                // console.log('Feature', Feature);
+                // addRecode(Feature, idx === clipedGeoms.length - 1 ? true : false);
+            });
+        });
 
     }
     // 合并图层
     const union = () => {
-        // topologyInstance && topologyInstance.merge(({ mergedGeom, mergedLayers }: TopoMergeResult) => {
-        //     // try {
-        //     console.log('合并--mergedGeom', mergedGeom, mergedLayers);
-        //     // 第一步：删除之前的旧图层
-        //     mergedLayers.forEach((layer: any) => {
-        //         const record = layer.options.origin;
-        //         // deleteRecode(record, false);
-        //     });
-        //     // 第二步：添加合并后的新图层
-        //     // addRecode(mergedGeom);
-        //     // } catch (error) {
-        //     //     console.log('error', error);
+        topologyInstance && topologyInstance.merge(({ mergedGeom, mergedLayers }: TopoMergeResult) => {
+            // try {
+            console.log('合并--mergedGeom', mergedGeom, mergedLayers);
+            // 第一步：删除之前的旧图层
+            mergedLayers.forEach((layer: any) => {
+                const record = layer.options.origin;
+                // deleteRecode(record, false);
+            });
+            // 第二步：添加合并后的新图层
+            // addRecode(mergedGeom);
+            // } catch (error) {
+            //     console.log('error', error);
 
-        //     //     // message.error(error as any);
-        //     // }
-        // });
+            //     // message.error(error as any);
+            // }
+        });
     }
     // 整形要素
     const reshapeFeature = () => {
-        // const options: ReshapeOptions = {
-        //     AllowReshapingWithoutSelection: reshapeBar[0].visible ? true : false,
-        //     chooseStrategy: reshapeBar[1].visible ? 'manual' : 'auto',
-        // };
-        // topologyInstance && topologyInstance.reshapeFeature(options, ({ doReshapeLayers, reshapedGeoms }: TopoReshapeFeatureResult) => {
-        //     // try {
-        //     // console.log('整形--reshapedGeoms', reshapedGeoms, doReshapeLayers);
-        //     // 第一步：删除之前的旧图层
-        //     doReshapeLayers.forEach((layer: any) => {
-        //         const record = layer.options.origin;
-        //         // deleteRecode(record, false);
-        //     });
-        //     // 第二步：添加整形后的新图层
-        //     // addRecode(reshapedGeoms);
-        //     // } catch (error) {
-        //     //     console.log('error', error);
+        const options: ReshapeOptions = {
+            AllowReshapingWithoutSelection: reshapeBar[0].visible ? true : false,
+            chooseStrategy: reshapeBar[1].visible ? 'manual' : 'auto',
+        };
+        topologyInstance && topologyInstance.reshapeFeature(options, ({ doReshapeLayers, reshapedGeoms }: TopoReshapeFeatureResult) => {
+            // try {
+            console.log('整形--reshapedGeoms', reshapedGeoms, doReshapeLayers);
+            // 第一步：删除之前的旧图层
+            doReshapeLayers.forEach((layer: any) => {
+                const record = layer.options.origin;
+                // deleteRecode(record, false);
+            });
+            // 第二步：添加整形后的新图层
+            // addRecode(reshapedGeoms);
+            // } catch (error) {
+            //     console.log('error', error);
 
-        //     //     // message.error(error as any);
-        //     // }
-        // });
+            //     // message.error(error as any);
+            // }
+        });
     }
     // 清除拓扑
     const clearTopo = () => {

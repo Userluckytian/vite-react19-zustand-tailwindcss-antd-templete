@@ -36,14 +36,14 @@ import { EditorState, type BaseEditOptions, type LeafletEditorOptions } from '..
 import { BaseEditor } from '../base/BaseEditor';
 import { reversePointLatLngs } from '../utils/commonUtils';
 
-export class MarkerPointEditor extends BaseEditor<L.Marker> {
+export default class MarkerPointEditor extends BaseEditor<L.Marker> {
 
 
     // #region 暂时未使用的部分
-    protected vertexMarkers: any[];
-    protected midpointMarkers: any[];
-    protected historyStack: any[];
-    protected redoStack: any[];
+    protected vertexMarkers: any[] = [];
+    protected midpointMarkers: any[] = [];
+    protected historyStack: any[] = [];
+    protected redoStack: any[] = [];
     protected enterEditMode(): void { }
     protected reBuildMarker(coords: any[]): void { }
     protected renderLayer(coords: any[], valid: boolean): void { }
@@ -56,7 +56,7 @@ export class MarkerPointEditor extends BaseEditor<L.Marker> {
     }
     // #endregion
 
-    constructor(map: L.Map, options?: LeafletEditorOptions) {
+    constructor(map: L.Map, options: LeafletEditorOptions = {}) {
         super(map, options);
         if (this.map) {
             this.activate();
@@ -97,7 +97,9 @@ export class MarkerPointEditor extends BaseEditor<L.Marker> {
 
     protected setLayerVisibility(visible: boolean) {
         this.layerVisble = visible;
-        this.layer.setOpacity(visible ? 1 : 0);
+        if(this.layer){
+            this.layer.setOpacity(visible ? 1 : 0);
+        }
     }
 
     /**  地图点击事件，用于设置点的位置

@@ -1,8 +1,10 @@
 import * as L from 'leaflet';
 import { queryLayerOnClick, queryLayersIntersectingGeometry } from '../utils/commonUtils';
+
 import { clipSelectedLayersByLine, mergePolygon, reshapeSelectedLayersByLine } from '../utils/topoUtils';
 import PolylineEditor from '../editor/polylineEditor';
 import { EditorState, type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoOptions, type TopoReshapeFeatureResult } from '../types';
+
 
 export class LeafletTopology {
   private static instance: LeafletTopology;
@@ -71,8 +73,9 @@ export class LeafletTopology {
           pickLayer.remove();
           this.selectedLayers.splice(findLayerIdx, 1);
         } else {
+          const clickLnglat = e.latlng;
           // 基于选中的图层的空间信息，添加对应的高亮图层
-          this.addHighLightLayerByPickLayerGeom(layer);
+          this.addHighLightLayerByPickLayerGeom(layer, clickLnglat);
         }
       });
     };
@@ -228,12 +231,11 @@ export class LeafletTopology {
    * @param {*} layer
    * @memberof LeafletTopology
    */
-  private addHighLightLayerByPickLayerGeom(layer: any) {
-    const layerGeom = layer.toGeoJSON(this.topoOptions.precision);
-    // 暂时不支持点类型的
-    if (layerGeom.geometry.type === 'Point') {
-      throw new Error('不支持的数据类型：' + layerGeom.geometry.type + '，不支持高亮');
-    }
+  private addHighLightLayerByPickLayerGeom(layer: any, lnglat: L.LatLng) {
+    console.log('layer', layer);
+
+    const layerGeom = layer.toGeoJSON();
+
     const highlightStyle = {
       // fillColor: 'rgba(0, 0, 0, 0)',
       color: '#ff0',
@@ -243,12 +245,48 @@ export class LeafletTopology {
       // 边框大小
       weight: 2,
     };
-    const highlightLayer = L.geoJSON(layerGeom, {
-      style: highlightStyle,
-      ['linkLayerId' as any]: layer._leaflet_id, // 添加自定义属性
-    });
-    this.selectedLayers.push(highlightLayer);
-    this.map && this.map.addLayer(highlightLayer);
+
+    let highlightLayer: any = null;
+    // 暂时不支持点类型的
+    if (layerGeom.geometry.type === 'Point') {
+      // 可能是圆
+      const { isCircle, circleHighLightLayer } = this.validIsCircle(layer, highlightStyle, lnglat);
+      if (isCircle) {
+        highlightLayer = circleHighLightLayer;
+      } else {
+        throw new Error('不支持的数据类型：' + layerGeom.geometry.type + '，不支持高亮');
+      }
+    } else {
+      highlightLayer = L.geoJSON(layerGeom, {
+        style: highlightStyle,
+        ['linkLayerId' as any]: layer._leaflet_id, // 添加自定义属性
+      });
+    }
+    if (highlightLayer) {
+      this.selectedLayers.push(highlightLayer);
+      this.map && this.map.addLayer(highlightLayer);
+    }
+  }
+
+  private validIsCircle(layer: any, options: L.CircleOptions, lnglat: L.LatLng) {
+    if (layer && layer.getRadius && layer.getLatLng) {
+      const center = layer.getLatLng();
+      const radius = layer.getRadius();
+      // 计算两点距离（单位：米）
+      const distance = center.distanceTo(lnglat);
+
+      // 如果点击的是内部，则做处理。否则什么也不做
+      if (distance <= radius) {
+        const circleLayer = L.circle(center, {
+          ...options,
+          radius,
+          ['linkLayerId' as any]: layer._leaflet_id, // 添加自定义属性
+        });
+        return { isCircle: true, circleHighLightLayer: circleLayer }
+      }
+      return { isCircle: true, circleHighLightLayer: null }
+    }
+    return { isCircle: false, circleHighLightLayer: null }
   }
 
   private disableMapOpt() {

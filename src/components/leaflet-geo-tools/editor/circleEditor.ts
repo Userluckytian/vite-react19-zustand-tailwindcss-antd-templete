@@ -32,6 +32,7 @@ import { booleanValidEnhance, getFractionalPointOnEdge, reversePointLatLngs } fr
 import { booleanPointInPolygon, circle, point } from "@turf/turf";
 import { LeafletTopology } from "@/components/custom-leaflet-draw/topo/topo";
 import { Polyline, type LatLngExpression } from "leaflet";
+import { isPointClickInCircle } from "../utils/topoUtils";
 export default class CircleEditor extends BaseEditor<L.Circle> {
 
 
@@ -271,7 +272,7 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
         if (!this.layer) throw new Error('图层实例化失败，无法完成图层创建，请重试');
         if (this.currentState !== EditorState.Drawing) {
             // 已绘制完成后的后续双击事件的逻辑均走这个
-            const isInside = this.isPointInCircle(e.latlng, this.layer as any);
+            const isInside = isPointClickInCircle(e.latlng, this.layer as any);
             if (isInside && this.currentState !== EditorState.Editing) {
                 this.startEdit();
             } else {
@@ -298,7 +299,7 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
             // topo正在选择图层，不处理双击编辑事件
             return false;
         }
-        const clickIsSelf = this.isPointInCircle(e.latlng, this.layer as any);
+        const clickIsSelf = isPointClickInCircle(e.latlng, this.layer as any);
         // 已经激活的实例，确保点击在自己的图层上
         if (this.isActive()) {
             return clickIsSelf;
@@ -310,16 +311,6 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
             }
         }
         return false;
-    }
-
-    private isPointInCircle(point: L.LatLng, layer: L.Circle) {
-        const center = layer.getLatLng();
-        const radius = layer.getRadius();
-
-        // 计算两点距离（单位：米）
-        const distance = center.distanceTo(point);
-
-        return distance <= radius;
     }
 
     /** 使用 turf.booleanValid 校验圆形有效性
