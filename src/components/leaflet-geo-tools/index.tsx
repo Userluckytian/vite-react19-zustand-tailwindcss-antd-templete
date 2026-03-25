@@ -6,7 +6,7 @@ import { App, Divider, Switch } from 'antd';
 import * as L from 'leaflet';
 import './index.scss';
 
-import { EditorState, type CircleDashLineOptions, type DragMarkerOptions, type drawInstance, type EditOptionsExpends, type EditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoReshapeFeatureResult, type ValidationOptions } from './types';
+import { EditorState, type CircleDashLineOptions, type DragMarkerOptions, type drawInstance, type EditOptionsExpends, type EditorInstance, type ReshapeOptions, type SnapOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult, type ValidationOptions } from './types';
 import MarkerPointEditor from './editor/markerPointEditor';
 import PolygonEditor from './editor/polygonEditor';
 import RectangleEditor from './editor/rectangleEditor';
@@ -324,6 +324,9 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 weight: 2,
             },
         }
+        const circleSpecialConfig = {
+            circle_LinkRadiusAndCenterDashLineOptions: circleDahsLineConfig,
+        }
         const edit: EditOptionsExpends = {
             enabled: true,
             dragLineMarkerOptions: edgeMarkerConfig,
@@ -393,6 +396,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 // };
                 // 存在默认空间信息的
                 // const lineLayer = new PolylineEditor(mapInstance, { snap, edit, validation, defaultGeometry: polylineGeom });
+                
                 // 不存在默认空间信息的
                 const lineLayer = new PolylineEditor(mapInstance, { snap, edit, validation });
                 saveEditorAndAddListener(lineLayer);
@@ -409,7 +413,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 break;
             case 'circle':
                 // 圆形有一个特殊的编辑属性
-                const circleLayer = new LeafletCircle(mapInstance, { edit: { ...edit, circleLinkRadiusAndCenterDashLineOptions: circleDahsLineConfig } });
+                const circleLayer = new LeafletCircle(mapInstance, { edit: { ...edit, ...circleSpecialConfig } });
                 saveEditorAndAddListener(circleLayer);
                 break;
             case 'rectangle':
@@ -954,7 +958,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
     // 裁切
     const cut = () => {
         topologyInstance && topologyInstance.clipByLine(({ doClipLayers, clipedGeoms }: TopoClipResult) => {
-            console.log('裁剪--clipedGeoms', clipedGeoms, doClipLayers);
+            // console.log('裁剪--clipedGeoms', clipedGeoms, doClipLayers);
             // 第一步：删除之前的旧图层
             doClipLayers.forEach((layer: any) => {
                 // console.log('layer11', layer);
@@ -973,7 +977,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
     const union = () => {
         topologyInstance && topologyInstance.merge(({ mergedGeom, mergedLayers }: TopoMergeResult) => {
             // try {
-            console.log('合并--mergedGeom', mergedGeom, mergedLayers);
+            // console.log('合并--mergedGeom', mergedGeom, mergedLayers);
             // 第一步：删除之前的旧图层
             mergedLayers.forEach((layer: any) => {
                 const record = layer.options.origin;

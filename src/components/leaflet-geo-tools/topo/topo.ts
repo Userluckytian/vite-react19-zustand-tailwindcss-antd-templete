@@ -4,6 +4,7 @@ import { queryLayerOnClick, queryLayersIntersectingGeometry } from '../utils/com
 import { clipSelectedLayersByLine, mergePolygon, reshapeSelectedLayersByLine } from '../utils/topoUtils';
 import PolylineEditor from '../editor/polylineEditor';
 import { EditorState, type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoOptions, type TopoReshapeFeatureResult } from '../types';
+import { circle } from '@turf/turf';
 
 
 export class LeafletTopology {
@@ -16,6 +17,7 @@ export class LeafletTopology {
   private isPicking: boolean = false; // 是否处于选择图层状态（这个状态主要用于edit编辑器在编辑时，确保当前不是选择图层的状态，如果是选择图层的状态，则editor编辑器的事件应该禁止，不让其触发）
   private topoOptions: TopoOptions = {
     precision: 6,
+    circleStep: 64,
   }
 
   constructor(map: L.Map, options: TopoOptions = {}) {
@@ -135,7 +137,7 @@ export class LeafletTopology {
           const tempIntersectLayer = queryLayersIntersectingGeometry(this.map!, geoJson, this.topoOptions.precision);
           this.selectedLayers = tempIntersectLayer.filter((it: L.Layer) => (it.options as any).drawFlag !== drawReshapeLineFlag);
         }
-        // console.log('final-this.selectedLayers', this.selectedLayers);
+        console.log('final-this.selectedLayers', this.selectedLayers);
 
         const { doReshapeLayers, reshapedGeoms } = reshapeSelectedLayersByLine(geoJson, this.selectedLayers, options, this.topoOptions.precision);
         // 行为1：正常输出
@@ -148,7 +150,7 @@ export class LeafletTopology {
 
         // 为啥不删掉？ 后续调试用
         // 行为2：上图渲染，但不输出，主要用于测试
-        // clipsPolygons.forEach(element => {
+        // reshapedGeoms.forEach(element => {
         //   const layer = L.geoJSON(element, {
         //     style: {
         //       fillColor: 'rgba(0, 0, 0, 0.2)',
@@ -268,7 +270,7 @@ export class LeafletTopology {
     }
   }
 
-  private validIsCircle(layer: any, options: L.CircleOptions, lnglat: L.LatLng) {
+  private validIsCircle(layer: any, options: L.PolylineOptions, lnglat: L.LatLng) {
     if (layer && layer.getRadius && layer.getLatLng) {
       const center = layer.getLatLng();
       const radius = layer.getRadius();
@@ -277,11 +279,22 @@ export class LeafletTopology {
 
       // 如果点击的是内部，则做处理。否则什么也不做
       if (distance <= radius) {
-        const circleLayer = L.circle(center, {
-          ...options,
-          radius,
+
+        const km_value = 1000; // 1千米 = 1000米
+
+        const lnglat = [center.lng, center.lat];
+        const turfOptions: any = {
+          steps: this.topoOptions.circleStep || 64,
+          units: 'kilometers',
+          properties: { type: 'circle' }
+        };
+
+        const geojson = circle(lnglat, radius / km_value, turfOptions);
+        const circleLayer = new L.GeoJSON(geojson, {
+          style: options,
           ['linkLayerId' as any]: layer._leaflet_id, // 添加自定义属性
         });
+
         return { isCircle: true, circleHighLightLayer: circleLayer }
       }
       return { isCircle: true, circleHighLightLayer: null }

@@ -120,22 +120,24 @@ export function reshapeSelectedLayersByLine(
         switch (type) {
             case 'LineString':
                 const lineResult = reshapeLineByLine(geojson as GeoJSON.Feature<GeoJSON.LineString>, sketchLine, options);
-                // console.log('lineResult', lineResult);
-
-                if (lineResult)
+                if (lineResult){
                     results.push(...lineResult);
+                    waitingDelLayer.push(layer);
+                }
                 break;
             case 'Polygon':
                 const polyResult = reshapePolygonByLine(geojson as GeoJSON.Feature<GeoJSON.Polygon>, sketchLine, options);
-                // console.log('polyResult', polyResult);
-
-                if (polyResult)
+                if (polyResult) {
                     results.push(...polyResult);
+                    waitingDelLayer.push(layer);
+                }
                 break;
             case 'MultiPolygon':
                 const MultiPolyResult = reshapeMultiPolygonByLine(geojson as GeoJSON.Feature<GeoJSON.MultiPolygon>, sketchLine, options);
-                if (MultiPolyResult)
+                if (MultiPolyResult) {
                     results.push(...MultiPolyResult);
+                    waitingDelLayer.push(layer);
+                }
                 break;
             default:
                 console.warn(`不支持的图层类型: ${type}`);
@@ -143,7 +145,6 @@ export function reshapeSelectedLayersByLine(
         }
 
     });
-    // console.log('results', results);
 
     return { doReshapeLayers: waitingDelLayer, reshapedGeoms: results };
 }
@@ -208,15 +209,15 @@ function normalizeGeoJSONCoordinates(geojson: any, precision = 6): any {
  */
 export function isPointOnLine(pointGeoJSON: any, lineGeoJSON: any): boolean {
     const geometryType = lineGeoJSON.geometry.type;
-    
+
     if (geometryType === 'LineString') {
         const turfLine = lineString(lineGeoJSON.geometry.coordinates);
         return booleanPointOnLine(pointGeoJSON, turfLine);
     }
-    
+
     if (geometryType === 'MultiLineString') {
         const multiLines = lineGeoJSON.geometry.coordinates;
-        
+
         // 遍历每条线
         for (const lineCoords of multiLines) {
             const turfLine = lineString(lineCoords);
@@ -226,7 +227,7 @@ export function isPointOnLine(pointGeoJSON: any, lineGeoJSON: any): boolean {
         }
         return false;
     }
-    
+
     console.warn('不支持的几何类型:', geometryType);
     return false;
 }

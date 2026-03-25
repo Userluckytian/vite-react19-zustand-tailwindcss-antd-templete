@@ -22,7 +22,10 @@ export interface BaseEditOptions {
 export interface EditOptionsExpends extends BaseEditOptions {
     dragLineMarkerOptions?: DragMarkerOptions; // 拖动边的marker的属性信息
     dragMidMarkerOptions?: DragMarkerOptions; // 拖动中点的marker属性信息
-    circleLinkRadiusAndCenterDashLineOptions?: CircleDashLineOptions // 圆形：连接半径和中心点的虚线的样式
+    // +++其他新增的建议以类型+“_”为开头+++
+    circle_LinkRadiusAndCenterDashLineOptions?: CircleDashLineOptions // 圆形：连接半径和中心点的虚线的样式
+    // 我担心用户万一需要拓展新属性。。。
+    [key: string]: unknown;
 }
 
 export interface LeafletPolylineOptions extends L.PolylineOptions {
@@ -119,6 +122,7 @@ export type MidpointPair = {
 // #region 拓扑内容
 export interface TopoOptions {
     precision?: number // topo操作时，坐标的精度
+    circleStep?: number // topo操作时，圆的拟和点的数量
 }
 /* topo操作执行合并(union)后返回的结果 */
 export interface TopoMergeResult {

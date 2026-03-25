@@ -30,9 +30,10 @@ import { EditorState, type LeafletEditorOptions, type MidpointPair } from "../ty
 import * as L from 'leaflet';
 import { booleanValidEnhance, getFractionalPointOnEdge, reversePointLatLngs } from "../utils/commonUtils";
 import { booleanPointInPolygon, circle, point } from "@turf/turf";
-import { LeafletTopology } from "@/components/custom-leaflet-draw/topo/topo";
 import { Polyline, type LatLngExpression } from "leaflet";
 import { isPointClickInCircle } from "../utils/topoUtils";
+import { LeafletTopology } from "../topo/topo";
+
 export default class CircleEditor extends BaseEditor<L.Circle> {
 
 
@@ -132,6 +133,28 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
         map.off('click', this.mapClickEvent);
         map.off('dblclick', this.mapDblClickEvent);
         map.off('mousemove', this.mapMouseMoveEvent);
+    }
+
+    /** 返回图层的空间信息 
+     * 
+     * 
+     * @memberof LeafletEditPolygon
+     */
+    public getGeoJSON(FittingPointNum: number = 64) {
+        if (this.layer && (this.layer as any).toGeoJSON) {
+            const center = this.layer.getLatLng();
+            const radius = this.layer.getRadius();
+            const lnglat = [center.lng, center.lat];
+            const options: any = {
+                steps: FittingPointNum ?? this.editOptions.circle_TopoFittingPointNum,
+                units: 'kilometers',
+                properties: { type: 'circle' }
+            };
+            const geojson = circle(lnglat, radius / this.km_value, options); // 获取图形！
+            return geojson;
+        } else {
+            throw new Error("未捕获到图层，无法获取到geojson数据");
+        }
     }
 
     // #endregion
@@ -328,7 +351,7 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
             const circleGeoJSON = circle(
                 [center.lng, center.lat],
                 radius / this.km_value,  // 转换为公里
-                { steps: 64, units: 'kilometers' }
+                { steps: 32, units: 'kilometers' }
             );
 
             // 使用 turf.booleanValid 校验
@@ -533,7 +556,7 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
     }
     // 虚线图层
     private renderDashLineLayer(coords: number[][]) {
-        const enableRanderDashLine = this.editOptions?.circleLinkRadiusAndCenterDashLineOptions?.enabled;
+        const enableRanderDashLine = this.editOptions?.circle_LinkRadiusAndCenterDashLineOptions?.enabled;
         if (!enableRanderDashLine) return;
 
         if (this.dashLineLayer) {
@@ -542,7 +565,7 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
             // 要么使用注释的这个，即使用和自身图层样式一致的样式，或者使用用户传递进来的样式。
             // const { isValid } = this.getCenterAndRadiusByCoordArr(this.tempCoords);
             // const layerStyle = this.getLayerStyle(isValid);
-            const labelStyle = this.editOptions?.circleLinkRadiusAndCenterDashLineOptions?.dashLineStyle || {};
+            const labelStyle = this.editOptions?.circle_LinkRadiusAndCenterDashLineOptions?.dashLineStyle || {};
             this.dashLineLayer = new Polyline(coords as LatLngExpression[], {
                 dashArray: [5, 5],
                 color: '#008BFF',
@@ -556,7 +579,7 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
     }
 
     private removeDashLineLayer() {
-        const enableRanderDashLine = this.editOptions?.circleLinkRadiusAndCenterDashLineOptions?.enabled;
+        const enableRanderDashLine = this.editOptions?.circle_LinkRadiusAndCenterDashLineOptions?.enabled;
         if (!enableRanderDashLine) return;
 
         if (this.dashLineLayer && this.map) {
