@@ -89,15 +89,17 @@ export default class MarkerPointEditor extends BaseEditor<L.Marker> {
 
     protected bindMapEvents(map: L.Map): void {
         map.on('click', this.mapClickEvent);
+        map.on('mousemove', this.mapMouseMoveEvent); // 新增
     }
 
     protected offMapEvents(map: L.Map): void {
         map.off('click', this.mapClickEvent);
+        map.off('mousemove', this.mapMouseMoveEvent); // 新增
     }
 
     protected setLayerVisibility(visible: boolean) {
         this.layerVisble = visible;
-        if(this.layer){
+        if (this.layer) {
             this.layer.setOpacity(visible ? 1 : 0);
         }
     }
@@ -113,14 +115,31 @@ export default class MarkerPointEditor extends BaseEditor<L.Marker> {
         if (!this.isActive()) return;
         if (!this.layer) throw new Error('图层实例化失败，无法完成图层创建，请重试');
         if (this.currentState === EditorState.Drawing) {
-            // 尝试添加新点
+            // 使用当前预览位置作为最终位置
+            const currentPos = this.layer.getLatLng();
+            this.layer.setLatLng(currentPos);
+            this.resetStatus();
+        }
+    }
+
+    /**  地图鼠标移动事件，用于设置点的位置
+     *
+     *
+     * @private
+     * @param {L.LeafletMouseEvent} e
+     * @memberof markerPoint
+     */
+    private mapMouseMoveEvent = (e: L.LeafletMouseEvent) => {
+        if (!this.isActive()) return;
+        if (!this.layer) throw new Error('图层实例化失败，无法完成图层创建，请重试');
+        if (this.currentState === EditorState.Drawing) {
             let waitingAddCoord: L.LatLngExpression = [e.latlng.lat, e.latlng.lng];
             if (this.IsEnableSnap()) {
                 const { snappedLatLng } = this.applySnapWithTarget(e.latlng);
                 waitingAddCoord = [snappedLatLng.lat, snappedLatLng.lng];
             }
+            // 实时更新点的预览位置
             this.layer.setLatLng(waitingAddCoord);
-            this.resetStatus();
         }
     }
 

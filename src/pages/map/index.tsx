@@ -11,7 +11,6 @@ import { GlobalContext } from "@/main";
 import { addScaleControl, addZoomControl } from "./map-utils";
 import { formatNumber, throttle } from "@/utils/utils";
 import { App } from "antd";
-import CustomLeafLetDraw from "@/components/custom-leaflet-draw";
 // 类型定义
 import FunctionPanel from "./opt-description";
 import MapFunctionPanel from "./pick-layers";
