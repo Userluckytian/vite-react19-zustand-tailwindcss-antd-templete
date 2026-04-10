@@ -15,7 +15,7 @@ import {
   addLeafletGeoJsonLayer,
   bingGeojsonLayerEditEvent,
 } from "@/utils/leafletUtils";
-import CustomLeafLetDraw from "@/components/custom-leaflet-draw";
+// import CustomLeafLetDraw from "@/components/custom-leaflet-draw";
 interface MapPreviewProps {
   outputMapView?: (map: L.Map) => void;
 }
@@ -347,7 +347,7 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
 
       {/* 工具条2: 绘制工具 */}
       <div className="draw-tools">
-        <CustomLeafLetDraw mapInstance={mapView}></CustomLeafLetDraw>
+        {/* <CustomLeafLetDraw mapInstance={mapView}></CustomLeafLetDraw> */}
       </div>
       {/* 工具条3: 绘制面积 */}
       <div className="area-info"></div>
