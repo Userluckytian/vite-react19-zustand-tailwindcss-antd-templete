@@ -242,17 +242,15 @@ export default class PolygonEditor extends BaseEditor<L.Polygon> {
         this.midpointMarkers = newMidpoints.length > 0 ? [[[...newMidpoints]]] : [];
     }
 
-    /** 根据坐标重建 marker 和图形 + 重新渲染图层(未使用)
+    /** 根据坐标重建 marker 和图形 + 重新渲染图层(在基类中使用的)
      * 
      * @param latlngs 坐标数组
      */
     protected reBuildMarkerAndRender(latlngs: number[][][][]): void {
-        this.renderLayer(latlngs);
-
+        const isValid = this.isValidPolygon(latlngs);
+        this.renderLayer(latlngs, isValid);
         this.reBuildMarker(latlngs);
-
         this.updateMidpoints();
-
     }
 
     /** 根据坐标重建 marker 和图形
@@ -393,8 +391,8 @@ export default class PolygonEditor extends BaseEditor<L.Polygon> {
                 waitingAddCoord = [snappedLatLng.lat, snappedLatLng.lng];
             }
             const testCoords = [...this.tempCoords, waitingAddCoord, this.tempCoords[0]];
-            // 实时校验并改变样式
-            const isValid = this.isValidPolygon(testCoords);
+            // 绘制状态下的校验，允许少于4个点的情况
+            const isValid = this.isValidForDrawing(testCoords);
             if (isValid) {
                 // 通过校验，则添加点
                 this.tempCoords.push(waitingAddCoord);
@@ -437,7 +435,7 @@ export default class PolygonEditor extends BaseEditor<L.Polygon> {
             if (isInside && this.currentState !== EditorState.Editing) {
                 this.startEdit();
             } else {
-                this.commitEdit();
+                this.commitEdit(); // 重写了基类的commmitEdit方法
             }
         }
     }
@@ -464,8 +462,8 @@ export default class PolygonEditor extends BaseEditor<L.Polygon> {
             if (!tempMovedCoords.length) return;
             // 2：构建临时坐标点数组。
             tempMovedCoords = [...tempMovedCoords, lastMoveEndPoint];
-            // 校验事件
-            let layerIsValid = this.isValidPolygon([...tempMovedCoords, this.tempCoords[0]]);
+            // 绘制状态下的校验，允许少于3个点的情况
+            let layerIsValid = this.isValidForDrawing([...tempMovedCoords, this.tempCoords[0]]);
             // 实时渲染, 包装成 [面][环][点] 结构
             this.renderLayer([[tempMovedCoords]], layerIsValid);
             return;
@@ -488,7 +486,9 @@ export default class PolygonEditor extends BaseEditor<L.Polygon> {
                 });
 
                 const updated = this.getCurrentMarkerCoords();
-                this.renderLayer(updated);
+                const isValid = this.isValidPolygon(updated);
+                this.renderLayer(updated, isValid);
+
                 this.updateMidpoints();
 
                 this.dragStartLatLng = e.latlng; // 连续拖动
@@ -516,7 +516,8 @@ export default class PolygonEditor extends BaseEditor<L.Polygon> {
                 this.dragStartLatLng = null;
                 this.map.dragging.enable();
                 const updated = this.getCurrentMarkerCoords();
-                this.renderLayer(updated);
+                const isValid = this.isValidPolygon(updated);
+                this.renderLayer(updated, isValid);
                 this.historyStack.push(updated);
                 this.updateMidpoints();
                 return;
@@ -528,22 +529,66 @@ export default class PolygonEditor extends BaseEditor<L.Polygon> {
      *
      *
      * @private
-     * @param {L.LatLng[]} coords
+     * @param {number[][] | number[][][] | number[][][][]} coords 单面、多面或多面多环坐标
      * @return {*}  {boolean}
      */
-    private isValidPolygon(coords: number[][]): boolean {
+    private isValidPolygon(coords: number[][] | number[][][] | number[][][][]): boolean {
+        // 处理不同维度的坐标结构
+        let polygonsToCheck: number[][][];
+        
+        if (Array.isArray(coords[0]) && Array.isArray(coords[0][0]) && Array.isArray(coords[0][0][0])) {
+            // 四维数组：多面多环结构 [面][环][点][latlng]
+            // 检查所有环（包括外环和内环/洞）
+            polygonsToCheck = (coords as number[][][][]).flat();
+        } else if (Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
+            // 三维数组：多面结构 [面][点][latlng]
+            polygonsToCheck = coords as number[][][];
+        } else {
+            // 二维数组：单面结构 [点][latlng]
+            polygonsToCheck = [coords] as number[][][];
+        }
 
-        // 1. 检查自相交（根据配置）
-        if (this.validationOptions?.allowSelfIntersect === false) {
-            if (polygonHasSelfIntersection(coords)) {
-                return false;
+        // 检查每个面的有效性
+        for (const singlePolygon of polygonsToCheck) {
+            if (singlePolygon.length < 3) {
+                return false; // 面至少需要3个点
+            }
+
+            // 1. 检查自相交（根据配置）
+            if (this.validationOptions?.allowSelfIntersect === false) {
+                // 确保环是闭合的（第一个点和最后一个点相同）
+                let closedPolygon = singlePolygon;
+                if (singlePolygon[0][0] !== singlePolygon[singlePolygon.length - 1][0] || 
+                    singlePolygon[0][1] !== singlePolygon[singlePolygon.length - 1][1]) {
+                    closedPolygon = [...singlePolygon, singlePolygon[0]];
+                }
+                
+                if (polygonHasSelfIntersection(closedPolygon)) {
+                    return false;
+                }
             }
         }
 
         // 2. 其他校验规则可以在这里添加...
 
         return true;
+    }
 
+    /** 绘制状态下的校验，允许少于3个点的情况
+     *
+     *
+     * @private
+     * @param {number[][]} coords 单个面的坐标
+     * @return {*}  {boolean}
+     */
+    private isValidForDrawing(coords: number[][]): boolean {
+        // 绘制状态下，允许少于3个点的情况
+        if (coords.length < 4) {
+            return true; // 绘制时允许1-2个点
+        }
+
+        // 对于3个点及以上的情况，使用完整的校验
+        return this.isValidPolygon(coords);
     }
 
     /** 完成绘制（结束绘制）
@@ -563,6 +608,28 @@ export default class PolygonEditor extends BaseEditor<L.Polygon> {
         // 设置为空闲状态，并发出状态通知
         this.updateAndNotifyStateChange(EditorState.Idle);
     }
+
+    /** 完成编辑（退出编辑模式）
+     *
+     * @protected
+     */
+    protected commitEdit(): void {
+        const current = this.getCurrentMarkerCoords();
+        // 新添加的内容：start
+        
+        const isValid = this.isValidPolygon(current);
+        
+        // 重新渲染图层，保持有效性状态
+        this.renderLayer(current, isValid);
+        // end
+        this.historyStack = [current]; // 读取当前状态作为新的初始快照
+        this.redoStack = []; // 清空重做栈（如果有）
+        this.exitEditMode();
+        // 事件监听停止。
+        this.deactivate();
+        this.updateAndNotifyStateChange(EditorState.Idle);
+        this.reset();
+    };
 
     /** 进入编辑模式
      *
@@ -833,7 +900,8 @@ export default class PolygonEditor extends BaseEditor<L.Polygon> {
 
     private renderLayerFromMarkers() {
         const coords = this.getCurrentMarkerCoords()
-        this.renderLayer(coords);
+        const isValid = this.isValidPolygon(coords);
+        this.renderLayer(coords, isValid);
     }
 
     private pushHistoryFromMarkers() {
@@ -858,10 +926,12 @@ export default class PolygonEditor extends BaseEditor<L.Polygon> {
             // ✅ 修复：检查是否还有剩余点
             if (this.tempCoords.length > 0) {
                 const finalCoords = [...this.tempCoords, this.lastMoveCoord];
-                this.renderLayer([[finalCoords]]);
+                // 绘制状态下的校验，允许少于3个点的情况
+                const isValid = this.isValidForDrawing(finalCoords);
+                this.renderLayer([[finalCoords]], isValid);
             } else {
                 // 没有点了，清空渲染
-                this.renderLayer([[]]);
+                this.renderLayer([[]], false);
                 this.lastMoveCoord = []; // 清空移动点
             }
             return true;

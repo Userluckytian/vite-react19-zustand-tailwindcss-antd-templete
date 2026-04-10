@@ -85,27 +85,27 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
             type: 'measure_area',
             desp: '测面'
         },
-        {
-            id: 'add',
-            title: '添加默认图层',
-            type: 'add',
-            icon: 'icon-shujudaoru',
-            desp: '添加默认图层'
-        },
-        {
-            id: 'add_hole',
-            title: '添加挖孔图层',
-            type: 'add_hole',
-            icon: 'icon-shujudaoru',
-            desp: '添加挖孔图层'
-        },
-        {
-            id: 'add_hole_multi',
-            title: '添加挖孔多面图层',
-            type: 'add_hole_multi',
-            icon: 'icon-shujudaoru',
-            desp: '添加挖孔多面图层'
-        },
+        // {
+        //     id: 'add',
+        //     title: '添加默认图层',
+        //     type: 'add',
+        //     icon: 'icon-shujudaoru',
+        //     desp: '添加默认图层'
+        // },
+        // {
+        //     id: 'add_hole',
+        //     title: '添加挖孔图层',
+        //     type: 'add_hole',
+        //     icon: 'icon-shujudaoru',
+        //     desp: '添加挖孔图层'
+        // },
+        // {
+        //     id: 'add_hole_multi',
+        //     title: '添加挖孔多面图层',
+        //     type: 'add_hole_multi',
+        //     icon: 'icon-shujudaoru',
+        //     desp: '添加挖孔多面图层'
+        // },
         {
             id: 'magic',
             title: 'magic-bar',
@@ -167,7 +167,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
         {
             id: 'valid',
             label: '允许自相交',
-            enable: true
+            enable: false
         },
     ]);
 
@@ -333,6 +333,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
         };
         const validation: ValidationOptions = {
             allowSelfIntersect: someConfigBar.find((it: any) => it.id === 'valid').enable,
+            circle_minRadius: 500000,
         };
         setCurrSelTool(toolId);
         switch (toolId) {
@@ -395,10 +396,11 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 // };
                 // 存在默认空间信息的
                 // const lineLayer = new PolylineEditor(mapInstance, { snap, edit, validation, defaultGeometry: polylineGeom });
-                
+
                 // 不存在默认空间信息的
                 const lineLayer = new PolylineEditor(mapInstance, { snap, edit, validation });
                 saveEditorAndAddListener(lineLayer);
+
                 break;
             case 'polygon':
                 // defaultGeometry ?: GeoJSON.Geometry; // 默认几何信息（如果有的话，可以在编辑时直接加载）
@@ -412,7 +414,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 break;
             case 'circle':
                 // 圆形有一个特殊的编辑属性
-                const circleLayer = new LeafletCircle(mapInstance, { edit: { ...edit, ...circleSpecialConfig } });
+                const circleLayer = new LeafletCircle(mapInstance, { snap, edit: { ...edit, ...circleSpecialConfig }, validation });
                 saveEditorAndAddListener(circleLayer);
                 break;
             case 'rectangle':
@@ -836,7 +838,12 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 //         ]
                 //     ]
                 // };
-                // const holeMultiPolygonEditor = new PolygonEditor(mapInstance!, {defaultGeometry: hole_multi_geometry});
+                // const holeMultiPolygonEditor = new PolygonEditor(mapInstance!, {
+                //     defaultGeometry: hole_multi_geometry,
+                //     snap,
+                //     edit,
+                //     validation
+                // });
                 // saveEditorAndAddListener(holeMultiPolygonEditor, false, 'add_hole_multi');
                 break;
             case 'delete':
@@ -860,10 +867,10 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
      */
     const saveEditorAndAddListener = (editor: EditorInstance, immediateNotify: boolean = false, toolId?: string) => {
         setEditorList((pre: any[]) => [...pre, editor]);
+        setCurrEditor(editor);
         // 添加监听逻辑
         editor.onStateChange((status: EditorState) => {
             if (status === EditorState.Editing) {
-                setCurrEditor(editor);
                 currEditorRef.current = editor as any
             } else {
                 if (status === EditorState.Idle) {
@@ -1120,8 +1127,8 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 </div>
             ))}
         </div>
-        {/* 编辑工具条 */}
-        {currEditor
+        {/* 编辑工具条(俩条件：1：地图上存在图层 2：是编辑模式时。才展示编辑工具条) */}
+        {currEditor && currEditor.getCurrentState() === EditorState.Editing
             &&
             <div className="leaflet-editor-toolbar leaflet-common-bar">
                 <div>编辑工具条：</div>
@@ -1132,7 +1139,7 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
             </div>
         }
         {/* 拓扑工具条(俩条件：1：地图上存在图层 2：不是编辑模式时。才展示拓扑工具条) */}
-        {!currEditor
+        {(!currEditor || (currEditor && currEditor.getCurrentState() !== EditorState.Editing))
             &&
             <div className="leaflet-topo-toolbar leaflet-common-bar">
                 <div>拓扑工具条：</div>
@@ -1142,8 +1149,8 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 <div className='topology-tool-item item-bar' onClick={() => clearTopo()}>🔄 清除</div>
             </div>
         }
-        {/* 整形要素工具条 */}
-        {!currEditor
+        {/* 拓扑工具条(俩条件：1：地图上存在图层 2：不是编辑模式时。才展示拓扑工具条) */}
+        {(!currEditor || (currEditor && currEditor.getCurrentState() !== EditorState.Editing))
             &&
             <div className="leaflet-reshape-toolbar leaflet-common-bar">
                 <div className='top'>
@@ -1168,8 +1175,8 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
                 </div>
             </div>
         }
-        {/* 编辑配置工具 */}
-        {currEditor
+        {/* 编辑工具条(俩条件：1：地图上存在图层 2：不是编辑模式时。才展示编辑工具条) */}
+        {currEditor && currEditor.getCurrentState() === EditorState.Editing
             &&
             <div className="edit-config-toolbar leaflet-common-bar">
                 <div className='edit-config-content'>

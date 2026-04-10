@@ -40,7 +40,6 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
     // #region 不需要的部分
     protected midpointMarkers: MidpointPair[] = [];
     protected updateMidpoints(skipMarker?: L.Marker): void { }
-    protected reBuildMarkerAndRender(coordinatesArray: any): void { }
     // #endregion
 
     protected vertexMarkers: L.Marker[] = [];
@@ -134,7 +133,15 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
         map.off('dblclick', this.mapDblClickEvent);
         map.off('mousemove', this.mapMouseMoveEvent);
     }
-
+    protected reBuildMarkerAndRender(coordinatesArray: number[][]): void {
+        // 更新临时坐标
+        this.tempCoords = coordinatesArray;
+        // 重建标记
+        this.reBuildMarker(coordinatesArray);
+        const { isValid } = this.getCenterAndRadiusByCoordArr(coordinatesArray);
+        // 渲染图层
+        this.renderLayer(coordinatesArray, isValid);
+    }
     /** 返回图层的空间信息 
      * 
      * 
@@ -347,14 +354,20 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
      */
     private isValidCircle(center: L.LatLng, radius: number): boolean {
         try {
-            // 使用 turf.circle 创建圆形几何体
+            // 1. 检查最小半径约束
+            const minRadius = this.validationOptions.circle_minRadius;
+            if (minRadius && radius < minRadius) {
+                return false;
+            }
+
+            // 2. 使用 turf.circle 创建圆形几何体
             const circleGeoJSON = circle(
                 [center.lng, center.lat],
                 radius / this.km_value,  // 转换为公里
                 { steps: 32, units: 'kilometers' }
             );
 
-            // 使用 turf.booleanValid 校验
+            // 3. 使用 turf.booleanValid 校验
             return booleanValidEnhance(circleGeoJSON);
         } catch (error) {
             // 如果创建或校验过程出错，说明圆形无效
@@ -546,7 +559,8 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
 
     private renderLayerFromMarkers() {
         const coords = this.getCurrentMarkerCoords()
-        this.renderLayer(coords);
+        const { isValid } = this.getCenterAndRadiusByCoordArr(coords);
+        this.renderLayer(coords, isValid);
         this.renderDashLineLayer(coords);
     }
 

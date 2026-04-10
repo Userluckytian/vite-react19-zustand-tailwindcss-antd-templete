@@ -20,35 +20,33 @@ const FunctionPanel = () => {
 
             {isExpanded && (
                 <div className="panel-content">
-                    <h3 className='text-xl font-bold mb-2'>功能模块1：绘制、测量功能</h3>
+                    <h3 className='text-xl font-bold mb-2'>功能模块1：绘制、编辑、测量功能</h3>
                     <div className="function-section">
                         <ul className="function-list">
                             <li className="completed">✔ 绘制marker点 <CustomIcon type='icon-biaodian_1' /></li>
                             <li className="completed">✔ 绘制线 <CustomIcon type='icon-biaoxian_1' /></li>
-                            <li className="completed">✔ 绘制矩形 <CustomIcon type='icon-huajuxing_0' /></li>
-                            <li className="completed">✔ 绘制圆形 <CustomIcon type='icon-huayuan_0' /></li>
-                            <li className="completed">✔ 绘制多边形面 <CustomIcon type='icon-biaomian_0' /></li>
+                            <li className="completed">✔ 绘制矩形（双击编辑） <CustomIcon type='icon-huajuxing_0' /></li>
+                            <li className="completed">✔ 绘制圆形（双击编辑） <CustomIcon type='icon-huayuan_0' /></li>
+                            <li className="completed">✔ 绘制多边形面（双击编辑） <CustomIcon type='icon-biaomian_0' /></li>
                             <li className="completed">✔ 距离测量 <CustomIcon type='icon-ceju_0' /></li>
                             <li className="completed">✔ 面积测量 <CustomIcon type='icon-cemian_0' /></li>
                         </ul>
                     </div>
 
-                    <h3 className='text-xl font-bold mb-2'>功能模块2：图形编辑功能</h3>
                     <div className="function-section">
                         <div className="instruction-section">
                             <h4>操作说明：</h4>
                             <ol className="instruction-list">
                                 {/* <li><strong>点击：</strong> <CustomIcon type='icon-huizhiduobianxing1-copy' />、<CustomIcon type='icon-juxinghuizhi1-copy' />开始绘制可以被编辑的多边形（仅支持单面的多边形的编辑）</li> */}
-                                <li><strong>点击：</strong> <CustomIcon type='icon-huizhiduobianxing1' />、<CustomIcon type='icon-juxinghuizhi1' />开始绘制可以被编辑的多边形。（除了支持单多边形的编辑外，还支持外部传入多面、环形挖孔等复杂多边形的编辑）</li>
-                                <li><strong>双击</strong>刚才绘制的多边形，激活编辑功能（需要手动点击保存按钮保存更改）</li>
+                                <li><strong>双击</strong>图上的多边形，激活编辑功能（API中是 <code>editorInstance.startEdit()</code>）</li>
                             </ol>
                         </div>
                         <ul className="function-list">
-                            <li className="completed">✔ 【绘制时撤销已经绘制的点的最后一个点】</li>
+                            <li className="completed">✔ 【绘制时撤销已经绘制的点的最后一个点】（API中是 <code>editorInstance.undoDraw()</code>）</li>
                             <li className="completed">✔ 【绘制时吸附已经存在的图层】</li>
                             <li className="completed">✔ 【编辑点】拖动顶点，以及右键实现顶点移除</li>
                             <li className="completed">✔ 【中点插入】拖动线上的红色marker，实现添加新的点</li>
-                            <li className="completed">✔ 【拖动边】拖动线上的蓝色marker，实现拖动边功能</li>
+                            <li className="completed">✔ 【拖动边】拖动线上的绿色marker，实现拖动边功能</li>
                             <li className="completed">✔ 【拖动面】可以拖动整个面移动</li>
                             <li className="completed">✔ 【快捷键】关联键盘事件</li>
                             <li className="completed">✔ 【撤销】撤销刚才的操作</li>
@@ -83,7 +81,7 @@ const FunctionPanel = () => {
                             </li>
                             <li className="completed">✔【增加自相交校验】
                                 <ul className='text-amber-600'>
-                                    <li>①：支持的绘制工具：<CustomIcon type='icon-biaoxian_1' title="标线" />、 <CustomIcon type='icon-biaomian_0' title="标面"/>、<CustomIcon type='icon-cemian_0'  title="测面"/>、 <CustomIcon type='icon-huizhiduobianxing1' title="绘制多边形" />（✔）</li>
+                                    <li>①：支持的绘制工具：<CustomIcon type='icon-biaoxian_1' title="标线" />、 <CustomIcon type='icon-biaomian_0' title="标面"/>（✔）</li>
                                     <li>②：如何使用：先点击”其他属性工具条“上的自相交开关，再进行绘制行为（✔）</li>
                                     <li>③：视觉反馈：不允许自相交时，绘制的图形，若发生了自相交，图形会变为红色，双击事件无法结束绘制（✔）</li>
                                     <li>④：tip：绘制过程中，切换自相交，校验机制不会生效(因为未处理)。本工具是支持的（<code>editorInstance.setValidationOptions({`{allowSelfIntersect: false / true}`})</code>）（✔）</li>

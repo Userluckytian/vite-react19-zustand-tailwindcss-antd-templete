@@ -765,6 +765,16 @@ export abstract class BaseEditor<T extends L.Layer> {
         BaseEditor.currentActiveEditor = this;
     }
 
+
+    /** 停用当前编辑器实例
+     * 
+     */
+    protected getCurrentState(): EditorState {
+        // console.log('停用编辑器:', this.constructor.name);
+        return this.currentState;
+
+    }
+
     /** 停用当前编辑器实例
      * 
      */

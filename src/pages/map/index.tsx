@@ -426,13 +426,13 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
       </div>
       {/* 收集绘制的图形面板 */}
 
-      <MapFunctionPanel
+      {/* <MapFunctionPanel
         drawLayers={drawLayers}
         onToggleLayer={handleToggleLayer}
         onRemoveLayer={handleRemoveLayer}
         onHoverLayer={handleHoverLayer}
         onLeaveLayer={handleLeaveLayer}
-      />
+      /> */}
       {/* 功能说明组件 */}
 
       <FunctionPanel />

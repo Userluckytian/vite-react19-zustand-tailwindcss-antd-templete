@@ -71,6 +71,7 @@ export type ValidationOptions = {
     validErrorPolygonStyle?: L.PolylineOptions; // 校验失败时的样式
     validErrorLineStyle?: L.PolylineOptions; // 校验失败时的样式
     validErrorPointStyle?: L.MarkerOptions; // 校验失败时的样式
+    circle_minRadius?: number; // 圆最小半径（米）
 }
 
 export type DragMarkerOptions = {

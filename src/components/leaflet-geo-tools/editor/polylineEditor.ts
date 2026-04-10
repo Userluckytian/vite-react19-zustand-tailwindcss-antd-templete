@@ -53,10 +53,7 @@ import { isPointOnLine } from '../utils/topoUtils';
 
 export default class PolylineEditor extends BaseEditor<L.Polyline> {
 
-    // #region 暂时未使用的部分
 
-    protected reBuildMarkerAndRender(coordinatesArray: any): void { }
-    // #endregion
 
     protected historyStack: number[][][][] = [];
     private tempCoords: number[][] = [];  // 绘制的时候存储用户点击的坐标点
@@ -181,8 +178,8 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
                 waitingAddCoord = [snappedLatLng.lat, snappedLatLng.lng];
             }
             const testCoords = [...this.tempCoords, waitingAddCoord];
-            // 实时校验并改变样式
-            const isValid = this.isValidPolyline(testCoords);
+            // 绘制状态下的校验，允许1个点的情况
+            const isValid = this.isValidForDrawing(testCoords);
             // 通过校验，则添加点
             isValid && this.tempCoords.push(waitingAddCoord);
             // 同时记录最后一个点，用于后续撤回操作行为
@@ -207,7 +204,7 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
             const lastCoord = [e.latlng.lat, e.latlng.lng];
             // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
             const finalCoords = deduplicateCoordinates([...this.tempCoords, lastCoord]);
-            if (this.isValidPolyline(finalCoords)) {
+            if (this.isValidPolyline([finalCoords])) {
                 this.finishedDraw([finalCoords]);
             } else {
                 // 校验失败，保持绘制状态
@@ -265,10 +262,12 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
             }
             // 1：一个点也没有时，我们移动事件，也什么也不做。
             if (!this.tempCoords.length) return;
+            // 实时更新鼠标当前位置，用于撤销时恢复预览线
+            this.lastMoveCoord = lastMoveEndPoint;
             // 2：构建临时坐标点数组。
             tempMovedCoords = [...tempMovedCoords, lastMoveEndPoint];
-            // 实时校验并改变样式
-            const isValid = this.isValidPolyline(tempMovedCoords);
+            // 绘制状态下的特殊校验
+            const isValid = this.isValidForDrawing(tempMovedCoords);
             // 实时渲染
             this.renderLayer([tempMovedCoords], isValid);
             return;
@@ -278,28 +277,7 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
         }
     }
 
-    /** 校验线图层的有效性
-     *
-     *
-     * @private
-     * @param {L.LatLng[]} coords
-     * @return {*}  {boolean}
-     * @memberof LeafletRectangle
-     */
-    private isValidPolyline(coords: number[][]): boolean {
 
-        // 1. 检查自相交（根据配置）
-        if (this.validationOptions.allowSelfIntersect === false) {
-            if (polylineHasSelfIntersection(coords)) {
-                return false;
-            }
-        }
-
-        // 2. 其他校验规则可以在这里添加...
-
-        return true;
-
-    }
 
     /** 显示图层
      *
@@ -363,13 +341,16 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
             // 移除最后一个点
             this.tempCoords.pop();
 
-            // ✅ 修复：检查是否还有剩余点
+            // 修复：检查是否还有剩余点
             if (this.tempCoords.length > 0) {
+                // 使用鼠标当前位置作为预览线的终点
                 const finalCoords = [...this.tempCoords, this.lastMoveCoord];
-                this.renderLayer([finalCoords]);
+                // 绘制状态下的校验，允许1个点的情况
+                const isValid = this.isValidForDrawing(finalCoords);
+                this.renderLayer([finalCoords], isValid);
             } else {
                 // 没有点了，清空渲染
-                this.renderLayer([[]]);
+                this.renderLayer([[]], false); // 空线无效
                 this.lastMoveCoord = []; // 清空移动点
             }
             return true;
@@ -620,7 +601,8 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
             newCoords[lineIndex] = newLine;
 
             // 4. 实时渲染
-            this.renderLayer(newCoords);
+            const isValid = this.isValidPolyline(newCoords);
+            this.renderLayer(newCoords, isValid);
         });
         // 中点拖动结束后，移除此处中点，执行添加新的顶点
         marker.on('dragend', () => {
@@ -777,7 +759,8 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
 
     private renderLayerFromMarkers() {
         const coords = this.getCurrentMarkerCoords()
-        this.renderLayer(coords);
+        const isValid = this.isValidPolyline(coords);
+        this.renderLayer(coords, isValid);
     }
 
     private pushHistoryFromMarkers() {
@@ -785,6 +768,62 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
         this.historyStack.push(coords);
     }
 
-    // #endregion
+    /** 根据坐标重建 marker 和图形 + 重新渲染图层(在基类中使用的)
+     * 
+     * @param latlngs 坐标数组
+     */
+    protected reBuildMarkerAndRender(latlngs: number[][][]): void {
+        const isValid = this.isValidPolyline(latlngs);
+        this.renderLayer(latlngs, isValid);
+        this.reBuildMarker(latlngs);
+        this.updateMidpoints();
+    }
 
+    /** 校验线图层的有效性
+     *
+     *
+     * @private
+     * @param {number[][][]} multiLine_coords 多线坐标
+     * @return {*}  {boolean}
+     * @memberof PolylineEditor
+     */
+    private isValidPolyline(multiLine_coords: number[][][]): boolean {
+        // 检查每条线的有效性
+        for (const singleLine of multiLine_coords) {
+            if (singleLine.length < 2) {
+                return false; // 线至少需要2个点
+            }
+
+            // 1. 检查自相交（根据配置）
+            if (this.validationOptions.allowSelfIntersect === false) {
+                if (polylineHasSelfIntersection(singleLine)) {
+                    return false;
+                }
+            }
+        }
+
+        // 2. 其他校验规则可以在这里添加...
+
+        return true;
+    }
+
+    /** 绘制状态下的校验，允许只有1个点的情况
+     *
+     *
+     * @private
+     * @param {number[][]} coords 单条线的坐标
+     * @return {*}  {boolean}
+     * @memberof PolylineEditor
+     */
+    private isValidForDrawing(coords: number[][]): boolean {
+        // 绘制状态下，允许1个点的情况
+        if (coords.length < 2) {
+            return true; // 绘制时允许1个点
+        }
+
+        // 对于2个点及以上的情况，使用完整的校验
+        return this.isValidPolyline([coords]);
+    }
+
+    // #endregion
 }
