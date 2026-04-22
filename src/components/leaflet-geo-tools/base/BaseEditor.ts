@@ -1056,7 +1056,7 @@ export abstract class BaseEditor<T extends L.Layer> {
             }
 
             // 2、编辑器是否启用编辑功能( 子类可能扩充这个内容，initEditOptions还是放在子类中调用吧)
-            if (options?.edit?.enabled) {
+            if (options?.edit) {
                 this.initEditOptions(options?.edit);
             }
 
