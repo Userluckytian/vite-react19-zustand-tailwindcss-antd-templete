@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>MagicWand 遥感水体提取</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+
+        .control {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .slider {
+            margin: 10px 0;
+        }
+
+        .slider label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <div class="control">
+        <button id="btn-load">加载遥感影像</button>
+        <button id="btn-extract">进入提取模式</button>
+        <div class="slider">
+            <label>阈值: <span id="threshold-value">30</span></label>
+            <input type="range" id="threshold" min="10" max="100" value="30">
+        </div>
+        <button id="btn-clear">清除结果</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="./MagicWand.js"></script> <!-- 替换路径 -->
+
+    <script>
+        let map = L.map('map').setView([31.3, 120.6], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        let imageryLayer, extractionLayer = L.layerGroup().addTo(map);
+        let extracting = false;
+        let threshold = 30;
+
+        // 阈值滑块
+        document.getElementById('threshold').oninput = function () {
+            threshold = parseInt(this.value);
+            document.getElementById('threshold-value').textContent = this.value;
+        };
+
+        document.getElementById('btn-load').onclick = () => {
+            if (imageryLayer) map.removeLayer(imageryLayer);
+            imageryLayer = L.tileLayer(
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                { attribution: 'Esri World Imagery' }
+            ).addTo(map);
+            alert("遥感影像已加载，可以点击进入提取模式。");
+        };
+
+        document.getElementById('btn-extract').onclick = () => {
+            extracting = !extracting;
+            map.getContainer().style.cursor = extracting ? 'crosshair' : '';
+            document.getElementById('btn-extract').innerText = extracting ? '退出提取模式' : '进入提取模式';
+        };
+
+        document.getElementById('btn-clear').onclick = () => {
+            extractionLayer.clearLayers();
+        };
+
+        // 修复偏移的关键修改
+        map.on('click', async e => {
+            if (!extracting || !imageryLayer) return;
+
+            const zoom = map.getZoom();
+            const tileSize = 256;
+
+            // 关键修改1：使用正确的瓦片坐标计算
+            const point = map.project(e.latlng, zoom);
+
+            // 计算点击点所在的瓦片坐标（瓦片坐标从0开始）
+            const tileX = Math.floor(point.x / tileSize);
+            const tileY = Math.floor(point.y / tileSize);
+
+            // 关键修改2：计算在拼接图中的正确像素位置
+            const pixelInFirstTileX = point.x - tileX * tileSize;
+            const pixelInFirstTileY = point.y - tileY * tileSize;
+
+            // 创建3x3瓦片的拼接图，确保有足够的区域进行连续检测
+            const numTiles = 3; // 3x3瓦片，足够大区域
+            const canvas = document.createElement('canvas');
+            canvas.width = tileSize * numTiles;
+            canvas.height = tileSize * numTiles;
+            const ctx = canvas.getContext('2d');
+
+            // 加载3x3瓦片网格
+            for (let dx = 0; dx < numTiles; dx++) {
+                for (let dy = 0; dy < numTiles; dy++) {
+                    const currentTileX = tileX - 1 + dx; // 从左上角开始
+                    const currentTileY = tileY - 1 + dy;
+
+                    // 确保瓦片坐标有效
+                    if (currentTileX >= 0 && currentTileY >= 0) {
+                        const url = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${currentTileY}/${currentTileX}`;
+                        await new Promise((resolve, reject) => {
+                            const img = new Image();
+                            img.crossOrigin = "Anonymous";
+                            img.src = url;
+                            img.onload = () => {
+                                // 关键修改3：正确计算绘制位置
+                                ctx.drawImage(img, dx * tileSize, dy * tileSize);
+                                resolve();
+                            };
+                            img.onerror = () => {
+                                console.warn('瓦片加载失败:', url);
+                                resolve(); // 继续加载其他瓦片
+                            };
+                        });
+                    }
+                }
+            }
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const image = {
+                data: imageData.data,
+                width: canvas.width,
+                height: canvas.height,
+                bytes: 4
+            };
+
+            // 关键修改4：计算点击点在3x3拼接图中的正确位置
+            // 在3x3网格中，点击点在中间瓦片(索引1,1)的某个位置
+            const pixelX = tileSize + pixelInFirstTileX; // 中间瓦片起始于tileSize位置
+            const pixelY = tileSize + pixelInFirstTileY;
+
+            console.log(`点击位置 - 瓦片:(${tileX},${tileY}), 像素:(${pixelInFirstTileX},${pixelInFirstTileY}), 3x3图中:(${pixelX},${pixelY})`);
+
+            // MagicWand 提取（使用洪水填充自动检测连续区域）
+            const mask = MagicWand.floodFill(image, pixelX, pixelY, threshold, null, false);
+            if (!mask) {
+                alert("未找到符合条件的连续区域，请尝试调整阈值或点击其他位置");
+                return;
+            }
+
+            const blurred = MagicWand.gaussBlur(mask, 2);
+            const contours = MagicWand.traceContours(blurred);
+            const simplified = MagicWand.simplifyContours(contours, 2.0, 10);
+
+            // 关键修改5：正确的坐标转换
+            simplified.forEach(c => {
+                const latlngs = c.points.map(p => {
+                    // 重要：将提取的像素坐标转换回地图坐标
+                    // 计算全局像素坐标（考虑3x3拼接图的偏移）
+                    const globalPixelX = (tileX - 1) * tileSize + p.x; // -1是因为从左上角瓦片开始
+                    const globalPixelY = (tileY - 1) * tileSize + p.y;
+
+                    // 转换为地理坐标
+                    return map.unproject(L.point(globalPixelX, globalPixelY), zoom);
+                });
+
+                if (latlngs.length > 2) {
+                    // 根据轮廓类型设置不同颜色
+                    const color = c.inner ? '#ff0000' : '#00a8ff';
+                    const fillColor = c.inner ? '#ff0000' : '#00a8ff';
+
+                    L.polygon(latlngs, {
+                        color: color,
+                        fillColor: fillColor,
+                        fillOpacity: 0.3,
+                        weight: 2
+                    }).addTo(extractionLayer);
+                }
+            });
+
+            console.log(`提取完成，找到 ${simplified.length} 个轮廓`);
+        });
+    </script>
+</body>
+
+</html>
