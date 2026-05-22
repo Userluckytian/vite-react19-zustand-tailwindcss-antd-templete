@@ -16,6 +16,7 @@ import LeafletCircle from './editor/circleEditor';
 import LeafletDistance from './measure/distance';
 import LeafletArea from './measure/area';
 import { LeafletTopology } from './topo/topo';
+import MagicWandEditor from './magic/magicWandEditor';
 // import LeafletRectangle from './editor/rectangle';
 // import LeafletDistance from './measure/distance';
 // import LeafletArea from './measure/area';
@@ -30,11 +31,14 @@ interface LeafLetGeoToolsProps {
     mapInstance: L.Map; // 传入的地图实例
     drawGeoJsonResult?: (result: any) => void; // 绘制结果吐出
     drawStatus?: (status: boolean) => void; // 绘制状态吐出
+    onMagicEnable?: () => void; // 魔棒工具启用时的回调（用于切换底图等）
+    magicTileUrl?: string; // 魔棒工具使用的瓦片 URL
 }
 
 export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
     const { message } = App.useApp();
-    const { mapInstance } = props;
+    const { mapInstance, onMagicEnable, magicTileUrl } = props;
+    const messageApi = message;
     const [toolbarList, setToolBarList] = useState<any>([
         {
             id: 'point',
@@ -428,6 +432,14 @@ export default function LeafLetGeoTools(props: LeafLetGeoToolsProps) {
             case 'measure_area':
                 const areaLayer = new LeafletArea(mapInstance, { precision: 2, lang: 'zh', validation: { allowSelfIntersect: false } });
                 saveEditorAndAddListener(areaLayer, false, 'measure_area');
+                break;
+            case 'magic':
+                const magicEditor = new MagicWandEditor(mapInstance, {
+                    tileUrl: magicTileUrl || webConfig.baseMapList.find((item: any) => item.checked)?.mapUrl || webConfig.tileUrl,
+                    onEnable: onMagicEnable,
+                    messageApi: messageApi,
+                });
+                saveEditorAndAddListener(magicEditor, false, 'magic');
                 break;
             case 'add':
                 // const geometry: any = {

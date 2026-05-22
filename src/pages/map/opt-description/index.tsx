@@ -88,7 +88,15 @@ const FunctionPanel = () => {
                                 </ul>
                                 
                             </li>
-                            <li className="pending">【magic魔棒选择要素工具】</li>
+                            <li className="completed">✔【magic魔棒选择要素工具】
+                                <ul className='text-amber-600'>
+                                    <li>①：点击魔棒按钮，自动切换地图底图为影像底图，并定位到北京（层级18）。（✔）</li>
+                                    <li>②：层级限制：必须大于16层级才可以进行提取，否则会提示警告。（✔）</li>
+                                    <li>③：点击地图提取相似颜色区域，基于MagicWand算法（floodFill + traceContours）。（✔）</li>
+                                    <li>④：提取结果高亮显示在地图上（红色边框 + 半透明填充），每次只保留最新结果。（✔）</li>
+                                    <li>⑤：提取结果输出到控制台（GeoJSON格式）。（✔）</li>
+                                </ul>
+                            </li>
                         </ul>
                     </div>
                 </div>

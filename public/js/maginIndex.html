@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>MagicWand 遥感水体提取（稳定版）</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { height: 100vh; width: 100%; }
+    .control {
+      position: absolute; top: 10px; left: 10px; z-index: 1000;
+      background: white; padding: 10px; border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      font-size: 13px;
+    }
+    .row { margin: 6px 0; }
+    label { margin-right: 8px; }
+    input[type=range] { width: 120px; }
+    button { margin-right: 6px; padding: 6px 10px; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="control">
+    <div class="row">
+      <button id="btn-load">加载遥感影像</button>
+      <button id="btn-extract">进入提取模式</button>
+      <button id="btn-clear">清除结果</button>
+    </div>
+    <div class="row">
+      <label>阈值: <span id="threshold-value">30</span></label>
+      <input type="range" id="threshold" min="10" max="100" value="30">
+    </div>
+    <div class="row">
+      <label>模糊: <span id="blur-value">2</span></label>
+      <input type="range" id="blur" min="0" max="5" value="2">
+    </div>
+    <div class="row">
+      <label>拼接范围:</label>
+      <select id="stitch">
+        <option value="2">2 × 2</option>
+        <option value="3" selected>3 × 3</option>
+        <option value="4">4 × 4</option>
+      </select>
+    </div>
+    <div class="row" id="status">状态：就绪</div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="./MagicWand.js"></script> <!-- 替换路径 -->
+
+  <script>
+    const map = L.map('map').setView([31.3, 120.6], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    let imageryLayer, extractionLayer = L.layerGroup().addTo(map);
+    let extracting = false;
+    let busy = false; // 节流标志，避免连续点击导致崩溃
+
+    const statusEl = document.getElementById('status');
+    const thresholdEl = document.getElementById('threshold');
+    const blurEl = document.getElementById('blur');
+    const stitchEl = document.getElementById('stitch');
+
+    function setStatus(msg) { statusEl.textContent = '状态：' + msg; }
+
+    // 参数绑定
+    thresholdEl.oninput = () => {
+      document.getElementById('threshold-value').textContent = thresholdEl.value;
+    };
+    blurEl.oninput = () => {
+      document.getElementById('blur-value').textContent = blurEl.value;
+    };
+
+    // 加载遥感影像
+    document.getElementById('btn-load').onclick = () => {
+      if (imageryLayer) map.removeLayer(imageryLayer);
+      imageryLayer = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { attribution: 'Esri World Imagery' }
+      ).addTo(map);
+      setStatus('遥感影像已加载');
+      alert('遥感影像已加载，可以进入提取模式并点击地图。');
+    };
+
+    // 切换提取模式
+    document.getElementById('btn-extract').onclick = () => {
+      extracting = !extracting;
+      map.getContainer().style.cursor = extracting ? 'crosshair' : '';
+      document.getElementById('btn-extract').innerText = extracting ? '退出提取模式' : '进入提取模式';
+      setStatus(extracting ? '提取模式已激活' : '提取模式已关闭');
+    };
+
+    // 清除结果
+    document.getElementById('btn-clear').onclick = () => {
+      extractionLayer.clearLayers();
+      setStatus('已清除结果');
+    };
+
+    // 点击提取
+    map.on('click', async e => {
+      if (!extracting || !imageryLayer || busy) return;
+      busy = true; // 开始提取，阻止连续点击
+
+      try {
+        setStatus('正在提取...');
+        await performExtraction(e.latlng);
+        setStatus('提取完成');
+      } catch (err) {
+        console.error(err);
+        setStatus('提取失败：' + err.message);
+        alert('提取失败：' + err.message);
+      } finally {
+        busy = false; // 允许下一次点击
+      }
+    });
+
+    // 核心提取逻辑
+    async function performExtraction(latlng) {
+      if (!window.MagicWand) throw new Error('MagicWand 未加载');
+
+      const zoom = map.getZoom();
+      const tileSize = 256;
+      const point = map.project(latlng, zoom);
+
+      const clickedTileX = Math.floor(point.x / tileSize);
+      const clickedTileY = Math.floor(point.y / tileSize);
+
+      const n = parseInt(stitchEl.value, 10);
+      const half = Math.floor(n / 2);
+      const baseTileX = clickedTileX - half;
+      const baseTileY = clickedTileY - half;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = tileSize * n;
+      canvas.height = tileSize * n;
+      const ctx = canvas.getContext('2d');
+
+      for (let dx = 0; dx < n; dx++) {
+        for (let dy = 0; dy < n; dy++) {
+          const tileX = baseTileX + dx;
+          const tileY = baseTileY + dy;
+          const url = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${tileY}/${tileX}`;
+
+          await new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.src = url;
+            img.onload = () => {
+              ctx.drawImage(img, dx * tileSize, dy * tileSize);
+              resolve();
+            };
+            img.onerror = () => resolve(); // 忽略失败的瓦片
+          });
+        }
+      }
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const image = { data: imageData.data, width: canvas.width, height: canvas.height, bytes: 4 };
+
+      const pixelX = Math.floor(point.x - baseTileX * tileSize);
+      const pixelY = Math.floor(point.y - baseTileY * tileSize);
+
+      const threshold = parseInt(thresholdEl.value, 10);
+      const blurRadius = parseInt(blurEl.value, 10);
+
+      const mask = MagicWand.floodFill(image, pixelX, pixelY, threshold, null, false);
+      if (!mask) { alert('未找到符合条件的区域'); return; }
+
+      const blurred = MagicWand.gaussBlur(mask, blurRadius);
+      const contours = MagicWand.traceContours(blurred);
+      if (!contours || contours.length === 0) { alert('未提取到轮廓'); return; }
+
+      const simplified = MagicWand.simplifyContours(contours, 2.0, 10);
+
+      simplified.forEach(c => {
+        const latlngs = c.points.map(p => {
+          const worldX = baseTileX * tileSize + p.x;
+          const worldY = baseTileY * tileSize + p.y;
+          return map.unproject(L.point(worldX, worldY), zoom);
+        });
+
+        if (latlngs.length > 2) {
+          L.polygon(latlngs, {
+            color: c.inner ? '#ff0000' : '#00a8ff',
+            fillColor: c.inner ? '#ff0000' : '#00a8ff',
+            fillOpacity: 0.3,
+            weight: 2
+          }).addTo(extractionLayer);
+        }
+      });
+
+      // 内存释放
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  </script>
+</body>
+</html>

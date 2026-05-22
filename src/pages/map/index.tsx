@@ -405,7 +405,20 @@ export default function SampleCheckEditMap({ outputMapView }: MapPreviewProps) {
 
       {/* 绘制工具 */}
       <div className="draw-tools">
-        <LeafLetGeoTools mapInstance={mapView} drawGeoJsonResult={handleDrawResult} />
+        <LeafLetGeoTools
+          mapInstance={mapView}
+          drawGeoJsonResult={handleDrawResult}
+          onMagicEnable={() => {
+            // 切换到影像底图（地球）
+            const imageLayer = BASE_LAYERS.find((layer) => layer.name === '地球');
+            if (imageLayer) {
+              changeBaseMap('地球', imageLayer);
+            }
+            // 定位到北京故宫，层级18
+            mapView?.setView([39.9189, 116.3974], 18);
+          }}
+          magicTileUrl={BASE_LAYERS.find((layer) => layer.name === '地球')?.baseUrl || ''}
+        />
       </div>
 
       {/* 经纬度信息 */}
