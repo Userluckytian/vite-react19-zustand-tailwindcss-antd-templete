@@ -214,7 +214,7 @@ export default class MagicWandEditor {
             geometry = { type: 'MultiPolygon', coordinates };
         }
 
-        const feature: GeoJSON.Feature = {
+        const feature: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> = {
             type: 'Feature',
             geometry,
             properties: {
